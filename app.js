@@ -111,6 +111,7 @@ function saveProfileData(data) {
 }
 
 function loadProfileScreen() {
+    if (!document.getElementById('profile-user-name')) return;
     const d = getProfileData();
     const user = auth.currentUser;
     const name = d.name || (user && user.displayName) || 'User';
@@ -124,35 +125,30 @@ function loadProfileScreen() {
     document.getElementById('profile-display-visibility').textContent = d.visibility || 'Public';
     document.getElementById('profile-display-joined').textContent = d.joined || ('Joined ' + new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }));
 
-    // Avatar
     const img = document.getElementById('profile-avatar-img');
     const icon = document.getElementById('profile-avatar-icon');
     if (d.avatar) { img.src = d.avatar; img.classList.remove('hidden'); icon.classList.add('hidden'); }
     else { img.classList.add('hidden'); icon.classList.remove('hidden'); }
 
-    // Skills
     const skillsEl = document.getElementById('profile-skills-display');
     const skills = d.skills ? d.skills.split(',').map(s => s.trim()).filter(Boolean) : [];
     skillsEl.innerHTML = skills.length
         ? skills.map(s => `<span class="text-xs bg-primary/10 text-primary font-semibold px-3 py-1 rounded-full">${s}</span>`).join('')
         : '<span class="text-sm text-on-surface-variant">No skills added yet.</span>';
 
-    // Resume
     document.getElementById('profile-resume-name').textContent = d.resumeName || 'No resume uploaded';
     document.getElementById('profile-resume-date').textContent = d.resumeDate || '';
 
-    // Prefs
     const prefs = d.prefs || {};
     updateNotifToggle(prefs.notifications !== false);
     const langEl = document.getElementById('pref-language');
     if (langEl) langEl.value = prefs.language || 'English';
     document.getElementById('pref-language-display').textContent = prefs.language || 'English';
     const tfaEl = document.getElementById('tfa-status');
-    const tfaBtn = document.querySelector('#tfa-status + button') || document.querySelector('[onclick="togglePref(\'tfa\')"]');
+    const tfaBtn = document.getElementById('tfa-toggle-btn');
     if (tfaEl) tfaEl.textContent = prefs.tfa ? 'Enabled' : 'Disabled';
     if (tfaBtn) tfaBtn.textContent = prefs.tfa ? 'Disable' : 'Enable';
 
-    // Also update dashboard name
     const dashEl = document.getElementById('dashboard-user-name');
     if (dashEl) dashEl.textContent = name;
 }
@@ -227,7 +223,7 @@ function togglePref(key) {
     if (key === 'notifications') updateNotifToggle(d.prefs.notifications);
     if (key === 'tfa') {
         const tfaEl = document.getElementById('tfa-status');
-        const tfaBtn = document.querySelector('[onclick="togglePref(\'tfa\')"]');
+        const tfaBtn = document.getElementById('tfa-toggle-btn');
         if (tfaEl) tfaEl.textContent = d.prefs.tfa ? 'Enabled' : 'Disabled';
         if (tfaBtn) tfaBtn.textContent = d.prefs.tfa ? 'Disable' : 'Enable';
     }
