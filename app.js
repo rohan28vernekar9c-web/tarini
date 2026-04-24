@@ -247,16 +247,57 @@ function updateNotifToggle(on) {
     else { btn.classList.remove('bg-primary'); btn.classList.add('bg-outline-variant'); knob.classList.remove('translate-x-6'); knob.classList.add('translate-x-0'); }
 }
 
-function shareProfile() {
+async function shareProfile() {
     const d = getProfileData();
-    const name = d.name || 'User';
+    const user = auth.currentUser;
+    const name = d.name || (user && user.displayName) || 'User';
+    const uid = user ? user.uid : 'guest';
+
+    // Build a deep-link URL pointing to this user's profile
+    const profileUrl = `https://tarini-9ff23.web.app/?profile=${uid}`;
+    const shareTitle = `${name} on Tarini`;
+    const shareText = `Check out ${name}'s profile on Tarini — a platform empowering women entrepreneurs.`;
+
     if (navigator.share) {
-        navigator.share({ title: name + ' on Tarini', text: 'Check out ' + name + '\'s profile on Tarini!' });
+        try {
+            await navigator.share({ title: shareTitle, text: shareText, url: profileUrl });
+        } catch (err) {
+            if (err.name !== 'AbortError') copyToClipboard(profileUrl);
+        }
     } else {
-        alert('Share link copied! (Feature requires HTTPS)');
+        copyToClipboard(profileUrl);
     }
 }
 window.shareProfile = shareProfile;
+
+function copyToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => showToast('Profile link copied to clipboard!'));
+    } else {
+        const el = document.createElement('textarea');
+        el.value = text;
+        el.style.position = 'fixed';
+        el.style.opacity = '0';
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+        showToast('Profile link copied to clipboard!');
+    }
+}
+
+function showToast(msg) {
+    let toast = document.getElementById('share-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'share-toast';
+        toast.className = 'fixed bottom-32 left-1/2 -translate-x-1/2 bg-on-surface text-surface text-sm font-semibold px-5 py-3 rounded-full shadow-xl z-[999] transition-all';
+        document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.style.opacity = '1';
+    setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+}
 
 // --- SHOP LOGIC ---
 
