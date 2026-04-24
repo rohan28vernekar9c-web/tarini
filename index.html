@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tarini Women Empowerment Platform</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <!-- Phosphor Icons for modern iconography -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Firebase SDK (Compat Version is required to work without a web server via file://) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <div id="app-container">
+        <!-- Screens will be injected or toggled here -->
+        
+        <!-- Screen: Login / Register -->
+        <div id="screen-login" class="screen active">
+            <div class="login-container">
+                <div class="logo-wrapper">
+                    <img src="tarini%20logo%20png.png" alt="Tarini Logo" class="app-logo">
+                </div>
+                
+                <div id="auth-error-msg" style="color: var(--danger); font-size: 14px; text-align: center; margin-bottom: 10px; display: none;"></div>
+                
+                <!-- Login Form -->
+                <div class="auth-form" id="login-form">
+                    <div class="input-group">
+                        <i class="ph ph-envelope"></i>
+                        <input type="email" id="login-email" placeholder="Email Address">
+                    </div>
+                    <div class="input-group">
+                        <i class="ph ph-lock"></i>
+                        <input type="password" id="login-password" placeholder="Password">
+                    </div>
+                    <button class="btn-primary" id="login-btn" onclick="handleLogin()">Sign In</button>
+                    <p class="auth-switch">Don't have an account? <span onclick="toggleAuthMode('register')">Register here</span></p>
+                </div>
+
+                <!-- Register Form -->
+                <div class="auth-form" id="register-form" style="display: none;">
+                    <div class="input-group">
+                        <i class="ph ph-user"></i>
+                        <input type="text" id="register-name" placeholder="Full Name">
+                    </div>
+                    <div class="input-group">
+                        <i class="ph ph-envelope"></i>
+                        <input type="email" id="register-email" placeholder="Email Address">
+                    </div>
+                    <div class="input-group">
+                        <i class="ph ph-lock"></i>
+                        <input type="password" id="register-password" placeholder="Password">
+                    </div>
+                    <button class="btn-primary" id="register-btn" onclick="handleRegister()">Sign Up</button>
+                    <p class="auth-switch">Already have an account? <span onclick="toggleAuthMode('login')">Sign In here</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Screen: Dashboard -->
+        <div id="screen-dashboard" class="screen">
+            <header class="app-header">
+                <div class="header-user">
+                    <img src="https://i.pravatar.cc/150?img=47" alt="User Profile" class="avatar-small">
+                    <div>
+                        <p class="greeting">Hello,</p>
+                        <h2>Sarah Jane</h2>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="icon-btn theme-toggle" onclick="toggleTheme()">
+                        <i class="ph ph-moon" id="theme-icon"></i>
+                    </button>
+                    <button class="icon-btn" onclick="navigateTo('rewards')">
+                        <i class="ph ph-gift"></i>
+                    </button>
+                </div>
+            </header>
+
+            <div class="content-scroll">
+                <div class="ai-banner" onclick="navigateTo('ai-assistant')">
+                    <div class="ai-banner-text">
+                        <h3>Ask Tarini AI</h3>
+                        <p>Your personal assistant for career & skills</p>
+                    </div>
+                    <div class="ai-banner-icon">
+                        <i class="ph ph-sparkle"></i>
+                    </div>
+                </div>
+
+                <h3 class="section-title">Quick Actions</h3>
+                <div class="quick-actions">
+                    <div class="action-card" onclick="navigateTo('jobs')">
+                        <div class="action-icon jobs"><i class="ph ph-briefcase"></i></div>
+                        <span>Find Jobs</span>
+                    </div>
+                    <div class="action-card" onclick="navigateTo('skills')">
+                        <div class="action-icon skills"><i class="ph ph-book-open-text"></i></div>
+                        <span>Skill Hub</span>
+                    </div>
+                    <div class="action-card" onclick="navigateTo('shop')">
+                        <div class="action-icon shop"><i class="ph ph-storefront"></i></div>
+                        <span>My Shop</span>
+                    </div>
+                    <div class="action-card" onclick="navigateTo('applications')">
+                        <div class="action-icon apps"><i class="ph ph-file-text"></i></div>
+                        <span>Applications</span>
+                    </div>
+                </div>
+
+                <h3 class="section-title">Featured Opportunities</h3>
+                <div class="job-card">
+                    <div class="job-header">
+                        <div class="company-logo">T</div>
+                        <div>
+                            <h4>Tech Lead</h4>
+                            <p>TechNova Solutions</p>
+                        </div>
+                    </div>
+                    <div class="job-tags">
+                        <span class="tag">Remote</span>
+                        <span class="tag">Full-Time</span>
+                    </div>
+                </div>
+                <div class="job-card">
+                    <div class="job-header">
+                        <div class="company-logo">G</div>
+                        <div>
+                            <h4>Graphic Designer</h4>
+                            <p>Creative Minds</p>
+                        </div>
+                    </div>
+                    <div class="job-tags">
+                        <span class="tag">Hybrid</span>
+                        <span class="tag">Part-Time</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Screen: Find Jobs -->
+        <div id="screen-jobs" class="screen">
+            <header class="page-header">
+                <h2>Find Jobs</h2>
+                <div class="search-bar">
+                    <i class="ph ph-magnifying-glass"></i>
+                    <input type="text" placeholder="Search for jobs...">
+                </div>
+            </header>
+            <div class="content-scroll">
+                <div class="filter-pills">
+                    <span class="pill active">All</span>
+                    <span class="pill">Tech</span>
+                    <span class="pill">Design</span>
+                    <span class="pill">Remote</span>
+                </div>
+                
+                <div class="job-card">
+                    <div class="job-header">
+                        <div class="company-logo">I</div>
+                        <div>
+                            <h4>Data Analyst</h4>
+                            <p>Insight Corp</p>
+                        </div>
+                        <i class="ph ph-bookmark bookmark-icon"></i>
+                    </div>
+                    <div class="job-tags">
+                        <span class="tag">Remote</span>
+                        <span class="tag">$80k - $100k</span>
+                    </div>
+                    <button class="btn-secondary mt-10">Apply Now</button>
+                </div>
+                <!-- More jobs here -->
+            </div>
+        </div>
+
+        <!-- Screen: Skill Hub -->
+        <div id="screen-skills" class="screen">
+            <header class="page-header">
+                <h2>Skill Hub</h2>
+                <p>Learn new skills and empower yourself</p>
+            </header>
+            <div class="content-scroll">
+                <div class="course-card">
+                    <div class="course-image img-1"></div>
+                    <div class="course-info">
+                        <h4>Financial Literacy 101</h4>
+                        <p>Master your personal finances</p>
+                        <div class="progress-bar">
+                            <div class="progress" style="width: 40%"></div>
+                        </div>
+                        <span class="progress-text">40% Completed</span>
+                    </div>
+                </div>
+                <div class="course-card">
+                    <div class="course-image img-2"></div>
+                    <div class="course-info">
+                        <h4>Digital Marketing basics</h4>
+                        <p>Start your online business</p>
+                        <button class="btn-secondary btn-sm mt-10">Start Course</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Screen: My Shop -->
+        <div id="screen-shop" class="screen">
+            <header class="page-header">
+                <div class="header-flex">
+                    <h2>My Shop</h2>
+                    <button class="btn-primary btn-sm">+ Add Item</button>
+                </div>
+            </header>
+            <div class="content-scroll">
+                <div class="shop-stats">
+                    <div class="stat-box">
+                        <p>Total Sales</p>
+                        <h4>$1,240</h4>
+                    </div>
+                    <div class="stat-box">
+                        <p>Active Items</p>
+                        <h4>12</h4>
+                    </div>
+                </div>
+                <h3 class="section-title">My Products</h3>
+                <div class="product-grid">
+                    <div class="product-card">
+                        <div class="product-img p-1"></div>
+                        <p class="p-name">Handmade Pottery</p>
+                        <p class="p-price">$45.00</p>
+                    </div>
+                    <div class="product-card">
+                        <div class="product-img p-2"></div>
+                        <p class="p-name">Woven Basket</p>
+                        <p class="p-price">$30.00</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Screen: Profile -->
+        <div id="screen-profile" class="screen">
+            <header class="page-header center">
+                <h2>Profile</h2>
+            </header>
+            <div class="content-scroll">
+                <div class="profile-header">
+                    <img src="https://i.pravatar.cc/150?img=47" alt="User Profile" class="avatar-large">
+                    <h3>Sarah Jane</h3>
+                    <p>Entrepreneur & Tech Enthusiast</p>
+                </div>
+                <div class="profile-menu">
+                    <div class="menu-item" onclick="navigateTo('applications')">
+                        <div class="menu-icon"><i class="ph ph-file-text"></i></div>
+                        <span>My Applications</span>
+                        <i class="ph ph-caret-right chevron"></i>
+                    </div>
+                    <div class="menu-item" onclick="navigateTo('rewards')">
+                        <div class="menu-icon"><i class="ph ph-gift"></i></div>
+                        <span>My Rewards</span>
+                        <i class="ph ph-caret-right chevron"></i>
+                    </div>
+                    <div class="menu-item" onclick="toggleTheme()">
+                        <div class="menu-icon"><i class="ph ph-moon" id="theme-icon-profile"></i></div>
+                        <span>Dark Mode</span>
+                        <div class="theme-switch"></div>
+                    </div>
+                    <div class="menu-item text-danger" onclick="handleLogout()">
+                        <div class="menu-icon"><i class="ph ph-sign-out"></i></div>
+                        <span>Log Out</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Screen: AI Assistant -->
+        <div id="screen-ai-assistant" class="screen">
+            <header class="app-header">
+                <button class="icon-btn" onclick="navigateTo('dashboard')">
+                    <i class="ph ph-arrow-left"></i>
+                </button>
+                <h2>Tarini AI</h2>
+                <div class="w-24"></div>
+            </header>
+            <div class="chat-container">
+                <div class="chat-bubble ai">
+                    Hi Sarah! I'm Tarini AI. How can I help you empower your day?
+                </div>
+                <div class="chat-bubble user">
+                    I need help writing a resume for a Tech Lead position.
+                </div>
+                <div class="chat-bubble ai">
+                    I can certainly help with that! Let's start by highlighting your key leadership experiences. Could you tell me about the largest team you've managed?
+                </div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" placeholder="Type a message...">
+                <button class="send-btn"><i class="ph ph-paper-plane-right"></i></button>
+            </div>
+        </div>
+
+        <!-- Screen: My Applications -->
+        <div id="screen-applications" class="screen">
+            <header class="app-header">
+                <button class="icon-btn" onclick="goBack()">
+                    <i class="ph ph-arrow-left"></i>
+                </button>
+                <h2>Applications</h2>
+                <div class="w-24"></div>
+            </header>
+            <div class="content-scroll">
+                <div class="job-card">
+                    <div class="job-header">
+                        <div class="company-logo">T</div>
+                        <div>
+                            <h4>Tech Lead</h4>
+                            <p>TechNova Solutions</p>
+                        </div>
+                    </div>
+                    <div class="status-badge pending">Pending Review</div>
+                    <p class="applied-date">Applied on Oct 12, 2023</p>
+                </div>
+                <div class="job-card">
+                    <div class="job-header">
+                        <div class="company-logo">A</div>
+                        <div>
+                            <h4>Frontend Developer</h4>
+                            <p>Alpha Inc</p>
+                        </div>
+                    </div>
+                    <div class="status-badge rejected">Not Selected</div>
+                    <p class="applied-date">Applied on Sep 28, 2023</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Screen: My Rewards -->
+        <div id="screen-rewards" class="screen">
+            <header class="app-header">
+                <button class="icon-btn" onclick="goBack()">
+                    <i class="ph ph-arrow-left"></i>
+                </button>
+                <h2>My Rewards</h2>
+                <div class="w-24"></div>
+            </header>
+            <div class="content-scroll">
+                <div class="rewards-card">
+                    <h3>Total Points</h3>
+                    <div class="points-display">
+                        <i class="ph ph-coin gold"></i>
+                        <span>1,250</span>
+                    </div>
+                    <p>Keep learning and engaging to earn more!</p>
+                </div>
+                <h3 class="section-title">Available Rewards</h3>
+                <div class="reward-item">
+                    <div class="reward-icon"><i class="ph ph-certificate"></i></div>
+                    <div class="reward-info">
+                        <h4>Premium Course Unlock</h4>
+                        <p>500 points</p>
+                    </div>
+                    <button class="btn-secondary btn-sm">Redeem</button>
+                </div>
+                <div class="reward-item">
+                    <div class="reward-icon"><i class="ph ph-storefront"></i></div>
+                    <div class="reward-info">
+                        <h4>Shop Feature Boost</h4>
+                        <p>800 points</p>
+                    </div>
+                    <button class="btn-secondary btn-sm">Redeem</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation (Hidden on Login/AI Chat/Inner screens) -->
+        <nav id="bottom-nav" class="bottom-nav">
+            <div class="nav-item active" data-target="dashboard" onclick="navigateTo('dashboard')">
+                <i class="ph ph-house"></i>
+                <span>Home</span>
+            </div>
+            <div class="nav-item" data-target="jobs" onclick="navigateTo('jobs')">
+                <i class="ph ph-briefcase"></i>
+                <span>Jobs</span>
+            </div>
+            <div class="nav-item" data-target="skills" onclick="navigateTo('skills')">
+                <i class="ph ph-book-open-text"></i>
+                <span>Skills</span>
+            </div>
+            <div class="nav-item" data-target="shop" onclick="navigateTo('shop')">
+                <i class="ph ph-storefront"></i>
+                <span>Shop</span>
+            </div>
+            <div class="nav-item" data-target="profile" onclick="navigateTo('profile')">
+                <i class="ph ph-user"></i>
+                <span>Profile</span>
+            </div>
+        </nav>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
