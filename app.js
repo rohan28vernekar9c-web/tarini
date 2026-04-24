@@ -64,20 +64,33 @@ function navigateToWithOutHistory(screenId) {
 
 function updateBottomNav(screenId) {
     const bottomNav = document.getElementById('bottom-nav');
+    const globalHeader = document.getElementById('global-header');
     
-    // Check if bottom nav should be visible
+    // Check if bottom nav and header should be visible
     if (screensWithoutNav.includes(screenId)) {
-        bottomNav.classList.add('hidden');
+        if (bottomNav) bottomNav.classList.add('hidden');
+        if (globalHeader) globalHeader.classList.add('hidden');
     } else {
-        bottomNav.classList.remove('hidden');
+        if (bottomNav) bottomNav.classList.remove('hidden');
+        if (globalHeader) globalHeader.classList.remove('hidden');
     }
 
-    // Update active state on nav items
+    // Update active state on nav items using Tailwind classes
     const navItems = document.querySelectorAll('.nav-item');
     navItems.forEach(item => {
-        item.classList.remove('active');
+        // Reset to inactive state
+        item.classList.remove('text-indigo-600', 'dark:text-indigo-400', 'scale-110');
+        item.classList.add('text-slate-400', 'dark:text-slate-500');
+        
+        const icon = item.querySelector('.nav-icon');
+        if (icon) icon.style.fontVariationSettings = "'FILL' 0";
+
         if (item.getAttribute('data-target') === screenId) {
-            item.classList.add('active');
+            // Set to active state
+            item.classList.remove('text-slate-400', 'dark:text-slate-500');
+            item.classList.add('text-indigo-600', 'dark:text-indigo-400', 'scale-110');
+            
+            if (icon) icon.style.fontVariationSettings = "'FILL' 1";
         }
     });
 }
@@ -91,29 +104,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
         document.documentElement.classList.add('dark-theme');
-        updateThemeIcons(true);
+        document.documentElement.classList.add('dark');
     }
 });
 
 function toggleTheme() {
     const isDark = document.documentElement.classList.toggle('dark-theme');
+    document.documentElement.classList.toggle('dark');
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
-    updateThemeIcons(isDark);
 }
 window.toggleTheme = toggleTheme;
-
-function updateThemeIcons(isDark) {
-    const headerIcon = document.getElementById('theme-icon');
-    const profileIcon = document.getElementById('theme-icon-profile');
-    
-    if (isDark) {
-        if (headerIcon) { headerIcon.classList.remove('ph-moon'); headerIcon.classList.add('ph-sun'); }
-        if (profileIcon) { profileIcon.classList.remove('ph-moon'); profileIcon.classList.add('ph-sun'); }
-    } else {
-        if (headerIcon) { headerIcon.classList.remove('ph-sun'); headerIcon.classList.add('ph-moon'); }
-        if (profileIcon) { profileIcon.classList.remove('ph-sun'); profileIcon.classList.add('ph-moon'); }
-    }
-}
 
 // --- FIREBASE AUTHENTICATION LOGIC ---
 

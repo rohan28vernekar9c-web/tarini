@@ -1,306 +1,524 @@
 <!DOCTYPE html>
-<html lang="en">
+<html class="light" lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
     <title>Tarini Women Empowerment Platform</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
-    <!-- Phosphor Icons for modern iconography -->
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <!-- Firebase SDK (Compat Version is required to work without a web server via file://) -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Be+Vietnam+Pro:wght@400;500;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        .glow-shadow { box-shadow: 0 10px 40px -10px rgba(79, 68, 226, 0.15); }
+        .bg-glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .glass-card { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.3); }
+        .glow-primary { box-shadow: 0 10px 25px -5px rgba(77, 65, 223, 0.2); }
+        .custom-shadow-peach { box-shadow: 0 10px 30px -10px rgba(135, 80, 65, 0.2); }
+        .custom-shadow-indigo { box-shadow: 0 10px 30px -10px rgba(79, 68, 226, 0.15); }
+        body { min-height: max(884px, 100dvh); -webkit-tap-highlight-color: transparent; }
+        .screen { display: none; }
+        .screen.active { display: block; animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .app-wrapper { padding-bottom: 100px; }
+        .hidden { display: none !important; }
+    </style>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        outline: "#777587", "surface-container-high": "#eae6f3", "on-primary-fixed": "#100069",
+                        "on-tertiary-fixed": "#1a065c", "surface-container-highest": "#e4e1ee", "surface-variant": "#e4e1ee",
+                        "on-error-container": "#93000a", secondary: "#875041", "secondary-fixed": "#ffdbd1",
+                        "on-tertiary-container": "#fffbff", "on-secondary": "#ffffff", background: "#fcf8ff",
+                        "error-container": "#ffdad6", tertiary: "#5c51a0", "surface-container-lowest": "#ffffff",
+                        "surface-container": "#f0ecf9", "on-primary-container": "#fffbff", error: "#ba1a1a",
+                        "secondary-fixed-dim": "#feb5a2", "on-tertiary-fixed-variant": "#463b89", "tertiary-fixed-dim": "#c8bfff",
+                        "surface-container-low": "#f6f2ff", "secondary-container": "#feb5a2", "on-surface": "#1b1b24",
+                        "surface-bright": "#fcf8ff", "on-primary-fixed-variant": "#3622ca", "inverse-primary": "#c4c0ff",
+                        "on-background": "#1b1b24", "inverse-surface": "#302f39", "on-error": "#ffffff",
+                        "on-secondary-container": "#794436", "primary-fixed-dim": "#c4c0ff", "on-surface-variant": "#464555",
+                        "primary-container": "#675df9", "on-tertiary": "#ffffff", "primary-fixed": "#e3dfff",
+                        "surface-tint": "#4f44e2", "inverse-on-surface": "#f3effc", "tertiary-container": "#756abb",
+                        "on-primary": "#ffffff", primary: "#4d41df", "tertiary-fixed": "#e5deff",
+                        "on-secondary-fixed": "#360f05", surface: "#fcf8ff", "on-secondary-fixed-variant": "#6b392b",
+                        "outline-variant": "#c7c4d8", "surface-dim": "#dcd8e5"
+                    },
+                    borderRadius: { DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", full: "9999px" },
+                    spacing: { "container-padding": "20px", base: "8px", gutter: "16px", sm: "12px", xl: "64px", md: "24px", xs: "4px", lg: "40px" },
+                    fontFamily: { h3: ["Plus Jakarta Sans"], "label-caps": ["Be Vietnam Pro"], "body-md": ["Be Vietnam Pro"], h2: ["Plus Jakarta Sans"], "body-lg": ["Be Vietnam Pro"], h1: ["Plus Jakarta Sans"] },
+                    fontSize: {
+                        h3: ["24px", {lineHeight: "1.4", fontWeight: "600"}],
+                        "label-caps": ["12px", {lineHeight: "1", letterSpacing: "0.05em", fontWeight: "700"}],
+                        "body-md": ["16px", {lineHeight: "1.5", fontWeight: "400"}],
+                        h2: ["32px", {lineHeight: "1.3", letterSpacing: "-0.01em", fontWeight: "600"}],
+                        "body-lg": ["18px", {lineHeight: "1.6", fontWeight: "400"}],
+                        h1: ["40px", {lineHeight: "1.2", letterSpacing: "-0.02em", fontWeight: "700"}]
+                    }
+                }
+            }
+        }
+    </script>
 </head>
-<body>
-    <div id="app-container">
-        <!-- Screens will be injected or toggled here -->
-        
-        <!-- Screen: Login / Register -->
-        <div id="screen-login" class="screen active">
-            <div class="login-container">
-                <div class="logo-wrapper">
-                    <img src="tarini%20logo%20png.png" alt="Tarini Logo" class="app-logo">
-                </div>
-                
-                <div id="auth-error-msg" style="color: var(--danger); font-size: 14px; text-align: center; margin-bottom: 10px; display: none;"></div>
-                
-                <!-- Login Form -->
-                <div class="auth-form" id="login-form">
-                    <div class="input-group">
-                        <i class="ph ph-envelope"></i>
-                        <input type="email" id="login-email" placeholder="Email Address">
-                    </div>
-                    <div class="input-group">
-                        <i class="ph ph-lock"></i>
-                        <input type="password" id="login-password" placeholder="Password">
-                    </div>
-                    <button class="btn-primary" id="login-btn" onclick="handleLogin()">Sign In</button>
-                    <p class="auth-switch">Don't have an account? <span onclick="toggleAuthMode('register')">Register here</span></p>
-                </div>
+<body class="bg-background text-on-background font-body-md min-h-screen selection:bg-primary-container selection:text-on-primary-container">
 
-                <!-- Register Form -->
-                <div class="auth-form" id="register-form" style="display: none;">
-                    <div class="input-group">
-                        <i class="ph ph-user"></i>
-                        <input type="text" id="register-name" placeholder="Full Name">
-                    </div>
-                    <div class="input-group">
-                        <i class="ph ph-envelope"></i>
-                        <input type="email" id="register-email" placeholder="Email Address">
-                    </div>
-                    <div class="input-group">
-                        <i class="ph ph-lock"></i>
-                        <input type="password" id="register-password" placeholder="Password">
-                    </div>
-                    <button class="btn-primary" id="register-btn" onclick="handleRegister()">Sign Up</button>
-                    <p class="auth-switch">Already have an account? <span onclick="toggleAuthMode('login')">Sign In here</span></p>
-                </div>
+<div id="app-container" class="app-wrapper relative">
+
+    <!-- Global Header -->
+    <header id="global-header" class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-50 border-b border-indigo-100/20 dark:border-indigo-900/30 shadow-sm shadow-indigo-500/10 flex justify-between items-center px-6 py-4 max-w-full font-['Plus_Jakarta_Sans'] antialiased hidden">
+        <div class="flex items-center gap-4">
+            <h1 class="text-2xl font-bold tracking-tight text-indigo-600 dark:text-indigo-400">Tarini</h1>
+        </div>
+        <div class="flex items-center gap-4">
+            <button class="material-symbols-outlined text-slate-500 dark:text-slate-400 hover:text-indigo-600" onclick="toggleTheme()">dark_mode</button>
+            <div class="w-10 h-10 rounded-full bg-surface-container-high overflow-hidden border-2 border-primary-container/20 flex items-center justify-center text-primary cursor-pointer" onclick="navigateTo('profile')">
+                <span class="material-symbols-outlined text-2xl">account_circle</span>
             </div>
         </div>
+    </header>
 
-        <!-- Screen: Dashboard -->
-        <div id="screen-dashboard" class="screen">
-            <header class="app-header">
-                <div class="header-user">
-                    <i class="ph ph-user-circle" style="font-size: 40px; color: var(--primary);"></i>
-                    <div>
-                        <p class="greeting">Hello,</p>
-                        <h2 id="dashboard-user-name">User</h2>
+    <!-- SCREEN: LOGIN -->
+    <div id="screen-login" class="screen active">
+        <main class="relative min-h-[100vh] flex items-center justify-center p-container-padding overflow-hidden">
+            <!-- Decorative Background Elements -->
+            <div class="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-primary/5 rounded-full blur-[100px]"></div>
+            <div class="absolute bottom-[-10%] left-[-5%] w-[400px] h-[400px] bg-secondary/5 rounded-full blur-[80px]"></div>
+            <div class="w-full max-w-6xl grid lg:grid-cols-2 gap-xl items-center relative z-10">
+                <!-- Left Side: Brand Identity -->
+                <div class="hidden lg:flex flex-col space-y-md pr-lg">
+                    <div class="space-y-sm">
+                        <h1 class="font-h1 text-h1 text-primary leading-tight">Empowering Every <br/><span class="text-secondary">Step Forward.</span></h1>
+                        <p class="font-body-lg text-body-lg text-on-surface-variant max-w-md">
+                            Join a community dedicated to growth, safety, and professional excellence.
+                        </p>
                     </div>
                 </div>
-                <div style="display: flex; gap: 8px;">
-                    <button class="icon-btn theme-toggle" onclick="toggleTheme()">
-                        <i class="ph ph-moon" id="theme-icon"></i>
-                    </button>
-                    <button class="icon-btn" onclick="navigateTo('rewards')">
-                        <i class="ph ph-gift"></i>
-                    </button>
-                </div>
-            </header>
+                <!-- Right Side: Login Form -->
+                <div class="w-full max-w-md mx-auto">
+                    <div class="bg-surface-container-lowest p-lg rounded-[32px] glow-shadow border border-indigo-100/30">
+                        <div class="mb-lg text-center lg:text-left">
+                            <h2 class="text-2xl font-bold tracking-tight text-indigo-600 dark:text-indigo-400 mb-4 block lg:hidden">Tarini</h2>
+                            <h2 class="font-h2 text-h2 text-on-surface mb-xs" id="auth-title">Sign In</h2>
+                            <p class="font-body-md text-on-surface-variant">Welcome back to Tarini</p>
+                        </div>
+                        
+                        <div id="auth-error-msg" class="text-error text-center text-sm font-bold mb-4" style="display: none;"></div>
 
-            <div class="content-scroll">
-                <div class="ai-banner" onclick="navigateTo('ai-assistant')">
-                    <div class="ai-banner-text">
-                        <h3>Ask Tarini AI</h3>
-                        <p>Your personal assistant for career & skills</p>
-                    </div>
-                    <div class="ai-banner-icon">
-                        <i class="ph ph-sparkle"></i>
-                    </div>
-                </div>
+                        <!-- Login Form -->
+                        <form id="login-form" class="space-y-md" onsubmit="event.preventDefault(); handleLogin();">
+                            <div class="space-y-xs">
+                                <label class="font-label-caps text-label-caps text-on-surface-variant px-1">EMAIL ADDRESS</label>
+                                <input type="email" id="login-email" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="name@example.com"/>
+                            </div>
+                            <div class="space-y-xs">
+                                <label class="font-label-caps text-label-caps text-on-surface-variant px-1">PASSWORD</label>
+                                <input type="password" id="login-password" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="••••••••"/>
+                            </div>
+                            <div class="pt-sm">
+                                <button id="login-btn" type="submit" class="w-full h-14 bg-gradient-to-r from-primary to-tertiary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">Sign In</button>
+                            </div>
+                        </form>
 
-                <h3 class="section-title">Quick Actions</h3>
-                <div class="quick-actions">
-                    <div class="action-card" onclick="navigateTo('jobs')">
-                        <div class="action-icon jobs"><i class="ph ph-briefcase"></i></div>
-                        <span>Find Jobs</span>
-                    </div>
-                    <div class="action-card" onclick="navigateTo('skills')">
-                        <div class="action-icon skills"><i class="ph ph-book-open-text"></i></div>
-                        <span>Skill Hub</span>
-                    </div>
-                    <div class="action-card" onclick="navigateTo('shop')">
-                        <div class="action-icon shop"><i class="ph ph-storefront"></i></div>
-                        <span>My Shop</span>
-                    </div>
-                    <div class="action-card" onclick="navigateTo('applications')">
-                        <div class="action-icon apps"><i class="ph ph-file-text"></i></div>
-                        <span>Applications</span>
-                    </div>
-                </div>
+                        <!-- Register Form -->
+                        <form id="register-form" class="space-y-md" style="display: none;" onsubmit="event.preventDefault(); handleRegister();">
+                            <div class="space-y-xs">
+                                <label class="font-label-caps text-label-caps text-on-surface-variant px-1">FULL NAME</label>
+                                <input type="text" id="register-name" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="Sarah Jane"/>
+                            </div>
+                            <div class="space-y-xs">
+                                <label class="font-label-caps text-label-caps text-on-surface-variant px-1">EMAIL ADDRESS</label>
+                                <input type="email" id="register-email" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="name@example.com"/>
+                            </div>
+                            <div class="space-y-xs">
+                                <label class="font-label-caps text-label-caps text-on-surface-variant px-1">PASSWORD</label>
+                                <input type="password" id="register-password" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="••••••••"/>
+                            </div>
+                            <div class="pt-sm">
+                                <button id="register-btn" type="submit" class="w-full h-14 bg-gradient-to-r from-primary to-tertiary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">Sign Up</button>
+                            </div>
+                        </form>
 
-                <h3 class="section-title">Featured Opportunities</h3>
-                <div id="dashboard-featured-jobs">
-                    <!-- Dynamic jobs will be loaded here -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Screen: Find Jobs -->
-        <div id="screen-jobs" class="screen">
-            <header class="page-header">
-                <h2>Find Jobs</h2>
-                <div class="search-bar">
-                    <i class="ph ph-magnifying-glass"></i>
-                    <input type="text" placeholder="Search for jobs...">
-                </div>
-            </header>
-            <div class="content-scroll">
-                <div class="filter-pills">
-                    <span class="pill active">All</span>
-                    <span class="pill">Tech</span>
-                    <span class="pill">Design</span>
-                    <span class="pill">Remote</span>
-                </div>
-                
-                <div id="jobs-list-container">
-                    <!-- Dynamic jobs will be loaded here -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Screen: Skill Hub -->
-        <div id="screen-skills" class="screen">
-            <header class="page-header">
-                <h2>Skill Hub</h2>
-                <p>Learn new skills and empower yourself</p>
-            </header>
-            <div class="content-scroll">
-                <div id="skills-list-container">
-                    <!-- Dynamic courses will be loaded here -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Screen: My Shop -->
-        <div id="screen-shop" class="screen">
-            <header class="page-header">
-                <div class="header-flex">
-                    <h2>My Shop</h2>
-                    <button class="btn-primary btn-sm">+ Add Item</button>
-                </div>
-            </header>
-            <div class="content-scroll">
-                <div class="shop-stats">
-                    <div class="stat-box">
-                        <p>Total Sales</p>
-                        <h4 id="shop-total-sales">$0</h4>
-                    </div>
-                    <div class="stat-box">
-                        <p>Active Items</p>
-                        <h4 id="shop-active-items">0</h4>
-                    </div>
-                </div>
-                <h3 class="section-title">My Products</h3>
-                <div class="product-grid" id="shop-products-container">
-                    <!-- Dynamic products will be loaded here -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Screen: Profile -->
-        <div id="screen-profile" class="screen">
-            <header class="page-header center">
-                <h2>Profile</h2>
-            </header>
-            <div class="content-scroll">
-                <div class="profile-header">
-                    <i class="ph ph-user-circle" style="font-size: 80px; color: var(--primary);"></i>
-                    <h3 id="profile-user-name">User</h3>
-                    <p id="profile-user-bio">Welcome to Tarini</p>
-                </div>
-                <div class="profile-menu">
-                    <div class="menu-item" onclick="navigateTo('applications')">
-                        <div class="menu-icon"><i class="ph ph-file-text"></i></div>
-                        <span>My Applications</span>
-                        <i class="ph ph-caret-right chevron"></i>
-                    </div>
-                    <div class="menu-item" onclick="navigateTo('rewards')">
-                        <div class="menu-icon"><i class="ph ph-gift"></i></div>
-                        <span>My Rewards</span>
-                        <i class="ph ph-caret-right chevron"></i>
-                    </div>
-                    <div class="menu-item" onclick="toggleTheme()">
-                        <div class="menu-icon"><i class="ph ph-moon" id="theme-icon-profile"></i></div>
-                        <span>Dark Mode</span>
-                        <div class="theme-switch"></div>
-                    </div>
-                    <div class="menu-item text-danger" onclick="handleLogout()">
-                        <div class="menu-icon"><i class="ph ph-sign-out"></i></div>
-                        <span>Log Out</span>
+                        <p class="text-center mt-lg text-on-surface-variant font-body-md" id="toggle-to-register">
+                            New to Tarini? <a class="text-primary font-bold hover:underline cursor-pointer" onclick="toggleAuthMode('register')">Create an account</a>
+                        </p>
+                        <p class="text-center mt-lg text-on-surface-variant font-body-md" id="toggle-to-login" style="display: none;">
+                            Already have an account? <a class="text-primary font-bold hover:underline cursor-pointer" onclick="toggleAuthMode('login')">Sign In</a>
+                        </p>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Screen: AI Assistant -->
-        <div id="screen-ai-assistant" class="screen">
-            <header class="app-header">
-                <button class="icon-btn" onclick="navigateTo('dashboard')">
-                    <i class="ph ph-arrow-left"></i>
-                </button>
-                <h2>Tarini AI</h2>
-                <div class="w-24"></div>
-            </header>
-            <div class="chat-container" id="ai-chat-container">
-                <div class="chat-bubble ai">
-                    Hi there! I'm Tarini AI. How can I help you empower your day?
-                </div>
-            </div>
-            <div class="chat-input-area">
-                <input type="text" placeholder="Type a message...">
-                <button class="send-btn"><i class="ph ph-paper-plane-right"></i></button>
-            </div>
-        </div>
-
-        <!-- Screen: My Applications -->
-        <div id="screen-applications" class="screen">
-            <header class="app-header">
-                <button class="icon-btn" onclick="goBack()">
-                    <i class="ph ph-arrow-left"></i>
-                </button>
-                <h2>Applications</h2>
-                <div class="w-24"></div>
-            </header>
-            <div class="content-scroll">
-                <div id="applications-list-container">
-                    <!-- Dynamic applications will be loaded here -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Screen: My Rewards -->
-        <div id="screen-rewards" class="screen">
-            <header class="app-header">
-                <button class="icon-btn" onclick="goBack()">
-                    <i class="ph ph-arrow-left"></i>
-                </button>
-                <h2>My Rewards</h2>
-                <div class="w-24"></div>
-            </header>
-            <div class="content-scroll">
-                <div class="rewards-card">
-                    <h3>Total Points</h3>
-                    <div class="points-display">
-                        <i class="ph ph-coin gold"></i>
-                        <span id="rewards-total-points">0</span>
-                    </div>
-                    <p>Keep learning and engaging to earn more!</p>
-                </div>
-                <h3 class="section-title">Available Rewards</h3>
-                <div id="rewards-list-container">
-                    <!-- Dynamic rewards will be loaded here -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Bottom Navigation (Hidden on Login/AI Chat/Inner screens) -->
-        <nav id="bottom-nav" class="bottom-nav">
-            <div class="nav-item active" data-target="dashboard" onclick="navigateTo('dashboard')">
-                <i class="ph ph-house"></i>
-                <span>Home</span>
-            </div>
-            <div class="nav-item" data-target="jobs" onclick="navigateTo('jobs')">
-                <i class="ph ph-briefcase"></i>
-                <span>Jobs</span>
-            </div>
-            <div class="nav-item" data-target="skills" onclick="navigateTo('skills')">
-                <i class="ph ph-book-open-text"></i>
-                <span>Skills</span>
-            </div>
-            <div class="nav-item" data-target="shop" onclick="navigateTo('shop')">
-                <i class="ph ph-storefront"></i>
-                <span>Shop</span>
-            </div>
-            <div class="nav-item" data-target="profile" onclick="navigateTo('profile')">
-                <i class="ph ph-user"></i>
-                <span>Profile</span>
-            </div>
-        </nav>
+        </main>
     </div>
 
-    <script src="app.js"></script>
+    <!-- SCREEN: DASHBOARD -->
+    <div id="screen-dashboard" class="screen">
+        <main class="px-container-padding pt-base space-y-lg max-w-2xl mx-auto">
+            <!-- Welcome Section -->
+            <section class="mt-md">
+                <div class="flex flex-col gap-1">
+                    <p class="text-label-caps font-label-caps text-secondary uppercase">Welcome back,</p>
+                    <h2 class="text-h2 font-h2 text-on-surface" id="dashboard-user-name">User</h2>
+                    <p class="text-on-surface-variant font-body-md">Your professional journey is glowing today.</p>
+                </div>
+            </section>
+            
+            <!-- Profile Summary Bento Card -->
+            <section class="grid grid-cols-1 md:grid-cols-2 gap-md">
+                <div class="bg-white p-md rounded-[24px] border border-surface-container-high shadow-lg shadow-indigo-500/5 flex flex-col justify-between min-h-[180px] relative overflow-hidden">
+                    <div class="z-10">
+                        <p class="text-label-caps font-label-caps text-outline mb-1">CURRENT EARNINGS</p>
+                        <h3 class="text-h3 font-h3 text-on-surface">₹0.00</h3>
+                    </div>
+                    <div class="absolute -bottom-10 -right-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl"></div>
+                </div>
+                <div class="bg-white p-md rounded-[24px] border border-surface-container-high shadow-lg shadow-indigo-500/5 flex flex-col justify-between min-h-[180px] relative overflow-hidden">
+                    <div class="z-10">
+                        <p class="text-label-caps font-label-caps text-outline mb-1">PROFILE STRENGTH</p>
+                        <h3 class="text-h3 font-h3 text-on-surface">20% Complete</h3>
+                    </div>
+                    <div class="w-full bg-surface-container h-2 rounded-full mt-4 relative z-10">
+                        <div class="bg-secondary h-full rounded-full w-[20%] shadow-[0_0_8px_rgba(135,80,65,0.4)]"></div>
+                    </div>
+                    <button class="text-sm font-semibold text-primary mt-2 text-left z-10 hover:underline" onclick="navigateTo('profile')">Complete profile</button>
+                </div>
+            </section>
+
+            <!-- Quick Actions -->
+            <section>
+                <div class="flex items-center justify-between mb-sm">
+                    <h3 class="text-h3 font-h3">Quick Actions</h3>
+                </div>
+                <div class="flex overflow-x-auto gap-md hide-scrollbar py-2 -mx-2 px-2">
+                    <div class="flex-shrink-0 w-32 group cursor-pointer" onclick="navigateTo('jobs')">
+                        <div class="w-full aspect-square bg-primary-container/10 rounded-3xl flex items-center justify-center mb-2 group-active:scale-95 transition-transform duration-200 border border-primary/10">
+                            <span class="material-symbols-outlined text-primary text-3xl">work</span>
+                        </div>
+                        <p class="text-center text-sm font-semibold text-on-surface">Find Job</p>
+                    </div>
+                    <div class="flex-shrink-0 w-32 group cursor-pointer" onclick="navigateTo('skills')">
+                        <div class="w-full aspect-square bg-secondary-container/20 rounded-3xl flex items-center justify-center mb-2 group-active:scale-95 transition-transform duration-200 border border-secondary/10">
+                            <span class="material-symbols-outlined text-secondary text-3xl">school</span>
+                        </div>
+                        <p class="text-center text-sm font-semibold text-on-surface">Learning</p>
+                    </div>
+                    <div class="flex-shrink-0 w-32 group cursor-pointer" onclick="navigateTo('shop')">
+                        <div class="w-full aspect-square bg-surface-container-high rounded-3xl flex items-center justify-center mb-2 group-active:scale-95 transition-transform duration-200 border border-outline-variant">
+                            <span class="material-symbols-outlined text-tertiary text-3xl">storefront</span>
+                        </div>
+                        <p class="text-center text-sm font-semibold text-on-surface">My Shop</p>
+                    </div>
+                    <div class="flex-shrink-0 w-32 group cursor-pointer" onclick="navigateTo('rewards')">
+                        <div class="w-full aspect-square bg-indigo-50 rounded-3xl flex items-center justify-center mb-2 group-active:scale-95 transition-transform duration-200 border border-indigo-100">
+                            <span class="material-symbols-outlined text-indigo-400 text-3xl">military_tech</span>
+                        </div>
+                        <p class="text-center text-sm font-semibold text-on-surface">Rewards</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Recommended Jobs -->
+            <section>
+                <div class="flex items-center justify-between mb-md">
+                    <h3 class="text-h3 font-h3">Recommended Jobs</h3>
+                    <span class="text-primary font-semibold text-sm cursor-pointer" onclick="navigateTo('jobs')">View all</span>
+                </div>
+                <div id="dashboard-featured-jobs" class="space-y-gutter">
+                    <!-- Dynamic jobs will be loaded here -->
+                </div>
+            </section>
+        </main>
+        <!-- Floating Action Button for AI -->
+        <div class="fixed bottom-32 right-6 z-50">
+            <button onclick="navigateTo('ai-assistant')" class="w-16 h-16 bg-gradient-to-br from-primary to-tertiary text-white rounded-full shadow-2xl shadow-primary/40 flex items-center justify-center cursor-pointer active:scale-90 transition-all duration-200">
+                <span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- SCREEN: FIND JOB -->
+    <div id="screen-jobs" class="screen">
+        <main class="max-w-2xl mx-auto px-container-padding py-md pb-32">
+            <!-- Search Section -->
+            <div class="relative mb-md">
+                <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                    <span class="material-symbols-outlined text-outline">search</span>
+                </div>
+                <input class="w-full pl-12 pr-4 py-4 bg-surface-container-low border-none rounded-2xl focus:ring-2 focus:ring-primary/20 text-body-md transition-all shadow-sm" placeholder="Search for jobs, skills, or companies..." type="text"/>
+            </div>
+            
+            <div class="mb-lg">
+                <button class="w-full py-5 rounded-[24px] bg-gradient-to-r from-primary via-tertiary to-primary-container text-white font-h3 flex items-center justify-center gap-3 shadow-xl shadow-primary/25 active:scale-[0.98] transition-all">
+                    <span class="material-symbols-outlined" data-weight="fill">auto_awesome</span>
+                    <span>✨ Match Jobs with AI</span>
+                </button>
+            </div>
+
+            <!-- Job List Header -->
+            <div class="flex justify-between items-end mb-sm">
+                <h2 class="font-h2 text-h3 text-on-surface">Recommended for you</h2>
+            </div>
+
+            <!-- Job Cards Stack -->
+            <div id="jobs-list-container" class="space-y-gutter">
+                <!-- Dynamic jobs will be loaded here -->
+            </div>
+        </main>
+    </div>
+
+    <!-- SCREEN: SKILL HUB -->
+    <div id="screen-skills" class="screen">
+        <main class="pb-32">
+            <section class="px-container-padding pt-md pb-lg">
+                <div class="mb-lg">
+                    <h2 class="font-h2 text-h2 text-on-surface mb-xs">Skill Hub</h2>
+                    <p class="text-on-surface-variant font-body-md">Master new abilities with curated pathways.</p>
+                </div>
+            </section>
+
+            <section class="mb-lg">
+                <div class="px-container-padding flex justify-between items-center mb-md">
+                    <h3 class="font-h3 text-h3">Recommended Courses</h3>
+                </div>
+                <div id="skills-list-container" class="flex overflow-x-auto hide-scrollbar gap-gutter px-container-padding pb-4">
+                    <!-- Dynamic courses will be loaded here -->
+                </div>
+            </section>
+
+            <!-- Learning Categories -->
+            <section class="px-container-padding">
+                <h3 class="font-h3 text-h3 mb-md">Learning Categories</h3>
+                <div class="grid grid-cols-2 gap-gutter">
+                    <div class="bg-primary-container/10 p-md rounded-2xl border border-primary-container/20 flex flex-col items-start gap-4 active:scale-95 transition-all">
+                        <div class="w-12 h-12 rounded-xl bg-white flex items-center justify-center text-primary shadow-sm"><span class="material-symbols-outlined">code</span></div>
+                        <div><p class="font-bold text-on-surface">Development</p><p class="text-[12px] text-on-surface-variant">0 Courses</p></div>
+                    </div>
+                    <div class="bg-secondary-container/10 p-md rounded-2xl border border-secondary-container/20 flex flex-col items-start gap-4 active:scale-95 transition-all">
+                        <div class="w-12 h-12 rounded-xl bg-white flex items-center justify-center text-secondary shadow-sm"><span class="material-symbols-outlined">payments</span></div>
+                        <div><p class="font-bold text-on-surface">Finance</p><p class="text-[12px] text-on-surface-variant">0 Courses</p></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- SCREEN: MY SHOP -->
+    <div id="screen-shop" class="screen">
+        <main class="max-w-7xl mx-auto px-container-padding pt-base">
+            <section class="mt-sm mb-lg">
+                <div class="glass-card rounded-[32px] p-md flex flex-col md:flex-row justify-between items-start md:items-center gap-md border border-surface-container-high shadow-sm shadow-primary/5">
+                    <div>
+                        <h2 class="font-h2 text-h2 text-primary mb-xs">My Shop</h2>
+                        <p class="text-on-surface-variant font-body-md">Manage your handmade creations and sales.</p>
+                    </div>
+                    <button class="bg-primary hover:bg-primary-container text-on-primary px-xl py-base h-[56px] rounded-full font-bold flex items-center gap-2 shadow-[0_8px_20px_-6px_rgba(77,65,223,0.4)] transition-all active:scale-95">
+                        <span class="material-symbols-outlined">add_circle</span> Add Product
+                    </button>
+                </div>
+            </section>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+                <div class="lg:col-span-8">
+                    <div class="flex items-center justify-between mb-sm px-xs">
+                        <h3 class="font-h3 text-h3 text-on-surface">Active Listings</h3>
+                    </div>
+                    <div id="shop-products-container" class="grid grid-cols-2 md:grid-cols-3 gap-gutter">
+                        <!-- Dynamic products will be loaded here -->
+                    </div>
+                </div>
+                <div class="lg:col-span-4">
+                    <div class="sticky top-28 bg-surface-container-low rounded-[32px] p-md border border-surface-container-high">
+                        <div class="mt-lg pt-lg border-t border-surface-container-high">
+                            <div class="flex items-center gap-sm">
+                                <div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center">
+                                    <span class="material-symbols-outlined text-on-secondary-container">trending_up</span>
+                                </div>
+                                <div>
+                                    <p class="font-label-caps text-label-caps text-outline">WEEKLY SALES</p>
+                                    <p class="font-h3 text-h3 text-on-surface" id="shop-total-sales">$0.00</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- SCREEN: APPLICATIONS -->
+    <div id="screen-applications" class="screen">
+        <main class="max-w-2xl mx-auto px-container-padding py-md pb-xl">
+            <div class="mb-lg">
+                <h1 class="font-h1 text-h1 text-on-surface mb-xs">My Applications</h1>
+                <p class="font-body-md text-body-md text-on-surface-variant">Track your professional journey and application statuses.</p>
+            </div>
+            
+            <div id="applications-list-container" class="space-y-gutter">
+                <!-- Dynamic applications will be loaded here -->
+            </div>
+
+            <!-- Empty State -->
+            <div class="mt-xl text-center py-lg px-md border-2 border-dashed border-surface-container-highest rounded-[32px]">
+                <span class="material-symbols-outlined text-surface-container-highest text-[64px] mb-sm">work_history</span>
+                <h4 class="font-h3 text-on-surface-variant">Looking for more?</h4>
+                <p class="text-on-surface-variant font-body-md mt-xs">Explore new job openings tailored for your skills.</p>
+                <button class="mt-md bg-secondary-container text-on-secondary-container px-lg py-sm rounded-full font-label-caps text-label-caps shadow-sm hover:shadow-md transition-all" onclick="navigateTo('jobs')">Explore Jobs</button>
+            </div>
+        </main>
+    </div>
+
+    <!-- SCREEN: REWARDS -->
+    <div id="screen-rewards" class="screen">
+        <main class="max-w-5xl mx-auto px-container-padding py-md pb-32">
+            <section class="mb-lg">
+                <div class="relative overflow-hidden rounded-[32px] bg-primary p-md text-on-primary shadow-xl custom-shadow-indigo">
+                    <div class="absolute -right-10 -top-10 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
+                    <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-md">
+                        <div class="text-center md:text-left">
+                            <h1 class="font-h1 text-h1 mb-xs">Your Rewards</h1>
+                            <p class="font-body-lg text-body-lg opacity-90 max-w-md">Celebrating every milestone on your journey to empowerment.</p>
+                        </div>
+                        <div class="bg-white/20 backdrop-blur-md rounded-2xl p-md flex items-center gap-md border border-white/20">
+                            <div class="text-center">
+                                <p class="font-label-caps text-label-caps uppercase opacity-70">Total Coins</p>
+                                <p class="font-h2 text-h2" id="rewards-total-points">0</p>
+                            </div>
+                            <div class="w-px h-12 bg-white/20"></div>
+                            <div class="text-center">
+                                <p class="font-label-caps text-label-caps uppercase opacity-70">Badges</p>
+                                <p class="font-h2 text-h2">0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-md">
+                <section class="lg:col-span-2">
+                    <div class="flex items-center justify-between mb-md">
+                        <h2 class="font-h2 text-h2 text-on-surface">Earned Badges</h2>
+                    </div>
+                    <div id="rewards-list-container" class="grid grid-cols-2 sm:grid-cols-3 gap-md">
+                        <!-- Dynamic badges will be loaded here -->
+                        <div class="bg-surface-container rounded-[24px] p-base flex flex-col items-center justify-center text-center border border-dashed border-outline-variant">
+                            <p class="font-h3 text-[24px] text-outline">+</p>
+                            <p class="font-label-caps text-outline">Keep Going!</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- SCREEN: PROFILE -->
+    <div id="screen-profile" class="screen">
+        <main class="max-w-2xl mx-auto px-container-padding py-md space-y-md pb-32">
+            <section class="relative bg-surface-container-low rounded-[32px] p-md overflow-hidden shadow-sm border border-outline-variant/30">
+                <div class="flex flex-col items-center text-center space-y-sm">
+                    <div class="relative">
+                        <div class="w-32 h-32 rounded-full p-1 bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-white bg-white">
+                            <span class="material-symbols-outlined text-surface-container-high" style="font-size: 80px;">account_circle</span>
+                        </div>
+                    </div>
+                    <div>
+                        <h1 class="font-h2 text-h2 text-on-surface" id="profile-user-name">User</h1>
+                        <p class="text-primary font-medium" id="profile-user-bio">Empowered Member</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="space-y-sm">
+                <h2 class="font-h3 text-h3 text-on-surface px-xs">Account Settings</h2>
+                <div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 divide-y divide-outline-variant/20 overflow-hidden shadow-sm">
+                    <div class="flex items-center justify-between p-md hover:bg-surface-container transition-colors cursor-pointer group" onclick="toggleTheme()">
+                        <div class="flex items-center gap-md">
+                            <div class="w-10 h-10 rounded-lg bg-tertiary/10 flex items-center justify-center text-tertiary">
+                                <span class="material-symbols-outlined">dark_mode</span>
+                            </div>
+                            <div>
+                                <p class="font-body-md font-semibold text-on-surface">Dark Mode</p>
+                                <p class="text-sm text-on-surface-variant">Switch theme</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <button onclick="handleLogout()" class="w-full p-md text-error font-semibold flex items-center justify-center gap-2 hover:bg-error-container/20 rounded-xl transition-colors">
+                <span class="material-symbols-outlined">logout</span>
+                Sign Out
+            </button>
+        </main>
+    </div>
+
+    <!-- SCREEN: AI ASSISTANT -->
+    <div id="screen-ai-assistant" class="screen">
+        <main class="max-w-2xl mx-auto px-container-padding py-md pb-32 flex flex-col h-[90vh]">
+            <div class="bg-primary/10 rounded-2xl p-4 flex items-center gap-4 mb-4">
+                <div class="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white">
+                    <span class="material-symbols-outlined">smart_toy</span>
+                </div>
+                <div>
+                    <h3 class="font-bold text-lg">Tarini AI</h3>
+                    <p class="text-sm text-on-surface-variant">Your personal career assistant</p>
+                </div>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto space-y-4 p-4 bg-surface-container-lowest rounded-2xl border border-outline-variant/30" id="ai-chat-container">
+                <div class="bg-surface-container-high rounded-2xl rounded-tl-none p-4 w-3/4">
+                    <p>Hi there! I'm Tarini AI. How can I help you empower your day?</p>
+                </div>
+            </div>
+            
+            <div class="mt-4 flex gap-2">
+                <input type="text" class="flex-1 bg-surface-container-low border-none rounded-xl px-4 py-3" placeholder="Type a message..."/>
+                <button class="bg-primary text-white w-12 h-12 rounded-xl flex items-center justify-center hover:bg-primary-container">
+                    <span class="material-symbols-outlined">send</span>
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- BOTTOM NAVIGATION -->
+    <nav id="bottom-nav" class="fixed bottom-0 left-0 w-full z-50 bg-white/90 dark:bg-slate-950/90 backdrop-blur-2xl border-t border-indigo-100/20 dark:border-indigo-900/20 shadow-[0_-8px_30px_rgb(108,99,255,0.08)] rounded-t-[32px] flex justify-around items-center px-4 pt-3 pb-8 hidden">
+        <div class="nav-item flex flex-col items-center justify-center cursor-pointer transition-all active:scale-95 text-slate-400 dark:text-slate-500" data-target="dashboard" onclick="navigateTo('dashboard')">
+            <span class="material-symbols-outlined nav-icon">home</span>
+            <span class="text-[11px] font-semibold font-['Plus_Jakarta_Sans']">Home</span>
+        </div>
+        <div class="nav-item flex flex-col items-center justify-center cursor-pointer transition-all active:scale-95 text-slate-400 dark:text-slate-500" data-target="jobs" onclick="navigateTo('jobs')">
+            <span class="material-symbols-outlined nav-icon">work_outline</span>
+            <span class="text-[11px] font-semibold font-['Plus_Jakarta_Sans']">Jobs</span>
+        </div>
+        <div class="nav-item flex flex-col items-center justify-center cursor-pointer transition-all active:scale-95 text-slate-400 dark:text-slate-500" data-target="skills" onclick="navigateTo('skills')">
+            <span class="material-symbols-outlined nav-icon">auto_stories</span>
+            <span class="text-[11px] font-semibold font-['Plus_Jakarta_Sans']">Skills</span>
+        </div>
+        <div class="nav-item flex flex-col items-center justify-center cursor-pointer transition-all active:scale-95 text-slate-400 dark:text-slate-500" data-target="shop" onclick="navigateTo('shop')">
+            <span class="material-symbols-outlined nav-icon">shopping_bag</span>
+            <span class="text-[11px] font-semibold font-['Plus_Jakarta_Sans']">Shop</span>
+        </div>
+        <div class="nav-item flex flex-col items-center justify-center cursor-pointer transition-all active:scale-95 text-slate-400 dark:text-slate-500" data-target="profile" onclick="navigateTo('profile')">
+            <span class="material-symbols-outlined nav-icon">person_outline</span>
+            <span class="text-[11px] font-semibold font-['Plus_Jakarta_Sans']">Profile</span>
+        </div>
+    </nav>
+
+</div>
+
+<script src="app.js"></script>
 </body>
 </html>
