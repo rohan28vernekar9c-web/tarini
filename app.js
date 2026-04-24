@@ -215,7 +215,12 @@ auth.onAuthStateChanged((user) => {
 
     if (user) {
         // User is signed in. Update UI and go to dashboard
-        document.querySelector('.greeting').nextElementSibling.textContent = user.displayName || 'Welcome Back!';
+        const displayName = user.displayName || 'User';
+        const dashboardUserNameEl = document.getElementById('dashboard-user-name');
+        if (dashboardUserNameEl) dashboardUserNameEl.textContent = displayName;
+        
+        const profileUserNameEl = document.getElementById('profile-user-name');
+        if (profileUserNameEl) profileUserNameEl.textContent = displayName;
         
         // Prevent navigating to dashboard if we are already inside the app
         if (historyStack[historyStack.length - 1] === 'login') {
