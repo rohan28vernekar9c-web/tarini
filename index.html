@@ -648,48 +648,249 @@
         <!-- SCREEN: PROFILE -->
         <div id="screen-profile" class="screen">
             <main class="max-w-2xl mx-auto px-container-padding py-md space-y-md pb-32">
-                <section
-                    class="relative bg-surface-container-low rounded-[32px] p-md overflow-hidden shadow-sm border border-outline-variant/30">
-                    <div class="flex flex-col items-center text-center space-y-sm">
-                        <div class="relative">
-                            <div
-                                class="w-32 h-32 rounded-full p-1 bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-white bg-white">
-                                <span class="material-symbols-outlined text-surface-container-high"
-                                    style="font-size: 80px;">account_circle</span>
+
+                <!-- Profile Header Card -->
+                <section class="relative bg-gradient-to-br from-primary to-tertiary rounded-[32px] p-md overflow-hidden shadow-lg text-on-primary">
+                    <div class="absolute -right-10 -top-10 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
+                    <div class="relative z-10">
+                        <!-- Top row: avatar + actions -->
+                        <div class="flex items-start justify-between mb-md">
+                            <div class="relative">
+                                <div class="w-20 h-20 rounded-full bg-white/20 border-2 border-white/40 overflow-hidden flex items-center justify-center cursor-pointer" onclick="document.getElementById('profile-pic-input').click()">
+                                    <img id="profile-avatar-img" class="w-full h-full object-cover hidden" alt=""/>
+                                    <span id="profile-avatar-icon" class="material-symbols-outlined text-white" style="font-size:52px">account_circle</span>
+                                </div>
+                                <div class="absolute -bottom-1 -right-1 w-6 h-6 bg-white rounded-full flex items-center justify-center cursor-pointer shadow" onclick="document.getElementById('profile-pic-input').click()">
+                                    <span class="material-symbols-outlined text-primary" style="font-size:14px">photo_camera</span>
+                                </div>
+                                <input type="file" id="profile-pic-input" accept="image/*" class="hidden" onchange="handleProfilePicChange(event)"/>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="openEditProfile()" class="bg-white/20 hover:bg-white/30 text-white text-xs font-semibold px-3 h-8 rounded-full flex items-center gap-1 transition-all active:scale-95">
+                                    <span class="material-symbols-outlined" style="font-size:14px">edit</span> Edit
+                                </button>
+                                <button onclick="shareProfile()" class="w-8 h-8 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-all active:scale-95">
+                                    <span class="material-symbols-outlined" style="font-size:16px">share</span>
+                                </button>
                             </div>
                         </div>
-                        <div>
-                            <h1 class="font-h2 text-h2 text-on-surface" id="profile-user-name">User</h1>
-                            <p class="text-primary font-medium" id="profile-user-bio">Empowered Member</p>
+                        <!-- Name & title -->
+                        <h2 class="font-h2 text-h2 text-white leading-tight" id="profile-user-name">User</h2>
+                        <p class="text-white/80 text-sm font-medium mt-1" id="profile-display-title">Empowered Member</p>
+                        <!-- Meta row -->
+                        <div class="flex flex-wrap gap-x-md gap-y-xs mt-sm">
+                            <span class="flex items-center gap-1 text-white/70 text-xs" id="profile-display-location-wrap">
+                                <span class="material-symbols-outlined" style="font-size:14px">location_on</span>
+                                <span id="profile-display-location">Add location</span>
+                            </span>
+                            <span class="flex items-center gap-1 text-white/70 text-xs" id="profile-display-website-wrap">
+                                <span class="material-symbols-outlined" style="font-size:14px">link</span>
+                                <span id="profile-display-website">Add website</span>
+                            </span>
+                            <span class="flex items-center gap-1 text-white/70 text-xs">
+                                <span class="material-symbols-outlined" style="font-size:14px">calendar_today</span>
+                                <span id="profile-display-joined">Joined recently</span>
+                            </span>
                         </div>
                     </div>
                 </section>
 
-                <section class="space-y-sm">
-                    <h2 class="font-h3 text-h3 text-on-surface px-xs">Account Settings</h2>
-                    <div
-                        class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 divide-y divide-outline-variant/20 overflow-hidden shadow-sm">
-                        <div class="flex items-center justify-between p-md hover:bg-surface-container transition-colors cursor-pointer group"
-                            onclick="toggleTheme()">
-                            <div class="flex items-center gap-md">
-                                <div
-                                    class="w-10 h-10 rounded-lg bg-tertiary/10 flex items-center justify-center text-tertiary">
-                                    <span class="material-symbols-outlined">dark_mode</span>
+                <!-- Personal Section -->
+                <section class="bg-white rounded-[24px] border border-surface-container-high shadow-sm overflow-hidden">
+                    <div class="flex items-center justify-between px-md pt-md pb-sm">
+                        <h3 class="font-semibold text-on-surface">Personal</h3>
+                        <button onclick="openEditProfile()" class="text-primary text-sm font-semibold flex items-center gap-1 active:scale-95">
+                            <span class="material-symbols-outlined" style="font-size:16px">edit</span> Edit
+                        </button>
+                    </div>
+                    <div class="divide-y divide-surface-container-high">
+                        <div class="px-md py-sm">
+                            <p class="text-xs text-outline font-semibold uppercase mb-1">Bio</p>
+                            <p class="text-on-surface text-sm" id="profile-display-bio">No bio yet. Tell the world about yourself!</p>
+                        </div>
+                        <div class="px-md py-sm flex justify-between items-center">
+                            <div>
+                                <p class="text-xs text-outline font-semibold uppercase mb-1">Full Name</p>
+                                <p class="text-on-surface text-sm" id="profile-display-fullname">—</p>
+                            </div>
+                        </div>
+                        <div class="px-md py-sm pb-md flex justify-between items-center">
+                            <div>
+                                <p class="text-xs text-outline font-semibold uppercase mb-1">Visibility</p>
+                                <p class="text-on-surface text-sm" id="profile-display-visibility">Public</p>
+                            </div>
+                            <button onclick="toggleProfileVisibility()" class="text-xs bg-primary/10 text-primary font-semibold px-3 py-1 rounded-full active:scale-95">Toggle</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Professional Section -->
+                <section class="bg-white rounded-[24px] border border-surface-container-high shadow-sm overflow-hidden">
+                    <div class="flex items-center justify-between px-md pt-md pb-sm">
+                        <h3 class="font-semibold text-on-surface">Professional</h3>
+                        <button onclick="openEditProfile()" class="text-primary text-sm font-semibold flex items-center gap-1 active:scale-95">
+                            <span class="material-symbols-outlined" style="font-size:16px">edit</span> Manage
+                        </button>
+                    </div>
+                    <div class="divide-y divide-surface-container-high">
+                        <div class="px-md py-sm">
+                            <p class="text-xs text-outline font-semibold uppercase mb-sm">Skills</p>
+                            <div id="profile-skills-display" class="flex flex-wrap gap-2"></div>
+                            <button onclick="openEditProfile()" class="mt-sm text-xs text-primary font-semibold flex items-center gap-1">
+                                <span class="material-symbols-outlined" style="font-size:14px">add_circle</span> Add skill
+                            </button>
+                        </div>
+                        <div class="px-md py-sm pb-md">
+                            <p class="text-xs text-outline font-semibold uppercase mb-sm">Resume</p>
+                            <div id="profile-resume-display" class="flex items-center gap-3">
+                                <span class="material-symbols-outlined text-outline-variant text-3xl">description</span>
+                                <div>
+                                    <p class="text-sm text-on-surface-variant" id="profile-resume-name">No resume uploaded</p>
+                                    <p class="text-xs text-outline" id="profile-resume-date"></p>
+                                </div>
+                            </div>
+                            <label class="mt-sm inline-flex items-center gap-1 text-xs text-primary font-semibold cursor-pointer">
+                                <span class="material-symbols-outlined" style="font-size:14px">upload</span> Upload resume
+                                <input type="file" accept=".pdf,.doc,.docx" class="hidden" onchange="handleResumeUpload(event)"/>
+                            </label>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Preferences Section -->
+                <section class="bg-white rounded-[24px] border border-surface-container-high shadow-sm overflow-hidden">
+                    <div class="px-md pt-md pb-sm">
+                        <h3 class="font-semibold text-on-surface">Preferences</h3>
+                    </div>
+                    <div class="divide-y divide-surface-container-high">
+                        <div class="flex items-center justify-between px-md py-sm">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                                    <span class="material-symbols-outlined" style="font-size:18px">notifications</span>
                                 </div>
                                 <div>
-                                    <p class="font-body-md font-semibold text-on-surface">Dark Mode</p>
-                                    <p class="text-sm text-on-surface-variant">Switch theme</p>
+                                    <p class="text-sm font-semibold text-on-surface">Push Notifications</p>
+                                    <p class="text-xs text-outline">Alerts and updates</p>
                                 </div>
                             </div>
+                            <button id="notif-toggle" onclick="togglePref('notifications')" class="w-12 h-6 rounded-full bg-primary flex items-center px-1 transition-all">
+                                <span id="notif-knob" class="w-4 h-4 bg-white rounded-full shadow transition-all translate-x-6"></span>
+                            </button>
+                        </div>
+                        <div class="flex items-center justify-between px-md py-sm" onclick="toggleTheme()">
+                            <div class="flex items-center gap-3 cursor-pointer">
+                                <div class="w-9 h-9 rounded-xl bg-tertiary/10 flex items-center justify-center text-tertiary">
+                                    <span class="material-symbols-outlined" style="font-size:18px">dark_mode</span>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-semibold text-on-surface">Dark Mode</p>
+                                    <p class="text-xs text-outline">Switch appearance</p>
+                                </div>
+                            </div>
+                            <span class="material-symbols-outlined text-outline">chevron_right</span>
+                        </div>
+                        <div class="flex items-center justify-between px-md py-sm pb-md">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary">
+                                    <span class="material-symbols-outlined" style="font-size:18px">language</span>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-semibold text-on-surface">Language</p>
+                                    <p class="text-xs text-outline" id="pref-language-display">English</p>
+                                </div>
+                            </div>
+                            <select id="pref-language" onchange="savePref('language', this.value)" class="text-xs text-primary font-semibold bg-transparent border-none outline-none cursor-pointer">
+                                <option value="English">English</option>
+                                <option value="Hindi">Hindi</option>
+                                <option value="Tamil">Tamil</option>
+                                <option value="Telugu">Telugu</option>
+                                <option value="Marathi">Marathi</option>
+                            </select>
                         </div>
                     </div>
                 </section>
 
-                <button onclick="handleLogout()"
-                    class="w-full p-md text-error font-semibold flex items-center justify-center gap-2 hover:bg-error-container/20 rounded-xl transition-colors">
-                    <span class="material-symbols-outlined">logout</span>
-                    Sign Out
+                <!-- Account & Security Section -->
+                <section class="bg-white rounded-[24px] border border-surface-container-high shadow-sm overflow-hidden">
+                    <div class="px-md pt-md pb-sm">
+                        <h3 class="font-semibold text-on-surface">Account &amp; Security</h3>
+                    </div>
+                    <div class="divide-y divide-surface-container-high">
+                        <div class="flex items-center justify-between px-md py-sm cursor-pointer active:bg-surface-container" onclick="alert('Change password feature coming soon.')">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                                    <span class="material-symbols-outlined" style="font-size:18px">lock</span>
+                                </div>
+                                <p class="text-sm font-semibold text-on-surface">Change Password</p>
+                            </div>
+                            <span class="material-symbols-outlined text-outline">chevron_right</span>
+                        </div>
+                        <div class="flex items-center justify-between px-md py-sm">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-tertiary/10 flex items-center justify-center text-tertiary">
+                                    <span class="material-symbols-outlined" style="font-size:18px">verified_user</span>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-semibold text-on-surface">Two-Factor Auth</p>
+                                    <p class="text-xs text-outline" id="tfa-status">Disabled</p>
+                                </div>
+                            </div>
+                            <button onclick="togglePref('tfa')" class="text-xs bg-primary/10 text-primary font-semibold px-3 py-1 rounded-full active:scale-95">Enable</button>
+                        </div>
+                        <div class="flex items-center justify-between px-md py-sm pb-md cursor-pointer active:bg-surface-container" onclick="alert('Privacy settings coming soon.')">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary">
+                                    <span class="material-symbols-outlined" style="font-size:18px">privacy_tip</span>
+                                </div>
+                                <p class="text-sm font-semibold text-on-surface">Privacy Settings</p>
+                            </div>
+                            <span class="material-symbols-outlined text-outline">chevron_right</span>
+                        </div>
+                    </div>
+                </section>
+
+                <button onclick="handleLogout()" class="w-full p-md text-error font-semibold flex items-center justify-center gap-2 hover:bg-error-container/20 rounded-xl transition-colors">
+                    <span class="material-symbols-outlined">logout</span> Sign Out
                 </button>
+            </main>
+        </div>
+
+        <!-- SCREEN: EDIT PROFILE -->
+        <div id="screen-edit-profile" class="screen">
+            <main class="max-w-2xl mx-auto px-container-padding py-md pb-16">
+                <div class="flex items-center gap-md mb-lg">
+                    <button onclick="navigateTo('profile')" class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center active:scale-90 transition-all">
+                        <span class="material-symbols-outlined">arrow_back</span>
+                    </button>
+                    <h2 class="font-h2 text-h2 text-on-surface">Edit Profile</h2>
+                </div>
+                <form id="edit-profile-form" class="space-y-md" onsubmit="event.preventDefault(); saveProfile();">
+                    <div class="space-y-xs">
+                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">FULL NAME</label>
+                        <input type="text" id="ep-name" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="Your full name"/>
+                    </div>
+                    <div class="space-y-xs">
+                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">TITLE / ROLE</label>
+                        <input type="text" id="ep-title" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="e.g. Artisan & Entrepreneur"/>
+                    </div>
+                    <div class="space-y-xs">
+                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">BIO</label>
+                        <textarea id="ep-bio" rows="3" class="w-full bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md py-3 transition-all resize-none" placeholder="Tell the world about yourself..."></textarea>
+                    </div>
+                    <div class="space-y-xs">
+                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">LOCATION</label>
+                        <input type="text" id="ep-location" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="City, State"/>
+                    </div>
+                    <div class="space-y-xs">
+                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">WEBSITE / PORTFOLIO</label>
+                        <input type="url" id="ep-website" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="https://yoursite.com"/>
+                    </div>
+                    <div class="space-y-xs">
+                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">SKILLS (comma separated)</label>
+                        <input type="text" id="ep-skills" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="e.g. Handicrafts, Leadership, Sewing"/>
+                    </div>
+                    <button type="submit" class="w-full h-14 bg-gradient-to-r from-primary to-tertiary text-on-primary font-bold rounded-xl shadow-lg shadow-primary/20 active:scale-95 transition-all">Save Changes</button>
+                </form>
             </main>
         </div>
 

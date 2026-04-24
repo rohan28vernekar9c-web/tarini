@@ -18,7 +18,7 @@ const db = firebase.firestore();
 let historyStack = ['login'];
 
 // List of screens that should hide the bottom navigation
-const screensWithoutNav = ['login', 'ai-assistant', 'applications', 'rewards', 'post-product', 'product-detail'];
+const screensWithoutNav = ['login', 'ai-assistant', 'applications', 'rewards', 'post-product', 'product-detail', 'edit-profile'];
 
 function navigateTo(screenId) {
     // Hide all screens
@@ -38,6 +38,7 @@ function navigateTo(screenId) {
         updateBottomNav(screenId);
 
         if (screenId === 'shop') renderShopProducts();
+        if (screenId === 'profile') loadProfileScreen();
     } else {
         console.error(`Screen 'screen-${screenId}' not found.`);
     }
@@ -62,6 +63,7 @@ function navigateToWithOutHistory(screenId) {
         targetScreen.classList.add('active');
         updateBottomNav(screenId);
         if (screenId === 'shop') renderShopProducts();
+        if (screenId === 'profile') loadProfileScreen();
     }
 }
 
@@ -97,6 +99,168 @@ function updateBottomNav(screenId) {
         }
     });
 }
+
+// --- PROFILE LOGIC ---
+
+function getProfileData() {
+    return JSON.parse(localStorage.getItem('profileData') || '{}');
+}
+
+function saveProfileData(data) {
+    localStorage.setItem('profileData', JSON.stringify(data));
+}
+
+function loadProfileScreen() {
+    const d = getProfileData();
+    const user = auth.currentUser;
+    const name = d.name || (user && user.displayName) || 'User';
+
+    document.getElementById('profile-user-name').textContent = name;
+    document.getElementById('profile-display-fullname').textContent = name;
+    document.getElementById('profile-display-title').textContent = d.title || 'Empowered Member';
+    document.getElementById('profile-display-bio').textContent = d.bio || 'No bio yet. Tell the world about yourself!';
+    document.getElementById('profile-display-location').textContent = d.location || 'Add location';
+    document.getElementById('profile-display-website').textContent = d.website || 'Add website';
+    document.getElementById('profile-display-visibility').textContent = d.visibility || 'Public';
+    document.getElementById('profile-display-joined').textContent = d.joined || ('Joined ' + new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }));
+
+    // Avatar
+    const img = document.getElementById('profile-avatar-img');
+    const icon = document.getElementById('profile-avatar-icon');
+    if (d.avatar) { img.src = d.avatar; img.classList.remove('hidden'); icon.classList.add('hidden'); }
+    else { img.classList.add('hidden'); icon.classList.remove('hidden'); }
+
+    // Skills
+    const skillsEl = document.getElementById('profile-skills-display');
+    const skills = d.skills ? d.skills.split(',').map(s => s.trim()).filter(Boolean) : [];
+    skillsEl.innerHTML = skills.length
+        ? skills.map(s => `<span class="text-xs bg-primary/10 text-primary font-semibold px-3 py-1 rounded-full">${s}</span>`).join('')
+        : '<span class="text-sm text-on-surface-variant">No skills added yet.</span>';
+
+    // Resume
+    document.getElementById('profile-resume-name').textContent = d.resumeName || 'No resume uploaded';
+    document.getElementById('profile-resume-date').textContent = d.resumeDate || '';
+
+    // Prefs
+    const prefs = d.prefs || {};
+    updateNotifToggle(prefs.notifications !== false);
+    const langEl = document.getElementById('pref-language');
+    if (langEl) langEl.value = prefs.language || 'English';
+    document.getElementById('pref-language-display').textContent = prefs.language || 'English';
+    const tfaEl = document.getElementById('tfa-status');
+    const tfaBtn = document.querySelector('#tfa-status + button') || document.querySelector('[onclick="togglePref(\'tfa\')"]');
+    if (tfaEl) tfaEl.textContent = prefs.tfa ? 'Enabled' : 'Disabled';
+    if (tfaBtn) tfaBtn.textContent = prefs.tfa ? 'Disable' : 'Enable';
+
+    // Also update dashboard name
+    const dashEl = document.getElementById('dashboard-user-name');
+    if (dashEl) dashEl.textContent = name;
+}
+window.loadProfileScreen = loadProfileScreen;
+
+function openEditProfile() {
+    const d = getProfileData();
+    const user = auth.currentUser;
+    document.getElementById('ep-name').value = d.name || (user && user.displayName) || '';
+    document.getElementById('ep-title').value = d.title || '';
+    document.getElementById('ep-bio').value = d.bio || '';
+    document.getElementById('ep-location').value = d.location || '';
+    document.getElementById('ep-website').value = d.website || '';
+    document.getElementById('ep-skills').value = d.skills || '';
+    navigateTo('edit-profile');
+}
+window.openEditProfile = openEditProfile;
+
+function saveProfile() {
+    const d = getProfileData();
+    d.name = document.getElementById('ep-name').value.trim();
+    d.title = document.getElementById('ep-title').value.trim();
+    d.bio = document.getElementById('ep-bio').value.trim();
+    d.location = document.getElementById('ep-location').value.trim();
+    d.website = document.getElementById('ep-website').value.trim();
+    d.skills = document.getElementById('ep-skills').value.trim();
+    if (!d.joined) d.joined = 'Joined ' + new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+    saveProfileData(d);
+    navigateTo('profile');
+}
+window.saveProfile = saveProfile;
+
+function handleProfilePicChange(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        const d = getProfileData();
+        d.avatar = e.target.result;
+        saveProfileData(d);
+        loadProfileScreen();
+    };
+    reader.readAsDataURL(file);
+}
+window.handleProfilePicChange = handleProfilePicChange;
+
+function toggleProfileVisibility() {
+    const d = getProfileData();
+    d.visibility = (d.visibility === 'Private') ? 'Public' : 'Private';
+    saveProfileData(d);
+    document.getElementById('profile-display-visibility').textContent = d.visibility;
+}
+window.toggleProfileVisibility = toggleProfileVisibility;
+
+function handleResumeUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const d = getProfileData();
+    d.resumeName = file.name;
+    d.resumeDate = 'Uploaded ' + new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    saveProfileData(d);
+    document.getElementById('profile-resume-name').textContent = d.resumeName;
+    document.getElementById('profile-resume-date').textContent = d.resumeDate;
+}
+window.handleResumeUpload = handleResumeUpload;
+
+function togglePref(key) {
+    const d = getProfileData();
+    if (!d.prefs) d.prefs = {};
+    d.prefs[key] = !d.prefs[key];
+    saveProfileData(d);
+    if (key === 'notifications') updateNotifToggle(d.prefs.notifications);
+    if (key === 'tfa') {
+        const tfaEl = document.getElementById('tfa-status');
+        const tfaBtn = document.querySelector('[onclick="togglePref(\'tfa\')"]');
+        if (tfaEl) tfaEl.textContent = d.prefs.tfa ? 'Enabled' : 'Disabled';
+        if (tfaBtn) tfaBtn.textContent = d.prefs.tfa ? 'Disable' : 'Enable';
+    }
+}
+window.togglePref = togglePref;
+
+function savePref(key, value) {
+    const d = getProfileData();
+    if (!d.prefs) d.prefs = {};
+    d.prefs[key] = value;
+    saveProfileData(d);
+    if (key === 'language') document.getElementById('pref-language-display').textContent = value;
+}
+window.savePref = savePref;
+
+function updateNotifToggle(on) {
+    const btn = document.getElementById('notif-toggle');
+    const knob = document.getElementById('notif-knob');
+    if (!btn || !knob) return;
+    if (on) { btn.classList.add('bg-primary'); btn.classList.remove('bg-outline-variant'); knob.classList.add('translate-x-6'); knob.classList.remove('translate-x-0'); }
+    else { btn.classList.remove('bg-primary'); btn.classList.add('bg-outline-variant'); knob.classList.remove('translate-x-6'); knob.classList.add('translate-x-0'); }
+}
+
+function shareProfile() {
+    const d = getProfileData();
+    const name = d.name || 'User';
+    if (navigator.share) {
+        navigator.share({ title: name + ' on Tarini', text: 'Check out ' + name + '\'s profile on Tarini!' });
+    } else {
+        alert('Share link copied! (Feature requires HTTPS)');
+    }
+}
+window.shareProfile = shareProfile;
 
 // --- SHOP LOGIC ---
 
@@ -293,6 +457,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateBottomNav('login');
     
     renderShopProducts();
+    loadProfileScreen();
 
     // Load theme from localStorage
     const savedTheme = localStorage.getItem('theme');
