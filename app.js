@@ -15,19 +15,32 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 // List of screens that should hide the bottom navigation
-const screensWithoutNav = ['login', 'notifications', 'ai-assistant', 'applications', 'rewards', 'post-product', 'product-detail', 'edit-profile'];
+const screensWithoutNav = ['login', 'notifications', 'ai-assistant', 'applications', 'rewards', 'post-product', 'product-detail', 'edit-profile', 'job-detail', 'job-apply', 'skill-categories', 'market-categories', 'my-shop', 'cart'];
+const _navStack = [];
 
 function navigateTo(screenId) {
     const screens = document.querySelectorAll('.screen');
     screens.forEach(s => s.classList.remove('active'));
     const targetScreen = document.getElementById(`screen-${screenId}`);
     if (targetScreen) {
+        // Track nav history for back navigation
+        const currentActive = document.querySelector('.screen.active');
+        if (currentActive) {
+            const currentId = currentActive.id.replace('screen-', '');
+            if (currentId !== screenId) _navStack.push(currentId);
+        }
         targetScreen.classList.add('active');
         updateBottomNav(screenId);
         if (screenId === 'shop') renderShopProducts();
         if (screenId === 'profile') loadProfileScreen();
         if (screenId === 'dashboard') loadDashboardEarnings();
         if (screenId === 'notifications') loadNotificationsScreen();
+        if (screenId === 'jobs') initJobsPage();
+        if (screenId === 'applications') loadApplicationsScreen();
+        if (screenId === 'skills') initSkillsPage();
+        if (screenId === 'shop') initMarketplace();
+        if (screenId === 'my-shop') initMyShop();
+        if (screenId === 'cart') renderCart();
     } else {
         console.error(`Screen 'screen-${screenId}' not found.`);
     }
@@ -50,6 +63,9 @@ function navigateToWithOutHistory(screenId) {
         if (screenId === 'profile') loadProfileScreen();
         if (screenId === 'dashboard') loadDashboardEarnings();
         if (screenId === 'notifications') loadNotificationsScreen();
+        if (screenId === 'jobs') initJobsPage();
+        if (screenId === 'applications') loadApplicationsScreen();
+        if (screenId === 'skills') initSkillsPage();
     }
 }
 
@@ -943,18 +959,20 @@ function toggleAuthMode(mode) {
     if (mode === 'register') {
         loginForm.style.display = 'none';
         roleSelector.style.display = 'block';
-        title.textContent = 'Sign Up';
-        subtitle.textContent = '✦ Tarini Welcomes You';
+        if (title) title.setAttribute('data-i18n', 'signUp');
+        if (subtitle) subtitle.setAttribute('data-i18n', 'tariniWelcomesYou');
         toggleToRegister.style.display = 'none';
         toggleToLogin.style.display = 'block';
     } else {
         roleSelector.style.display = 'none';
         loginForm.style.display = 'block';
-        title.textContent = 'Sign In';
-        subtitle.textContent = 'Welcome back to Tarini';
+        if (title) title.setAttribute('data-i18n', 'signIn');
+        if (subtitle) subtitle.setAttribute('data-i18n', 'welcomeBack');
         toggleToRegister.style.display = 'block';
         toggleToLogin.style.display = 'none';
     }
+    const lang = localStorage.getItem('authLangPref') || 'en';
+    setAuthLang(lang);
 }
 window.toggleAuthMode = toggleAuthMode;
 
@@ -998,10 +1016,18 @@ async function handleLogin() {
         btn.textContent = "Signing In...";
         btn.disabled = true;
         await auth.signInWithEmailAndPassword(email, password);
-        // onAuthStateChanged will handle navigation
+        navigateTo('dashboard');
+        
+        // Restore button state
+        const lang = localStorage.getItem('authLangPref') || 'en';
+        const dict = (window.authTranslations && window.authTranslations[lang]) ? window.authTranslations[lang] : (window.authTranslations ? window.authTranslations['en'] : null);
+        btn.textContent = dict && dict['signIn'] ? dict['signIn'] : "Sign In";
+        btn.disabled = false;
     } catch (error) {
         showError(error.message);
-        btn.textContent = "Sign In";
+        const lang = localStorage.getItem('authLangPref') || 'en';
+        const dict = (window.authTranslations && window.authTranslations[lang]) ? window.authTranslations[lang] : (window.authTranslations ? window.authTranslations['en'] : null);
+        btn.textContent = dict && dict['signIn'] ? dict['signIn'] : "Sign In";
         btn.disabled = false;
     }
 }
@@ -1055,9 +1081,18 @@ async function handleRegister(role) {
             d.address = document.getElementById('c-address').value;
         }
         saveProfileData(d);
+        navigateTo('dashboard');
+        
+        // Restore button state
+        const lang = localStorage.getItem('authLangPref') || 'en';
+        const dict = (window.authTranslations && window.authTranslations[lang]) ? window.authTranslations[lang] : (window.authTranslations ? window.authTranslations['en'] : null);
+        btn.textContent = role === 'woman' ? (dict && dict['createAccount'] ? dict['createAccount'] : 'Create Account') : role === 'company' ? (dict && dict['registerCompany'] ? dict['registerCompany'] : 'Register Company') : (dict && dict['registerAdmin'] ? dict['registerAdmin'] : 'Register as Admin');
+        btn.disabled = false;
     } catch (error) {
         showError(error.message);
-        btn.textContent = role === 'woman' ? 'Create Account' : role === 'company' ? 'Register Company' : 'Register as Admin';
+        const lang = localStorage.getItem('authLangPref') || 'en';
+        const dict = (window.authTranslations && window.authTranslations[lang]) ? window.authTranslations[lang] : (window.authTranslations ? window.authTranslations['en'] : null);
+        btn.textContent = role === 'woman' ? (dict && dict['createAccount'] ? dict['createAccount'] : 'Create Account') : role === 'company' ? (dict && dict['registerCompany'] ? dict['registerCompany'] : 'Register Company') : (dict && dict['registerAdmin'] ? dict['registerAdmin'] : 'Register as Admin');
         btn.disabled = false;
     }
 }
@@ -1078,8 +1113,11 @@ auth.onAuthStateChanged((user) => {
     const loginBtn = document.getElementById('login-btn');
     const regBtn = document.getElementById('register-btn');
     
-    if (loginBtn) { loginBtn.textContent = "Sign In"; loginBtn.disabled = false; }
-    if (regBtn) { regBtn.textContent = "Create Account"; regBtn.disabled = false; }
+    const lang = localStorage.getItem('authLangPref') || 'en';
+    const dict = (window.authTranslations && window.authTranslations[lang]) ? window.authTranslations[lang] : (window.authTranslations ? window.authTranslations['en'] : null);
+    
+    if (loginBtn) { loginBtn.textContent = dict && dict['signIn'] ? dict['signIn'] : "Sign In"; loginBtn.disabled = false; }
+    if (regBtn) { regBtn.textContent = dict && dict['createAccount'] ? dict['createAccount'] : "Create Account"; regBtn.disabled = false; }
 
     if (user) {
         // User is signed in. Update UI and go to dashboard
@@ -1090,7 +1128,10 @@ auth.onAuthStateChanged((user) => {
         const profileUserNameEl = document.getElementById('profile-user-name');
         if (profileUserNameEl) profileUserNameEl.textContent = displayName;
         
-        if (history.state && history.state.screen === 'login') {
+        const loginScreen = document.getElementById('screen-login');
+        if (loginScreen && loginScreen.classList.contains('active')) {
+            navigateTo('dashboard');
+        } else if (history.state && history.state.screen === 'login') {
             navigateTo('dashboard');
         }
     } else {
@@ -1098,3 +1139,1525 @@ auth.onAuthStateChanged((user) => {
         history.replaceState({ screen: 'login' }, '', window.location.pathname);
     }
 });
+// --- LANGUAGE SUPPORT ---
+const authTranslations = {
+    en: {
+        emailAddress: "EMAIL ADDRESS", emailPlaceholder: "name@example.com",
+        password: "PASSWORD", passwordPlaceholder: "Password",
+        forgotPassword: "Forgot Password?", signIn: "Sign In",
+        or: "or", signInGoogle: "Sign in with Google",
+        chooseRole: "Choose Your Role", chooseRoleSub: "Select the role that best describes you",
+        womanReg: "Woman Registration", fullName: "FULL NAME", fullNamePlaceholder: "Your full name",
+        skills: "SKILLS", skillsPlaceholder: "e.g. Sewing, Handicrafts, Teaching",
+        jobPref: "JOB PREFERENCE", selectPref: "Select preference", createAccount: "Create Account",
+        companyReg: "Company Registration", companyName: "COMPANY NAME", industry: "INDUSTRY",
+        address: "ADDRESS", addressPlaceholder: "City, State", registerCompany: "Register Company",
+        adminReg: "Admin Registration", registerAdmin: "Register as Admin",
+        newToTarini: "New to Tarini?", signUp: "Sign Up",
+        alreadyHaveAccount: "Already have an account?", back: "Back",
+        welcomeBack: "Welcome back to Tarini", tariniWelcomesYou: "✦ Tarini Welcomes You"
+    },
+    hi: {
+        emailAddress: "ईमेल पता", emailPlaceholder: "name@example.com",
+        password: "पासवर्ड", passwordPlaceholder: "पासवर्ड",
+        forgotPassword: "पासवर्ड भूल गए?", signIn: "साइन इन",
+        or: "या", signInGoogle: "Google के साथ साइन इन करें",
+        chooseRole: "अपनी भूमिका चुनें", chooseRoleSub: "वह भूमिका चुनें जो आपका सबसे अच्छा वर्णन करती है",
+        womanReg: "महिला पंजीकरण", fullName: "पूरा नाम", fullNamePlaceholder: "आपका पूरा नाम",
+        skills: "कौशल", skillsPlaceholder: "उदा. सिलाई, हस्तशिल्प, शिक्षण",
+        jobPref: "नौकरी की प्राथमिकता", selectPref: "प्राथमिकता चुनें", createAccount: "खाता बनाएं",
+        companyReg: "कंपनी पंजीकरण", companyName: "कंपनी का नाम", industry: "उद्योग",
+        address: "पता", addressPlaceholder: "शहर, राज्य", registerCompany: "कंपनी पंजीकृत करें",
+        adminReg: "व्यवस्थापक पंजीकरण", registerAdmin: "व्यवस्थापक के रूप में पंजीकरण करें",
+        newToTarini: "Tarini में नए हैं?", signUp: "साइन अप करें",
+        alreadyHaveAccount: "क्या आपके पास पहले से खाता है?", back: "पीछे",
+        welcomeBack: "Tarini में आपका स्वागत है", tariniWelcomesYou: "✦ Tarini आपका स्वागत करता है"
+    },
+    bn: {
+        emailAddress: "ইমেইল ঠিকানা", emailPlaceholder: "name@example.com",
+        password: "পাসওয়ার্ড", passwordPlaceholder: "পাসওয়ার্ড",
+        forgotPassword: "পাসওয়ার্ড ভুলে গেছেন?", signIn: "সাইন ইন করুন",
+        or: "অথবা", signInGoogle: "Google এর সাথে সাইন ইন করুন",
+        chooseRole: "আপনার ভূমিকা চয়ন করুন", chooseRoleSub: "যে ভূমিকা আপনাকে সেরা বর্ণনা করে তা চয়ন করুন",
+        womanReg: "মহিলা নিবন্ধন", fullName: "পুরো নাম", fullNamePlaceholder: "আপনার পুরো নাম",
+        skills: "দক্ষতা", skillsPlaceholder: "উদাঃ সেলাই, হস্তশিল্প, শিক্ষা",
+        jobPref: "কাজের পছন্দ", selectPref: "পছন্দ নির্বাচন করুন", createAccount: "অ্যাকাউন্ট তৈরি করুন",
+        companyReg: "কোম্পানি নিবন্ধন", companyName: "কোম্পানির নাম", industry: "শিল্প",
+        address: "ঠিকানা", addressPlaceholder: "শহর, রাজ্য", registerCompany: "কোম্পানি নিবন্ধন করুন",
+        adminReg: "অ্যাডমিন নিবন্ধন", registerAdmin: "অ্যাডমিন হিসাবে নিবন্ধন করুন",
+        newToTarini: "Tarini তে নতুন?", signUp: "সাইন আপ করুন",
+        alreadyHaveAccount: "ইতোমধ্যে একটি অ্যাকাউন্ট আছে?", back: "ফিরে যান",
+        welcomeBack: "Tarini তে আপনাকে আবার স্বাগতম", tariniWelcomesYou: "✦ Tarini আপনাকে স্বাগত জানায়"
+    },
+    mr: {
+        emailAddress: "ईमेल पत्ता", emailPlaceholder: "name@example.com",
+        password: "पासवर्ड", passwordPlaceholder: "पासवर्ड",
+        forgotPassword: "पासवर्ड विसरलात?", signIn: "साइन इन करा",
+        or: "किंवा", signInGoogle: "Google सह साइन इन करा",
+        chooseRole: "तुमची भूमिका निवडा", chooseRoleSub: "तुमचे उत्तम वर्णन करणारी भूमिका निवडा",
+        womanReg: "महिला नोंदणी", fullName: "पूर्ण नाव", fullNamePlaceholder: "तुमचे पूर्ण नाव",
+        skills: "कौशल्ये", skillsPlaceholder: "उदा. शिवणकाम, हस्तकला, शिक्षण",
+        jobPref: "नोकरीची पसंती", selectPref: "पसंती निवडा", createAccount: "खाते तयार करा",
+        companyReg: "कंपनी नोंदणी", companyName: "कंपनीचे नाव", industry: "उद्योग",
+        address: "पत्ता", addressPlaceholder: "शहर, राज्य", registerCompany: "कंपनीची नोंदणी करा",
+        adminReg: "प्रशासक नोंदणी", registerAdmin: "प्रशासक म्हणून नोंदणी करा",
+        newToTarini: "Tarini वर नवीन आहात?", signUp: "साइन अप करा",
+        alreadyHaveAccount: "आधीपासूनच खाते आहे?", back: "मागे",
+        welcomeBack: "Tarini वर आपले पुन्हा स्वागत आहे", tariniWelcomesYou: "✦ Tarini आपले स्वागत करत आहे"
+    },
+    ta: {
+        emailAddress: "மின்னஞ்சல் முகவரி", emailPlaceholder: "name@example.com",
+        password: "கடவுச்சொல்", passwordPlaceholder: "கடவுச்சொல்",
+        forgotPassword: "கடவுச்சொல்லை மறந்துவிட்டீர்களா?", signIn: "உள்நுழைக",
+        or: "அல்லது", signInGoogle: "Google உடன் உள்நுழைக",
+        chooseRole: "உங்கள் பங்கைத் தேர்வுசெய்க", chooseRoleSub: "உங்களைச் சிறப்பாக விவரிக்கும் பங்கைத் தேர்ந்தெடுக்கவும்",
+        womanReg: "பெண் பதிவு", fullName: "முழு பெயர்", fullNamePlaceholder: "உங்கள் முழு பெயர்",
+        skills: "திறன்கள்", skillsPlaceholder: "எ.கா. தையல், கைவினைப்பொருட்கள்",
+        jobPref: "வேலை விருப்பம்", selectPref: "விருப்பத்தை தேர்ந்தெடுக்கவும்", createAccount: "கணக்கை உருவாக்கவும்",
+        companyReg: "நிறுவனத்தின் பதிவு", companyName: "நிறுவனத்தின் பெயர்", industry: "தொழில்",
+        address: "முகவரி", addressPlaceholder: "நகரம், மாநிலம்", registerCompany: "நிறுவனத்தை பதிவு செய்யவும்",
+        adminReg: "நிர்வாகி பதிவு", registerAdmin: "நிவாகியாக பதிவு செய்யவும்",
+        newToTarini: "Tarini க்கு புதியவரா?", signUp: "பதிவு செய்க",
+        alreadyHaveAccount: "ஏற்கனவே கணக்கு உள்ளதா?", back: "பின்செல்",
+        welcomeBack: "Tarini க்கு மீண்டும் வரவேற்கிறோம்", tariniWelcomesYou: "✦ Tarini உங்களை வரவேற்கிறது"
+    },
+    te: {
+        emailAddress: "ఇమెయిల్ చిరునామా", emailPlaceholder: "name@example.com",
+        password: "పాస్వర్డ్", passwordPlaceholder: "పాస్వర్డ్",
+        forgotPassword: "పాస్వర్డ్ మర్చిపోయారా?", signIn: "సైన్ ఇన్ చేయండి",
+        or: "లేదా", signInGoogle: "Google తో సైన్ ఇన్ చేయండి",
+        chooseRole: "మీ పాత్రను ఎంచుకోండి", chooseRoleSub: "మిమ్మల్ని ఉత్తమంగా వివరించే పాత్రను ఎంచుకోండి",
+        womanReg: "మహిళా నమోదు", fullName: "పూర్తి పేరు", fullNamePlaceholder: "మీ పూర్తి పేరు",
+        skills: "నైపుణ్యాలు", skillsPlaceholder: "ఉదా. కుట్టుపని, హస్తకళలు",
+        jobPref: "ఉద్యోగ ప్రాధాన్యత", selectPref: "ప్రాధాన్యతను ఎంచుకోండి", createAccount: "ఖాతాను సృష్టించండి",
+        companyReg: "కంపెనీ నమోదు", companyName: "కంపెనీ పేరు", industry: "పరిశ్రమ",
+        address: "చిరునామా", addressPlaceholder: "నగరం, రాష్ట్రం", registerCompany: "కంపెనీని నమోదు చేయండి",
+        adminReg: "అడ్మిన్ నమోదు", registerAdmin: "అడ్మిన్ గా నమోదు చేయండి",
+        newToTarini: "Tarini కి కొత్తా?", signUp: "సైన్ అప్ చేయండి",
+        alreadyHaveAccount: "ఇప్పటికే ఖాతా ఉందా?", back: "వెనుకకు",
+        welcomeBack: "Tarini కి తిరిగి స్వాగతం", tariniWelcomesYou: "✦ Tarini మీకు స్వాగతం పలుకుతోంది"
+    },
+    gu: {
+        emailAddress: "ઇમેઇલ સરનામું", emailPlaceholder: "name@example.com",
+        password: "પાસવર્ડ", passwordPlaceholder: "પાસવર્ડ",
+        forgotPassword: "પાસવર્ડ ભૂલી ગયા છો?", signIn: "સાઇન ઇન કરો",
+        or: "અથવા", signInGoogle: "Google સાથે સાઇન ઇન કરો",
+        chooseRole: "તમારી ભૂમિકા પસંદ કરો", chooseRoleSub: "તમારું શ્રેષ્ઠ વર્ણન કરતી ભૂમિકા પસંદ કરો",
+        womanReg: "મહિલા નોંધણી", fullName: "પૂરું નામ", fullNamePlaceholder: "તમારું પૂરું નામ",
+        skills: "કૌશલ્યો", skillsPlaceholder: "દા.ત. સિલાઈ, હસ્તકલા",
+        jobPref: "નોકરીની પસંદગી", selectPref: "પસંદગી પસંદ કરો", createAccount: "ખાતું બનાવો",
+        companyReg: "કંપની નોંધણી", companyName: "કંપનીનું નામ", industry: "ઉદ્યોગ",
+        address: "સરનામું", addressPlaceholder: "શહેર, રાજ્ય", registerCompany: "કંપનીની નોંધણી કરો",
+        adminReg: "એડમિન નોંધણી", registerAdmin: "એડમિન તરીકે નોંધણી કરો",
+        newToTarini: "Tarini માં નવા છો?", signUp: "સાઇન અપ કરો",
+        alreadyHaveAccount: "પહેલેથી જ ખાતું છે?", back: "પાછળ",
+        welcomeBack: "Tarini માં ફરીથી સ્વાગત છે", tariniWelcomesYou: "✦ Tarini તમારું સ્વાગત કરે છે"
+    },
+    kn: {
+        emailAddress: "ಇಮೇಲ್ ವಿಳಾಸ", emailPlaceholder: "name@example.com",
+        password: "ಪಾಸ್‌ವರ್ಡ್", passwordPlaceholder: "ಪಾಸ್‌ವರ್ಡ್",
+        forgotPassword: "ಪಾಸ್‌ವರ್ಡ್ ಮರೆತಿರಾ?", signIn: "ಸೈನ್ ಇನ್ ಮಾಡಿ",
+        or: "ಅಥವಾ", signInGoogle: "Google ನೊಂದಿಗೆ ಸೈನ್ ಇನ್ ಮಾಡಿ",
+        chooseRole: "ನಿಮ್ಮ ಪಾತ್ರವನ್ನು ಆರಿಸಿ", chooseRoleSub: "ನಿಮ್ಮನ್ನು ಉತ್ತಮವಾಗಿ ವಿವರಿಸುವ ಪಾತ್ರವನ್ನು ಆರಿಸಿ",
+        womanReg: "ಮಹಿಳಾ ನೋಂದಣಿ", fullName: "ಪೂರ್ಣ ಹೆಸರು", fullNamePlaceholder: "ನಿಮ್ಮ ಪೂರ್ಣ ಹೆಸರು",
+        skills: "ಕೌಶಲ್ಯಗಳು", skillsPlaceholder: "ಉದಾ. ಹೊಲಿಗೆ, ಕರಕುಶಲ ವಸ್ತುಗಳು",
+        jobPref: "ಉದ್ಯೋಗದ ಆದ್ಯತೆ", selectPref: "ಆದ್ಯತೆಯನ್ನು ಆರಿಸಿ", createAccount: "ಖಾತೆಯನ್ನು ರಚಿಸಿ",
+        companyReg: "ಕಂಪನಿ ನೋಂದಣಿ", companyName: "ಕಂಪನಿಯ ಹೆಸರು", industry: "ಉದ್ಯಮ",
+        address: "ವಿಳಾಸ", addressPlaceholder: "ನಗರ, ರಾಜ್ಯ", registerCompany: "ಕಂಪನಿಯನ್ನು ನೋಂದಾಯಿಸಿ",
+        adminReg: "ನಿರ್ವಾಹಕ ನೋಂದಣಿ", registerAdmin: "ನಿರ್ವಾಹಕರಾಗಿ ನೋಂದಾಯಿಸಿ",
+        newToTarini: "Tarini ಗೆ ಹೊಸಬರೇ?", signUp: "ಸೈನ್ ಅಪ್ ಮಾಡಿ",
+        alreadyHaveAccount: "ಈಗಾಗಲೇ ಖಾತೆ ಇದೆಯೇ?", back: "ಹಿಂದೆ",
+        welcomeBack: "Tarini ಗೆ ಮರಳಿ ಸ್ವಾಗತ", tariniWelcomesYou: "✦ Tarini ನಿಮ್ಮನ್ನು ಸ್ವಾಗತಿಸುತ್ತದೆ"
+    },
+    ml: {
+        emailAddress: "ഇമെയിൽ വിലാസം", emailPlaceholder: "name@example.com",
+        password: "പാസ്‌വേഡ്", passwordPlaceholder: "പാസ്‌വേഡ്",
+        forgotPassword: "പാസ്‌വേഡ് മറന്നോ?", signIn: "സൈൻ ഇൻ ചെയ്യുക",
+        or: "അല്ലെങ്കിൽ", signInGoogle: "Google വഴി സൈൻ ഇൻ ചെയ്യുക",
+        chooseRole: "നിങ്ങളുടെ റോൾ തിരഞ്ഞെടുക്കുക", chooseRoleSub: "നിങ്ങളെ ഏറ്റവും നന്നായി വിവരിക്കുന്ന റോൾ തിരഞ്ഞെടുക്കുക",
+        womanReg: "വനിതാ രജിസ്ട്രേഷൻ", fullName: "പൂർണ്ണമായ പേര്", fullNamePlaceholder: "നിങ്ങളുടെ പൂർണ്ണനാമം",
+        skills: "കഴിവുകൾ", skillsPlaceholder: "ഉദാ. തയ്യൽ, കരകൗശലം",
+        jobPref: "ജോലി മുൻഗണന", selectPref: "മുൻഗണന തിരഞ്ഞെടുക്കുക", createAccount: "അക്കൗണ്ട് സൃഷ്ടിക്കുക",
+        companyReg: "കമ്പനി രജിസ്ട്രേഷൻ", companyName: "കമ്പനിയുടെ പേര്", industry: "വ്യവസായം",
+        address: "വിലാസം", addressPlaceholder: "നഗരം, സംസ്ഥാനം", registerCompany: "കമ്പനി രജിസ്റ്റർ ചെയ്യുക",
+        adminReg: "അഡ്മിൻ രജിസ്ട്രേഷൻ", registerAdmin: "അഡ്മിനായി രജിസ്റ്റർ ചെയ്യുക",
+        newToTarini: "Tarini-യിൽ പുതിയതാണോ?", signUp: "സൈൻ അപ്പ് ചെയ്യുക",
+        alreadyHaveAccount: "നേരത്തെ തന്നെ അക്കൗണ്ട് ഉണ്ടോ?", back: "തിരികെ",
+        welcomeBack: "Tarini-ലേക്ക് വീണ്ടും സ്വാഗതം", tariniWelcomesYou: "✦ Tarini നിങ്ങളെ സ്വാഗതം ചെയ്യുന്നു"
+    },
+    pa: {
+        emailAddress: "ਈਮੇਲ ਪਤਾ", emailPlaceholder: "name@example.com",
+        password: "ਪਾਸਵਰਡ", passwordPlaceholder: "ਪਾਸਵਰਡ",
+        forgotPassword: "ਪਾਸਵਰਡ ਭੁੱਲ ਗਏ?", signIn: "ਸਾਈਨ ਇਨ ਕਰੋ",
+        or: "ਜਾਂ", signInGoogle: "Google ਨਾਲ ਸਾਈਨ ਇਨ ਕਰੋ",
+        chooseRole: "ਆਪਣੀ ਭੂਮਿਕਾ ਚੁਣੋ", chooseRoleSub: "ਉਹ ਭੂਮਿਕਾ ਚੁਣੋ ਜੋ ਤੁਹਾਡਾ ਸਭ ਤੋਂ ਵਧੀਆ ਵਰਣਨ ਕਰਦੀ ਹੈ",
+        womanReg: "ਮਹਿਲਾ ਰਜਿਸਟ੍ਰੇਸ਼ਨ", fullName: "ਪੂਰਾ ਨਾਮ", fullNamePlaceholder: "ਤੁਹਾਡਾ ਪੂਰਾ ਨਾਮ",
+        skills: "ਹੁਨਰ", skillsPlaceholder: "ਉਦਾਹਰਨ ਲਈ: ਸਿਲਾਈ, ਦਸਤਕਾਰੀ",
+        jobPref: "ਨੌਕਰੀ ਦੀ ਤਰਜੀਹ", selectPref: "ਤਰਜੀਹ ਚੁਣੋ", createAccount: "ਖਾਤਾ ਬਣਾਓ",
+        companyReg: "ਕੰਪਨੀ ਰਜਿਸਟ੍ਰੇਸ਼ਨ", companyName: "ਕੰਪਨੀ ਦਾ ਨਾਮ", industry: "ਉਦਯੋਗ",
+        address: "ਪਤਾ", addressPlaceholder: "ਸ਼ਹਿਰ, ਰਾਜ", registerCompany: "ਕੰਪਨੀ ਰਜਿਸਟਰ ਕਰੋ",
+        adminReg: "ਐਡਮਿਨ ਰਜਿਸਟ੍ਰੇਸ਼ਨ", registerAdmin: "ਐਡਮਿਨ ਵਜੋਂ ਰਜਿਸਟਰ ਕਰੋ",
+        newToTarini: "Tarini 'ਤੇ ਨਵੇਂ ਹੋ?", signUp: "ਸਾਈਨ ਅੱਪ ਕਰੋ",
+        alreadyHaveAccount: "ਕੀ ਪਹਿਲਾਂ ਹੀ ਕੋਈ ਖਾਤਾ ਹੈ?", back: "ਪਿੱਛੇ",
+        welcomeBack: "Tarini 'ਤੇ ਤੁਹਾਡੀ ਵਾਪਸੀ ਦਾ ਸੁਆਗਤ ਹੈ", tariniWelcomesYou: "✦ Tarini ਤੁਹਾਡਾ ਸੁਆਗਤ ਕਰਦਾ ਹੈ"
+    },
+    or: {
+        emailAddress: "ଇମେଲ୍ ଠିକଣା", emailPlaceholder: "name@example.com",
+        password: "ପାସୱାର୍ଡ", passwordPlaceholder: "ପାସୱାର୍ଡ",
+        forgotPassword: "ପାସୱାର୍ଡ ଭୁଲିଗଲେ କି?", signIn: "ସାଇନ୍ ଇନ୍ କରନ୍ତୁ",
+        or: "କିମ୍ବା", signInGoogle: "Google ସହିତ ସାଇନ୍ ଇନ୍ କରନ୍ତୁ",
+        chooseRole: "ଆପଣଙ୍କର ଭୂମିକା ବାଛନ୍ତୁ", chooseRoleSub: "ଆପଣଙ୍କୁ ସର୍ବୋତ୍ତମ ବର୍ଣ୍ଣନା କରୁଥିବା ଭୂମିକା ବାଛନ୍ତୁ",
+        womanReg: "ମହିଳା ପଞ୍ଜିକରଣ", fullName: "ପୁରା ନାମ", fullNamePlaceholder: "ଆପଣଙ୍କର ପୁରା ନାମ",
+        skills: "ଦକ୍ଷତା", skillsPlaceholder: "ଉଦାହରଣ ସ୍ୱରୂପ: ସିଲେଇ, ହସ୍ତଶିଳ୍ପ",
+        jobPref: "ଚାକିରି ପସନ୍ଦ", selectPref: "ପସନ୍ଦ ଚୟନ କରନ୍ତୁ", createAccount: "ଆକାଉଣ୍ଟ୍ ତିଆରି କରନ୍ତୁ",
+        companyReg: "କମ୍ପାନୀ ପଞ୍ଜିକରଣ", companyName: "କମ୍ପାନୀ ନାମ", industry: "ଶିଳ୍ପ",
+        address: "ଠିକଣା", addressPlaceholder: "ସହର, ରାଜ୍ୟ", registerCompany: "କମ୍ପାନୀ ପଞ୍ଜିକରଣ କରନ୍ତୁ",
+        adminReg: "ଆଡମିନ୍ ପଞ୍ଜିକରଣ", registerAdmin: "ଆଡମିନ୍ ଭାବରେ ପଞ୍ଜିକରଣ କରନ୍ତୁ",
+        newToTarini: "Tarini ରେ ନୂଆ କି?", signUp: "ସାଇନ୍ ଅପ୍ କରନ୍ତୁ",
+        alreadyHaveAccount: "ପୂର୍ବରୁ ଗୋଟିଏ ଆକାଉଣ୍ଟ୍ ଅଛି କି?", back: "ପଛକୁ",
+        welcomeBack: "Tarini କୁ ପୁଣି ସ୍ୱାଗତ", tariniWelcomesYou: "✦ Tarini ଆପଣଙ୍କୁ ସ୍ୱାଗତ କରୁଛି"
+    },
+    ur: {
+        emailAddress: "ای میل ایڈریس", emailPlaceholder: "name@example.com",
+        password: "پاس ورڈ", passwordPlaceholder: "پاس ورڈ",
+        forgotPassword: "پاس ورڈ بھول گئے؟", signIn: "سائن ان کریں",
+        or: "یا", signInGoogle: "Google کے ساتھ سائن ان کریں",
+        chooseRole: "اپنا کردار منتخب کریں", chooseRoleSub: "وہ کردار منتخب کریں جو آپ کی بہترین وضاحت کرتا ہو",
+        womanReg: "خواتین کی رجسٹریشن", fullName: "پورا نام", fullNamePlaceholder: "آپ کا پورا نام",
+        skills: "مہارتیں", skillsPlaceholder: "مثلاً سلائی، دستکاری",
+        jobPref: "ملازمت کی ترجیح", selectPref: "ترجیح منتخب کریں", createAccount: "اکاؤنٹ بنائیں",
+        companyReg: "کمپنی کی رجسٹریشن", companyName: "کمپنی کا نام", industry: "صنعت",
+        address: "پتہ", addressPlaceholder: "شہر، ریاست", registerCompany: "کمپنی رجسٹر کریں",
+        adminReg: "ایڈمن رجسٹریشن", registerAdmin: "ایڈمن کے طور پر رجسٹر کریں",
+        newToTarini: "Tarini میں نئے ہیں؟", signUp: "سائن اپ کریں",
+        alreadyHaveAccount: "کیا پہلے سے اکاؤنٹ ہے؟", back: "پیچھے",
+        welcomeBack: "Tarini میں واپسی پر خوش آمدید", tariniWelcomesYou: "✦ Tarini آپ کو خوش آمدید کہتا ہے"
+    },
+    as: {
+        emailAddress: "ইমেইল ঠিকনা", emailPlaceholder: "name@example.com",
+        password: "পাছৱৰ্ড", passwordPlaceholder: "পাছৱৰ্ড",
+        forgotPassword: "পাছৱৰ্ড পাহৰিলে নেকি?", signIn: "ছাইন ইন কৰক",
+        or: "বা", signInGoogle: "Google ৰ সৈতে ছাইন ইন কৰক",
+        chooseRole: "আপোনাৰ ভূমিকা বাছক", chooseRoleSub: "আপোনাক সৰ্বোত্তম বৰ্ণনা কৰা ভূমিকা বাছক",
+        womanReg: "মহিলা পঞ্জীয়ন", fullName: "সম্পূৰ্ণ নাম", fullNamePlaceholder: "আপোনাৰ সম্পূৰ্ণ নাম",
+        skills: "দখল", skillsPlaceholder: "উদাহৰণস্বৰূপ: চিলাই, হস্তশিল্প",
+        jobPref: "কৰ্মৰ পছন্দ", selectPref: "পছন্দ বাছক", createAccount: "একাউণ্ট বনাওক",
+        companyReg: "কোম্পানী পঞ্জীয়ন", companyName: "কোম্পানীৰ নাম", industry: "উদ্যোগ",
+        address: "ঠিকনা", addressPlaceholder: "চহৰ, ৰাজ্য", registerCompany: "কোম্পানী পঞ্জীয়ন কৰক",
+        adminReg: "এডমিন পঞ্জীয়ন", registerAdmin: "এডমিন হিচাপে পঞ্জীয়ন কৰক",
+        newToTarini: "Tarini ত নতুন নেকি?", signUp: "ছাইন আপ কৰক",
+        alreadyHaveAccount: "ইতিমধ্যে এটা একাউণ্ট আছে নেকি?", back: "পিছলৈ",
+        welcomeBack: "Tarini লৈ পুনৰ স্বাগতম", tariniWelcomesYou: "✦ Tarini য়ে আপোনাক স্বাগতম জনাইছে"
+    }
+};
+
+function setAuthLang(lang) {
+    localStorage.setItem('authLangPref', lang);
+    const dict = authTranslations[lang] || authTranslations['en'];
+    const fallback = authTranslations['en'];
+    
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (dict[key] || fallback[key]) {
+            el.textContent = dict[key] || fallback[key];
+        }
+    });
+
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        if (dict[key] || fallback[key]) {
+            el.placeholder = dict[key] || fallback[key];
+        }
+    });
+}
+window.setAuthLang = setAuthLang;
+
+// Initialize language preference
+document.addEventListener('DOMContentLoaded', () => {
+    const savedLang = localStorage.getItem('authLangPref') || 'en';
+    const langSelect = document.getElementById('auth-lang-select');
+    if (langSelect) {
+        langSelect.value = savedLang;
+        setAuthLang(savedLang);
+    }
+});
+
+// ============================================================
+// FIND JOBS PAGE — data, filters, AI match, top companies
+// ============================================================
+
+const _allJobs = [
+    { id:1, title:'Tailoring Instructor', company:'Craft India', location:'Mumbai', locType:'On-site', type:'Part-time', exp:'Mid-level', industry:'Education', salaryNum:12000, salary:'₹12,000/mo', grad:'linear-gradient(135deg,#4d41df,#675df9)' },
+    { id:2, title:'Data Entry Operator', company:'TechSeva', location:'Remote', locType:'Remote', type:'Full-time', exp:'Fresher', industry:'Technology', salaryNum:15000, salary:'₹15,000/mo', grad:'linear-gradient(135deg,#5c51a0,#c8bfff)' },
+    { id:3, title:'Beauty Consultant', company:'GlowUp Studio', location:'Delhi', locType:'On-site', type:'Freelance', exp:'Fresher', industry:'Retail', salaryNum:8000, salary:'₹8,000/mo', grad:'linear-gradient(135deg,#875041,#feb5a2)' },
+    { id:4, title:'Junior Web Developer', company:'CodeNest', location:'Hybrid', locType:'Hybrid', type:'Full-time', exp:'Fresher', industry:'Technology', salaryNum:22000, salary:'₹22,000/mo', grad:'linear-gradient(135deg,#2d6a4f,#74c69d)' },
+    { id:5, title:'Healthcare Assistant', company:'MediCare Plus', location:'Bangalore', locType:'On-site', type:'Full-time', exp:'Mid-level', industry:'Healthcare', salaryNum:18000, salary:'₹18,000/mo', grad:'linear-gradient(135deg,#c77dff,#7b2d8b)' },
+    { id:6, title:'Content Writer', company:'WordCraft', location:'Remote', locType:'Remote', type:'Freelance', exp:'Fresher', industry:'Technology', salaryNum:9000, salary:'₹9,000/mo', grad:'linear-gradient(135deg,#4d41df,#875041)' },
+    { id:7, title:'Retail Store Manager', company:'FashionHub', location:'Chennai', locType:'On-site', type:'Full-time', exp:'Senior', industry:'Retail', salaryNum:35000, salary:'₹35,000/mo', grad:'linear-gradient(135deg,#875041,#5c51a0)' },
+    { id:8, title:'UI/UX Design Intern', company:'PixelWorks', location:'Hybrid', locType:'Hybrid', type:'Internship', exp:'Fresher', industry:'Technology', salaryNum:7000, salary:'₹7,000/mo', grad:'linear-gradient(135deg,#675df9,#c8bfff)' },
+    { id:9, title:'Primary School Teacher', company:'BrightMinds School', location:'Pune', locType:'On-site', type:'Full-time', exp:'Mid-level', industry:'Education', salaryNum:20000, salary:'₹20,000/mo', grad:'linear-gradient(135deg,#2d6a4f,#4d41df)' },
+    { id:10, title:'Senior Data Analyst', company:'InsightCo', location:'Remote', locType:'Remote', type:'Full-time', exp:'Senior', industry:'Technology', salaryNum:55000, salary:'₹55,000/mo', grad:'linear-gradient(135deg,#4d41df,#2d6a4f)' },
+];
+
+const _topCompanies = [
+    { name:'TechSeva', industry:'Technology', tagline:'Hiring freshers now!', color:'#4d41df', bg:'rgba(77,65,223,0.10)', icon:'computer' },
+    { name:'MediCare Plus', industry:'Healthcare', tagline:'Join our care team', color:'#c77dff', bg:'rgba(199,125,255,0.10)', icon:'health_and_safety' },
+    { name:'BrightMinds', industry:'Education', tagline:'Shape future leaders', color:'#2d6a4f', bg:'rgba(45,106,79,0.10)', icon:'school' },
+    { name:'FashionHub', industry:'Retail', tagline:'Style meets career', color:'#875041', bg:'rgba(135,80,65,0.10)', icon:'storefront' },
+    { name:'PixelWorks', industry:'Design', tagline:'Create. Inspire. Grow.', color:'#5c51a0', bg:'rgba(92,81,160,0.10)', icon:'palette' },
+    { name:'WordCraft', industry:'Media', tagline:'Words that matter', color:'#675df9', bg:'rgba(103,93,249,0.10)', icon:'edit_note' },
+];
+
+const _jobFilters = { type: new Set(), exp: new Set(), loc: new Set(), industry: new Set(), salary: new Set() };
+
+function toggleJobFilters() {
+    const panel = document.getElementById('job-filter-panel');
+    const btn = document.getElementById('filter-toggle-btn');
+    const isHidden = panel.classList.toggle('hidden');
+    btn.style.background = isHidden ? '' : 'rgba(77,65,223,0.12)';
+}
+window.toggleJobFilters = toggleJobFilters;
+
+function toggleFilter(group, value) {
+    const set = _jobFilters[group];
+    if (set.has(value)) set.delete(value); else set.add(value);
+    // Update chip visual
+    document.querySelectorAll(`.filter-chip[data-filter="${group}"][data-value="${value}"]`).forEach(btn => {
+        const active = set.has(value);
+        btn.style.background = active ? 'rgba(77,65,223,0.15)' : '';
+        btn.style.color = active ? '#4d41df' : '';
+        btn.style.fontWeight = active ? '700' : '';
+    });
+    applyJobFilters();
+}
+window.toggleFilter = toggleFilter;
+
+function clearJobFilters() {
+    Object.values(_jobFilters).forEach(s => s.clear());
+    document.querySelectorAll('.filter-chip').forEach(btn => {
+        btn.style.background = '';
+        btn.style.color = '';
+        btn.style.fontWeight = '';
+    });
+    const input = document.getElementById('job-search-input');
+    if (input) input.value = '';
+    applyJobFilters();
+}
+window.clearJobFilters = clearJobFilters;
+
+function _salaryMatch(job, salarySet) {
+    if (salarySet.size === 0) return true;
+    const n = job.salaryNum;
+    if (salarySet.has('under10') && n < 10000) return true;
+    if (salarySet.has('10to20') && n >= 10000 && n <= 20000) return true;
+    if (salarySet.has('20to40') && n > 20000 && n <= 40000) return true;
+    if (salarySet.has('above40') && n > 40000) return true;
+    return false;
+}
+
+function applyJobFilters() {
+    const query = (document.getElementById('job-search-input')?.value || '').toLowerCase();
+    const { type, exp, loc, industry, salary } = _jobFilters;
+
+    const filtered = _allJobs.filter(job => {
+        if (query && !`${job.title} ${job.company} ${job.location}`.toLowerCase().includes(query)) return false;
+        if (type.size && !type.has(job.type)) return false;
+        if (exp.size && !exp.has(job.exp)) return false;
+        if (loc.size && !loc.has(job.locType)) return false;
+        if (industry.size && !industry.has(job.industry)) return false;
+        if (!_salaryMatch(job, salary)) return false;
+        return true;
+    });
+
+    _renderJobCards(filtered);
+}
+window.applyJobFilters = applyJobFilters;
+
+function _renderJobCards(jobs) {
+    const container = document.getElementById('jobs-list-container');
+    const empty = document.getElementById('jobs-empty-state');
+    const countEl = document.getElementById('jobs-count');
+    if (!container) return;
+
+    if (jobs.length === 0) {
+        container.innerHTML = '';
+        if (empty) empty.classList.remove('hidden');
+        if (countEl) countEl.textContent = '';
+        return;
+    }
+    if (empty) empty.classList.add('hidden');
+    if (countEl) countEl.textContent = `${jobs.length} job${jobs.length !== 1 ? 's' : ''}`;
+
+    const typeColor = t => t === 'Full-time' ? 'background:rgba(77,65,223,0.10);color:#4d41df'
+        : t === 'Part-time' ? 'background:rgba(135,80,65,0.10);color:#875041'
+        : t === 'Internship' ? 'background:rgba(92,81,160,0.10);color:#5c51a0'
+        : 'background:rgba(45,106,79,0.10);color:#2d6a4f';
+
+    container.innerHTML = jobs.map(job => {
+        const initials = job.company.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+        return `
+        <div class="dash-job-card" onclick="openJobDetail(${job.id})" style="cursor:pointer">
+            <div style="display:flex;align-items:flex-start;gap:12px">
+                <div class="dash-job-avatar" style="background:${job.grad}">${initials}</div>
+                <div style="flex:1;min-width:0">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                        <p style="font-size:14px;font-weight:700;color:#1b1b24;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${job.title}</p>
+                        <button onclick="event.stopPropagation()" style="flex-shrink:0;width:30px;height:30px;border-radius:50%;background:rgba(77,65,223,0.08);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer">
+                            <span class="material-symbols-outlined" style="font-size:16px;color:#4d41df">bookmark</span>
+                        </button>
+                    </div>
+                    <p style="font-size:12px;color:#777587;margin-top:2px">${job.company} &bull; ${job.location}</p>
+                    <div style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap">
+                        <span class="dash-job-badge" style="${typeColor(job.type)}">${job.type}</span>
+                        <span class="dash-job-badge" style="background:rgba(56,161,105,0.10);color:#276749">${job.salary}</span>
+                        <span class="dash-job-badge" style="background:rgba(119,117,135,0.08);color:#777587">${job.exp}</span>
+                    </div>
+                </div>
+            </div>
+            <button onclick="event.stopPropagation();openJobDetail(${job.id})" style="margin-top:12px;width:100%;height:38px;border-radius:10px;border:none;background:linear-gradient(135deg,#4d41df,#5c51a0);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif">Apply Now</button>
+        </div>`;
+    }).join('');
+}
+
+function renderTopCompanies() {
+    const container = document.getElementById('top-companies-container');
+    if (!container) return;
+    container.innerHTML = _topCompanies.map(c => `
+        <div onclick="filterByCompany('${c.name}')" style="flex-shrink:0;width:130px;background:#fff;border-radius:18px;padding:14px 12px;border:1px solid #eae6f3;box-shadow:0 2px 10px -4px rgba(77,65,223,0.10);cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;text-align:center"
+            onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 18px -4px rgba(77,65,223,0.18)'"
+            onmouseleave="this.style.transform='';this.style.boxShadow='0 2px 10px -4px rgba(77,65,223,0.10)'"
+            ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform=''">
+            <div style="width:44px;height:44px;border-radius:12px;background:${c.bg};display:flex;align-items:center;justify-content:center;margin:0 auto 8px">
+                <span class="material-symbols-outlined" style="font-size:22px;color:${c.color};font-variation-settings:'FILL' 1">${c.icon}</span>
+            </div>
+            <p style="font-size:12px;font-weight:700;color:#1b1b24;line-height:1.3">${c.name}</p>
+            <p style="font-size:10px;color:#777587;margin-top:2px">${c.industry}</p>
+            <p style="font-size:10px;font-weight:600;color:${c.color};margin-top:4px;line-height:1.3">${c.tagline}</p>
+        </div>`).join('');
+}
+window.renderTopCompanies = renderTopCompanies;
+
+function filterByCompany(name) {
+    const input = document.getElementById('job-search-input');
+    if (input) { input.value = name; applyJobFilters(); }
+    // Scroll to job list
+    document.getElementById('jobs-list-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+window.filterByCompany = filterByCompany;
+
+function runAIMatch() {
+    const btn = document.querySelector('#screen-jobs button[onclick="runAIMatch()"]');
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.75'; }
+    const section = document.getElementById('ai-match-section');
+    const container = document.getElementById('ai-match-container');
+    if (section) section.classList.remove('hidden');
+    if (container) container.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:16px;background:rgba(77,65,223,0.05);border-radius:14px"><span class="material-symbols-outlined text-primary" style="font-size:20px;animation:spin 1s linear infinite">progress_activity</span><p style="font-size:13px;color:#777587">Analysing your profile for best matches...</p></div>`;
+
+    const d = getProfileData();
+    const skills = (d.skills || '').toLowerCase();
+
+    setTimeout(() => {
+        if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+        // Pick relevant jobs based on profile skills, fallback to top 3
+        let matched = _allJobs.filter(j => {
+            if (!skills) return false;
+            return skills.split(',').some(s => s.trim() && j.title.toLowerCase().includes(s.trim()));
+        });
+        if (matched.length === 0) matched = _allJobs.slice(0, 3);
+        matched = matched.slice(0, 4);
+
+        const scores = [98, 94, 89, 85];
+        if (!container) return;
+        container.innerHTML = matched.map((job, i) => {
+            const initials = job.company.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+            const score = scores[i] || 80;
+            return `
+            <div class="dash-job-card" onclick="openJobDetail(${job.id})" style="border-left:3px solid #4d41df;cursor:pointer">
+                <div style="display:flex;align-items:flex-start;gap:12px">
+                    <div class="dash-job-avatar" style="background:${job.grad}">${initials}</div>
+                    <div style="flex:1;min-width:0">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                            <p style="font-size:14px;font-weight:700;color:#1b1b24;line-height:1.3">${job.title}</p>
+                            <span style="flex-shrink:0;font-size:11px;font-weight:700;color:#4d41df;background:rgba(77,65,223,0.12);padding:2px 8px;border-radius:999px">${score}% match</span>
+                        </div>
+                        <p style="font-size:12px;color:#777587;margin-top:2px">${job.company} &bull; ${job.location}</p>
+                        <div style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap">
+                            <span class="dash-job-badge" style="background:rgba(77,65,223,0.10);color:#4d41df">${job.type}</span>
+                            <span class="dash-job-badge" style="background:rgba(56,161,105,0.10);color:#276749">${job.salary}</span>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="event.stopPropagation();openJobDetail(${job.id})" style="margin-top:12px;width:100%;height:38px;border-radius:10px;border:none;background:linear-gradient(135deg,#4d41df,#5c51a0);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif">Apply Now</button>
+            </div>`;
+        }).join('');
+    }, 2000);
+}
+window.runAIMatch = runAIMatch;
+
+function initJobsPage() {
+    renderTopCompanies();
+    applyJobFilters();
+}
+window.initJobsPage = initJobsPage;
+
+// ============================================================
+// JOB DETAIL PAGE
+// ============================================================
+
+const _jobDetails = {
+    1: {
+        description: 'Craft India is looking for an experienced Tailoring Instructor to teach stitching, pattern-making, and garment construction to women learners. You will design lesson plans, conduct hands-on sessions, and help students build a career in the fashion industry.',
+        requirements: ['Minimum 2 years of tailoring or teaching experience', 'Ability to communicate clearly in Hindi or local language', 'Patience and passion for teaching', 'Basic knowledge of fabric types and sewing machines'],
+        skills: ['Tailoring', 'Pattern Making', 'Teaching', 'Communication', 'Fabric Knowledge'],
+    },
+    2: {
+        description: 'TechSeva is hiring a Data Entry Operator to manage and update digital records accurately. You will work remotely, entering data into our systems, verifying information, and maintaining data quality standards.',
+        requirements: ['Typing speed of at least 35 WPM', 'Basic computer literacy (MS Office / Google Sheets)', 'Attention to detail', 'Reliable internet connection for remote work'],
+        skills: ['Data Entry', 'MS Excel', 'Google Sheets', 'Typing', 'Accuracy'],
+    },
+    3: {
+        description: 'GlowUp Studio is seeking a freelance Beauty Consultant to provide personalised skincare and makeup advice to clients. You will conduct consultations, recommend products, and help clients build confidence through beauty.',
+        requirements: ['Certification in beauty or cosmetology preferred', 'Strong interpersonal and communication skills', 'Knowledge of skincare and makeup trends', 'Ability to work flexible hours'],
+        skills: ['Skincare', 'Makeup', 'Client Consultation', 'Communication', 'Product Knowledge'],
+    },
+    4: {
+        description: 'CodeNest is looking for a Junior Web Developer to join our hybrid team. You will build and maintain web applications, collaborate with designers, and write clean, efficient code under the guidance of senior developers.',
+        requirements: ['Basic knowledge of HTML, CSS, and JavaScript', 'Familiarity with React or any frontend framework is a plus', 'Ability to work in a team environment', 'Eagerness to learn and grow'],
+        skills: ['HTML', 'CSS', 'JavaScript', 'React', 'Git'],
+    },
+    5: {
+        description: 'MediCare Plus is hiring a Healthcare Assistant to support medical staff in delivering quality patient care. You will assist with patient monitoring, record-keeping, and ensuring a safe and comfortable environment.',
+        requirements: ['Diploma or degree in healthcare or nursing preferred', 'Compassionate and patient-focused attitude', 'Ability to work in shifts', 'Basic knowledge of medical terminology'],
+        skills: ['Patient Care', 'Medical Records', 'Communication', 'Empathy', 'First Aid'],
+    },
+    6: {
+        description: 'WordCraft is looking for a freelance Content Writer to create engaging blog posts, social media content, and marketing copy. You will research topics, write original content, and meet deadlines consistently.',
+        requirements: ['Strong written communication skills in English', 'Ability to research and write on diverse topics', 'Experience with SEO basics is a plus', 'Self-motivated and deadline-driven'],
+        skills: ['Content Writing', 'SEO', 'Research', 'Editing', 'Creativity'],
+    },
+    7: {
+        description: 'FashionHub is seeking a Senior Retail Store Manager to oversee daily operations, manage a team of sales associates, and drive revenue growth. You will ensure excellent customer experience and maintain store standards.',
+        requirements: ['Minimum 4 years of retail management experience', 'Strong leadership and team management skills', 'Proven track record of meeting sales targets', 'Excellent customer service orientation'],
+        skills: ['Retail Management', 'Team Leadership', 'Sales', 'Customer Service', 'Inventory Management'],
+    },
+    8: {
+        description: 'PixelWorks is offering a UI/UX Design Internship for creative individuals passionate about digital design. You will assist in designing user interfaces, creating wireframes, and conducting user research under senior designers.',
+        requirements: ['Basic knowledge of Figma or Adobe XD', 'Understanding of UI/UX principles', 'Portfolio of design work (academic or personal projects accepted)', 'Eagerness to learn and take feedback'],
+        skills: ['Figma', 'UI Design', 'Wireframing', 'User Research', 'Creativity'],
+    },
+    9: {
+        description: 'BrightMinds School is hiring a Primary School Teacher to educate students in foundational subjects. You will create engaging lesson plans, assess student progress, and foster a positive learning environment.',
+        requirements: ['B.Ed or equivalent teaching qualification', 'Minimum 1 year of teaching experience', 'Strong communication and classroom management skills', 'Passion for child development and education'],
+        skills: ['Teaching', 'Lesson Planning', 'Classroom Management', 'Communication', 'Child Development'],
+    },
+    10: {
+        description: 'InsightCo is looking for a Senior Data Analyst to transform complex datasets into actionable business insights. You will build dashboards, conduct statistical analysis, and present findings to leadership teams.',
+        requirements: ['3+ years of data analysis experience', 'Proficiency in SQL, Python, or R', 'Experience with BI tools like Tableau or Power BI', 'Strong analytical and problem-solving skills'],
+        skills: ['SQL', 'Python', 'Tableau', 'Data Analysis', 'Statistics', 'Power BI'],
+    },
+};
+
+let _currentJobId = null;
+
+function openJobDetail(jobId) {
+    const job = _allJobs.find(j => j.id === jobId);
+    if (!job) return;
+    _currentJobId = jobId;
+    const detail = _jobDetails[jobId] || {
+        description: `${job.title} at ${job.company}. Join our team and grow your career in a supportive environment.`,
+        requirements: ['Relevant experience or qualification', 'Good communication skills', 'Willingness to learn'],
+        skills: [job.type, job.industry, job.exp],
+    };
+
+    // Hero card gradient
+    const hero = document.getElementById('jd-hero-card');
+    if (hero) hero.style.background = job.grad;
+
+    // Avatar initials
+    const avatar = document.getElementById('jd-avatar');
+    if (avatar) avatar.textContent = job.company.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+
+    document.getElementById('jd-company').textContent = job.company;
+    document.getElementById('jd-title').textContent = job.title;
+    document.getElementById('jd-type-badge').textContent = job.type;
+    document.getElementById('jd-loc-badge').textContent = job.locType;
+    document.getElementById('jd-exp-badge').textContent = job.exp;
+    document.getElementById('jd-salary').textContent = job.salary;
+    document.getElementById('jd-location').textContent = job.location;
+    document.getElementById('jd-industry').textContent = job.industry;
+    document.getElementById('jd-description').textContent = detail.description;
+
+    // Requirements list
+    const reqEl = document.getElementById('jd-requirements');
+    reqEl.innerHTML = detail.requirements.map(r => `
+        <li style="display:flex;align-items:flex-start;gap:8px">
+            <span class="material-symbols-outlined text-primary" style="font-size:16px;margin-top:1px;flex-shrink:0;font-variation-settings:'FILL' 1">check_circle</span>
+            <span style="font-size:13px;color:#464555;line-height:1.5">${r}</span>
+        </li>`).join('');
+
+    // Skills chips
+    const skillsEl = document.getElementById('jd-skills');
+    skillsEl.innerHTML = detail.skills.map(s => `
+        <span style="font-size:12px;font-weight:600;padding:5px 12px;border-radius:999px;background:rgba(77,65,223,0.10);color:#4d41df">${s}</span>`).join('');
+
+    // Reset apply button
+    const applyBtn = document.getElementById('jd-apply-btn');
+    if (applyBtn) { applyBtn.disabled = false; applyBtn.style.opacity = '1'; applyBtn.onclick = function(){ openJobApplyForm(); }; applyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-variation-settings:\'FILL\' 1">send</span> Apply Now'; }
+
+    // Bookmark state
+    const apps = JSON.parse(localStorage.getItem('tarini_applications') || '[]');
+    const alreadyApplied = apps.some(a => a.jobId === jobId);
+    if (alreadyApplied) {
+        if (applyBtn) { applyBtn.disabled = true; applyBtn.style.opacity = '0.7'; applyBtn.onclick = null; applyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-variation-settings:\'FILL\' 1">check_circle</span> Already Applied'; }
+    }
+
+    navigateTo('job-detail');
+}
+window.openJobDetail = openJobDetail;
+
+function submitJobApplication() {
+    const job = _allJobs.find(j => j.id === _currentJobId);
+    if (!job) return;
+
+    const applyBtn = document.getElementById('jd-apply-btn');
+    if (applyBtn) { applyBtn.disabled = true; applyBtn.style.opacity = '0.7'; applyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-variation-settings:\'FILL\' 1;animation:spin 1s linear infinite">progress_activity</span> Submitting...'; }
+
+    setTimeout(() => {
+        // Save to applications
+        const apps = JSON.parse(localStorage.getItem('tarini_applications') || '[]');
+        const alreadyApplied = apps.some(a => a.jobId === job.id);
+        if (!alreadyApplied) {
+            apps.unshift({
+                jobId: job.id,
+                title: job.title,
+                company: job.company,
+                location: job.location,
+                salary: job.salary,
+                type: job.type,
+                grad: job.grad,
+                appliedAt: new Date().toISOString(),
+                status: 'Applied',
+            });
+            localStorage.setItem('tarini_applications', JSON.stringify(apps));
+        }
+
+        // Add notification
+        addNotification('application', `Applied to ${job.title}`, `Your application to ${job.company} has been submitted successfully.`);
+
+        // Show success toast
+        const toast = document.getElementById('jd-success-toast');
+        const toastJob = document.getElementById('jd-toast-job');
+        if (toastJob) toastJob.textContent = `${job.title} at ${job.company}`;
+        if (toast) toast.classList.remove('hidden');
+
+        if (applyBtn) { applyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-variation-settings:\'FILL\' 1">check_circle</span> Already Applied'; }
+    }, 1200);
+}
+window.submitJobApplication = submitJobApplication;
+
+function closeJobToast() {
+    const toast = document.getElementById('jd-success-toast');
+    if (toast) toast.classList.add('hidden');
+    navigateTo('jobs');
+}
+window.closeJobToast = closeJobToast;
+
+function toggleJobBookmark() {
+    const icon = document.getElementById('jd-bookmark-icon');
+    if (!icon) return;
+    const filled = icon.style.fontVariationSettings && icon.style.fontVariationSettings.includes('1');
+    icon.style.fontVariationSettings = filled ? "'FILL' 0" : "'FILL' 1";
+}
+window.toggleJobBookmark = toggleJobBookmark;
+
+// ============================================================
+// JOB APPLICATION FORM
+// ============================================================
+
+function openJobApplyForm() {
+    const job = _allJobs.find(j => j.id === _currentJobId);
+    if (!job) return;
+
+    // Pre-fill from profile
+    const d = getProfileData();
+    const user = auth.currentUser;
+    const el = id => document.getElementById(id);
+
+    el('af-name').value = d.name || (user && user.displayName) || '';
+    el('af-email').value = (user && user.email) || '';
+    el('af-phone').value = d.phone || '';
+    el('af-street').value = '';
+    el('af-city').value = (d.location || '').split(',')[0]?.trim() || '';
+    el('af-state').value = (d.location || '').split(',')[1]?.trim() || '';
+    el('af-pincode').value = '';
+    el('af-education').value = d.education || '';
+    el('af-experience').value = d.experience || 'Fresher';
+    el('af-skills').value = d.skills || '';
+    el('af-notes').value = '';
+    el('af-resume-label').textContent = d.resumeName ? d.resumeName : 'Upload PDF / DOC';
+
+    // Job summary card
+    el('apply-job-title').textContent = job.title;
+    el('apply-job-company').textContent = job.company + ' · ' + job.location;
+    el('apply-job-type').textContent = job.type;
+    el('apply-form-subtitle').textContent = job.company;
+    const avatar = el('apply-job-avatar');
+    if (avatar) {
+        avatar.textContent = job.company.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+        avatar.style.background = job.grad;
+    }
+
+    // Reset error + button
+    const errEl = el('af-error');
+    if (errEl) errEl.classList.add('hidden');
+    const btn = el('af-submit-btn');
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.innerHTML = '<span class="material-symbols-outlined" style="font-variation-settings:\'FILL\' 1">send</span> Submit Application'; }
+
+    navigateTo('job-apply');
+}
+window.openJobApplyForm = openJobApplyForm;
+
+function handleApplyResumeChange(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const label = document.getElementById('af-resume-label');
+    if (label) label.textContent = file.name;
+}
+window.handleApplyResumeChange = handleApplyResumeChange;
+
+function finalSubmitApplication() {
+    const job = _allJobs.find(j => j.id === _currentJobId);
+    if (!job) return;
+
+    const el = id => document.getElementById(id);
+    const errEl = el('af-error');
+    const btn = el('af-submit-btn');
+
+    // Collect values
+    const name    = el('af-name').value.trim();
+    const email   = el('af-email').value.trim();
+    const phone   = el('af-phone').value.trim();
+    const street  = el('af-street').value.trim();
+    const city    = el('af-city').value.trim();
+    const state   = el('af-state').value.trim();
+    const pincode = el('af-pincode').value.trim();
+    const edu     = el('af-education').value;
+    const skills  = el('af-skills').value.trim();
+    const exp     = el('af-experience').value;
+    const notes   = el('af-notes').value.trim();
+    const resumeFile = el('af-resume').files[0];
+
+    // Validate
+    if (!name || !email || !phone || !street || !city || !state || !pincode || !edu || !skills) {
+        if (errEl) { errEl.textContent = 'Please fill in all required fields.'; errEl.classList.remove('hidden'); }
+        return;
+    }
+    if (!/^\d{10,13}$/.test(phone)) {
+        if (errEl) { errEl.textContent = 'Enter a valid phone number (10–13 digits).'; errEl.classList.remove('hidden'); }
+        return;
+    }
+    if (!/^\d{6}$/.test(pincode)) {
+        if (errEl) { errEl.textContent = 'Enter a valid 6-digit pincode.'; errEl.classList.remove('hidden'); }
+        return;
+    }
+    if (errEl) errEl.classList.add('hidden');
+
+    // Loading state
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.75'; btn.innerHTML = '<span class="material-symbols-outlined" style="font-variation-settings:\'FILL\' 1;animation:spin 1s linear infinite">progress_activity</span> Submitting...'; }
+
+    const user = auth.currentUser;
+
+    const doSave = (resumeName) => {
+        const apps = JSON.parse(localStorage.getItem('tarini_applications') || '[]');
+        const alreadyApplied = apps.some(a => a.jobId === job.id);
+        if (!alreadyApplied) {
+            apps.unshift({
+                jobId:      job.id,
+                userId:     user ? user.uid : 'guest',
+                companyId:  job.company.toLowerCase().replace(/\s+/g, '_'),
+                title:      job.title,
+                company:    job.company,
+                location:   job.location,
+                salary:     job.salary,
+                type:       job.type,
+                industry:   job.industry,
+                grad:       job.grad,
+                appliedAt:  new Date().toISOString(),
+                status:     'Applied',
+                applicant: { name, email, phone, address: `${street}, ${city}, ${state} - ${pincode}`, education: edu, experience: exp, skills, notes, resumeName: resumeName || '' },
+            });
+            localStorage.setItem('tarini_applications', JSON.stringify(apps));
+        }
+
+        addNotification('application', `Applied to ${job.title}`, `Your application to ${job.company} has been submitted successfully.`);
+
+        // Update apply button on detail page
+        const applyBtn = document.getElementById('jd-apply-btn');
+        if (applyBtn) { applyBtn.disabled = true; applyBtn.style.opacity = '0.7'; applyBtn.onclick = null; applyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-variation-settings:\'FILL\' 1">check_circle</span> Already Applied'; }
+
+        // Show success toast (on job detail screen)
+        const toast = document.getElementById('jd-success-toast');
+        const toastJob = document.getElementById('jd-toast-job');
+        if (toastJob) toastJob.textContent = `${job.title} at ${job.company}`;
+
+        // Navigate to job-detail first so toast is visible there
+        navigateTo('job-detail');
+        setTimeout(() => { if (toast) toast.classList.remove('hidden'); }, 150);
+    };
+
+    setTimeout(() => {
+        if (resumeFile) {
+            const reader = new FileReader();
+            reader.onload = () => doSave(resumeFile.name);
+            reader.readAsDataURL(resumeFile);
+        } else {
+            doSave('');
+        }
+    }, 1000);
+}
+window.finalSubmitApplication = finalSubmitApplication;
+
+// ============================================================
+// MY APPLICATIONS SCREEN
+// ============================================================
+
+function loadApplicationsScreen() {
+    const container = document.getElementById('applications-list-container');
+    if (!container) return;
+
+    const apps = JSON.parse(localStorage.getItem('tarini_applications') || '[]');
+
+    if (apps.length === 0) {
+        container.innerHTML = `
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 0;text-align:center">
+                <div style="width:64px;height:64px;border-radius:50%;background:rgba(77,65,223,0.10);display:flex;align-items:center;justify-content:center;margin-bottom:16px">
+                    <span class="material-symbols-outlined" style="font-size:32px;color:#4d41df;font-variation-settings:'FILL' 1">work_history</span>
+                </div>
+                <p style="font-size:15px;font-weight:700;color:#1b1b24">No applications yet</p>
+                <p style="font-size:13px;color:#777587;margin-top:4px">Start applying to jobs to track them here</p>
+                <button onclick="navigateTo('jobs')" style="margin-top:16px;padding:10px 24px;border-radius:999px;border:none;background:linear-gradient(135deg,#4d41df,#5c51a0);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif">Browse Jobs</button>
+            </div>`;
+        return;
+    }
+
+    const statusStyle = s => s === 'Applied'
+        ? 'background:rgba(77,65,223,0.10);color:#4d41df'
+        : s === 'Reviewed'
+        ? 'background:rgba(45,106,79,0.10);color:#276749'
+        : s === 'Shortlisted'
+        ? 'background:rgba(92,81,160,0.10);color:#5c51a0'
+        : 'background:rgba(135,80,65,0.10);color:#875041';
+
+    container.innerHTML = apps.map((app, idx) => {
+        const initials = app.company.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+        const date = new Date(app.appliedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        return `
+        <div style="background:#fff;border-radius:18px;padding:16px;border:1px solid #eae6f3;box-shadow:0 2px 12px -4px rgba(77,65,223,0.08);margin-bottom:12px">
+            <div style="display:flex;align-items:flex-start;gap:12px">
+                <div style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;flex-shrink:0;background:${app.grad || 'linear-gradient(135deg,#4d41df,#5c51a0)'}">${initials}</div>
+                <div style="flex:1;min-width:0">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+                        <div style="flex:1;min-width:0">
+                            <p style="font-size:14px;font-weight:700;color:#1b1b24;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${app.title}</p>
+                            <p style="font-size:12px;color:#777587;margin-top:2px">${app.company} &bull; ${app.location}</p>
+                        </div>
+                        <span style="flex-shrink:0;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;${statusStyle(app.status)}">${app.status}</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap">
+                        <span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:rgba(77,65,223,0.08);color:#4d41df">${app.type || ''}</span>
+                        <span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:rgba(56,161,105,0.08);color:#276749">${app.salary || ''}</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:4px;margin-top:8px">
+                        <span class="material-symbols-outlined" style="font-size:13px;color:#9e9bb8">calendar_today</span>
+                        <p style="font-size:11px;color:#9e9bb8">Applied on ${date}</p>
+                    </div>
+                </div>
+            </div>
+            ${app.applicant ? `
+            <div style="margin-top:12px;padding-top:12px;border-top:1px solid #f0ecf9">
+                <p style="font-size:11px;font-weight:600;color:#9e9bb8;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">Applicant Details</p>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px">
+                    <p style="font-size:12px;color:#464555"><span style="color:#9e9bb8">Name:</span> ${app.applicant.name}</p>
+                    <p style="font-size:12px;color:#464555"><span style="color:#9e9bb8">Phone:</span> ${app.applicant.phone}</p>
+                    <p style="font-size:12px;color:#464555;grid-column:1/-1"><span style="color:#9e9bb8">Education:</span> ${app.applicant.education}</p>
+                    <p style="font-size:12px;color:#464555;grid-column:1/-1"><span style="color:#9e9bb8">Experience:</span> ${app.applicant.experience}</p>
+                </div>
+            </div>` : ''}
+        </div>`;
+    }).join('');
+}
+window.loadApplicationsScreen = loadApplicationsScreen;
+
+// ============================================================
+// BACK NAVIGATION — My Applications
+// ============================================================
+
+function goBackFromApplications() {
+    // Pop the last screen from the stack; fall back to dashboard
+    const prev = _navStack.length > 0 ? _navStack.pop() : 'dashboard';
+    // Never go back to login or another no-nav screen that doesn't make sense
+    const safe = ['dashboard', 'jobs', 'job-detail', 'profile'].includes(prev) ? prev : 'dashboard';
+    navigateTo(safe);
+}
+window.goBackFromApplications = goBackFromApplications;
+
+// Hardware back button / Android back gesture support
+window.addEventListener('popstate', (e) => {
+    const activeScreen = document.querySelector('.screen.active');
+    if (!activeScreen) return;
+    const screenId = activeScreen.id.replace('screen-', '');
+    // If on applications, use our custom back logic
+    if (screenId === 'applications') {
+        e.preventDefault();
+        goBackFromApplications();
+        // Push a new state so the next back press is handled again
+        history.pushState({ screen: screenId }, '', window.location.pathname);
+    }
+});
+
+// Push a state entry whenever we navigate so popstate fires on back gesture
+const _origNavigateTo = navigateTo;
+// Wrap navigateTo to also push browser history state (enables swipe-back on mobile)
+(function () {
+    const _orig = window.navigateTo;
+    window.navigateTo = function (screenId) {
+        _orig(screenId);
+        if (screenId !== 'login') {
+            history.pushState({ screen: screenId }, '', window.location.pathname);
+        }
+    };
+})();
+
+// ============================================================
+// SKILL HUB PAGE
+// ============================================================
+
+const _skillCategories = [
+    { name:'Design',        icon:'palette',          color:'#5c51a0', bg:'rgba(92,81,160,0.12)',   grad:'linear-gradient(135deg,#5c51a0,#c8bfff)' },
+    { name:'Development',   icon:'code',             color:'#4d41df', bg:'rgba(77,65,223,0.12)',   grad:'linear-gradient(135deg,#4d41df,#675df9)' },
+    { name:'Marketing',     icon:'campaign',         color:'#875041', bg:'rgba(135,80,65,0.12)',   grad:'linear-gradient(135deg,#875041,#feb5a2)' },
+    { name:'Finance',       icon:'payments',         color:'#276749', bg:'rgba(45,106,79,0.12)',   grad:'linear-gradient(135deg,#276749,#74c69d)' },
+    { name:'Communication', icon:'forum',            color:'#675df9', bg:'rgba(103,93,249,0.12)',  grad:'linear-gradient(135deg,#675df9,#c4c0ff)' },
+    { name:'Business',      icon:'business_center',  color:'#c77dff', bg:'rgba(199,125,255,0.12)', grad:'linear-gradient(135deg,#c77dff,#e5deff)' },
+    { name:'Health',        icon:'health_and_safety',color:'#e63946', bg:'rgba(230,57,70,0.10)',   grad:'linear-gradient(135deg,#e63946,#ffb3b8)' },
+    { name:'Leadership',    icon:'military_tech',    color:'#4d41df', bg:'rgba(77,65,223,0.12)',   grad:'linear-gradient(135deg,#4d41df,#5c51a0)' },
+];
+
+const _allCourses = [
+    { id:1,  title:'Figma for Beginners',           instructor:'DesignCraft',    category:'Design',        level:'Beginner',     durLabel:'1.5h',  durKey:'short',  type:'Free', rating:4.8, enrolled:3200, desc:'Learn UI design fundamentals using Figma — from wireframes to polished prototypes.' },
+    { id:2,  title:'React.js Essentials',           instructor:'CodeNest',       category:'Development',   level:'Intermediate', durLabel:'4h',    durKey:'medium', type:'Free', rating:4.7, enrolled:5100, desc:'Build modern web apps with React hooks, components, and state management.' },
+    { id:3,  title:'Digital Marketing Masterclass', instructor:'GrowthLab',      category:'Marketing',     level:'Beginner',     durLabel:'3h',    durKey:'medium', type:'Paid', rating:4.6, enrolled:2800, desc:'Master SEO, social media, email campaigns, and paid ads from scratch.' },
+    { id:4,  title:'Personal Finance Basics',       instructor:'MoneyWise',      category:'Finance',       level:'Beginner',     durLabel:'1h',    durKey:'short',  type:'Free', rating:4.9, enrolled:7400, desc:'Understand budgeting, savings, investments, and financial planning for everyday life.' },
+    { id:5,  title:'Public Speaking Confidence',    instructor:'SpeakUp India',  category:'Communication', level:'Beginner',     durLabel:'2h',    durKey:'short',  type:'Free', rating:4.5, enrolled:1900, desc:'Overcome stage fear and communicate with clarity, confidence, and impact.' },
+    { id:6,  title:'Business Plan Writing',         instructor:'StartupSchool',  category:'Business',      level:'Intermediate', durLabel:'2.5h',  durKey:'medium', type:'Paid', rating:4.7, enrolled:1500, desc:'Write a compelling business plan that attracts investors and guides your startup.' },
+    { id:7,  title:'Advanced CSS & Animations',     instructor:'PixelWorks',     category:'Development',   level:'Advanced',     durLabel:'6h',    durKey:'long',   type:'Paid', rating:4.6, enrolled:2100, desc:'Deep-dive into CSS Grid, Flexbox, custom animations, and responsive design patterns.' },
+    { id:8,  title:'Stock Market for Women',        instructor:'InvestHer',      category:'Finance',       level:'Beginner',     durLabel:'3h',    durKey:'medium', type:'Paid', rating:4.8, enrolled:3300, desc:'Demystify the stock market — learn how to invest smartly and build long-term wealth.' },
+    { id:9,  title:'Brand Identity Design',         instructor:'DesignCraft',    category:'Design',        level:'Intermediate', durLabel:'5h',    durKey:'long',   type:'Paid', rating:4.7, enrolled:1800, desc:'Create powerful brand identities — logos, colour palettes, typography, and style guides.' },
+    { id:10, title:'Python for Data Analysis',      instructor:'DataSeva',       category:'Development',   level:'Intermediate', durLabel:'8h',    durKey:'long',   type:'Free', rating:4.9, enrolled:6200, desc:'Use Python, Pandas, and Matplotlib to analyse real-world datasets and visualise insights.' },
+    { id:11, title:'Effective Email Writing',       instructor:'SpeakUp India',  category:'Communication', level:'Beginner',     durLabel:'45min', durKey:'short',  type:'Free', rating:4.4, enrolled:980,  desc:'Write professional emails that get responses — structure, tone, and etiquette covered.' },
+    { id:12, title:'Entrepreneurship 101',          instructor:'StartupSchool',  category:'Business',      level:'Beginner',     durLabel:'4h',    durKey:'medium', type:'Free', rating:4.6, enrolled:4100, desc:'From idea to execution — learn the mindset, tools, and steps to launch your own venture.' },
+];
+
+const _skillFilters = { cat: new Set(), level: new Set(), dur: new Set(), type: new Set() };
+
+function toggleSkillFilters() {
+    const panel = document.getElementById('skill-filter-panel');
+    const btn   = document.getElementById('skill-filter-btn');
+    const hidden = panel.classList.toggle('hidden');
+    btn.style.background = hidden ? '' : 'rgba(77,65,223,0.12)';
+}
+window.toggleSkillFilters = toggleSkillFilters;
+
+function toggleSkillFilter(group, value) {
+    const set = _skillFilters[group];
+    if (set.has(value)) set.delete(value); else set.add(value);
+    document.querySelectorAll(`.skill-chip[data-sf="${group}"][data-sv="${value}"]`).forEach(btn => {
+        const on = set.has(value);
+        btn.style.background = on ? 'rgba(77,65,223,0.15)' : '';
+        btn.style.color      = on ? '#4d41df' : '';
+        btn.style.fontWeight = on ? '700' : '';
+    });
+    applySkillFilters();
+}
+window.toggleSkillFilter = toggleSkillFilter;
+
+function clearSkillFilters() {
+    Object.values(_skillFilters).forEach(s => s.clear());
+    document.querySelectorAll('.skill-chip').forEach(b => { b.style.background = ''; b.style.color = ''; b.style.fontWeight = ''; });
+    const inp = document.getElementById('skill-search-input');
+    if (inp) inp.value = '';
+    applySkillFilters();
+}
+window.clearSkillFilters = clearSkillFilters;
+
+function applySkillFilters() {
+    const q = (document.getElementById('skill-search-input')?.value || '').toLowerCase();
+    const { cat, level, dur, type } = _skillFilters;
+    const filtered = _allCourses.filter(c => {
+        if (q && !`${c.title} ${c.instructor} ${c.category}`.toLowerCase().includes(q)) return false;
+        if (cat.size   && !cat.has(c.category))  return false;
+        if (level.size && !level.has(c.level))   return false;
+        if (dur.size   && !dur.has(c.durKey))    return false;
+        if (type.size  && !type.has(c.type))     return false;
+        return true;
+    });
+    _renderCourseCards(filtered);
+}
+window.applySkillFilters = applySkillFilters;
+
+function _renderCourseCards(courses) {
+    const container = document.getElementById('skill-courses-container');
+    const empty     = document.getElementById('skill-empty-state');
+    const countEl   = document.getElementById('skill-courses-count');
+    if (!container) return;
+
+    if (courses.length === 0) {
+        container.innerHTML = '';
+        if (empty)   empty.classList.remove('hidden');
+        if (countEl) countEl.textContent = '';
+        return;
+    }
+    if (empty)   empty.classList.add('hidden');
+    if (countEl) countEl.textContent = `${courses.length} course${courses.length !== 1 ? 's' : ''}`;
+
+    const levelColor = l => l === 'Beginner'     ? 'background:rgba(45,106,79,0.10);color:#276749'
+                          : l === 'Intermediate' ? 'background:rgba(77,65,223,0.10);color:#4d41df'
+                          :                        'background:rgba(135,80,65,0.10);color:#875041';
+    const typeColor  = t => t === 'Free'         ? 'background:rgba(45,106,79,0.10);color:#276749'
+                          :                        'background:rgba(92,81,160,0.10);color:#5c51a0';
+    const stars = r => {
+        const full = Math.floor(r);
+        return Array.from({length:5}, (_,i) =>
+            `<span class="material-symbols-outlined" style="font-size:13px;color:${i < full ? '#f59e0b' : '#d1d5db'};font-variation-settings:'FILL' 1">star</span>`
+        ).join('');
+    };
+
+    container.innerHTML = courses.map(c => `
+        <div style="background:#fff;border-radius:20px;padding:16px;border:1px solid #eae6f3;box-shadow:0 2px 12px -4px rgba(77,65,223,0.08);transition:transform 0.15s,box-shadow 0.15s"
+            onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px -4px rgba(77,65,223,0.14)'"
+            onmouseleave="this.style.transform='';this.style.boxShadow='0 2px 12px -4px rgba(77,65,223,0.08)'"
+            ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform=''">
+            <div style="display:flex;align-items:flex-start;gap:12px">
+                <!-- Course icon avatar -->
+                <div style="width:48px;height:48px;border-radius:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:${(_skillCategories.find(x=>x.name===c.category)||{bg:'rgba(77,65,223,0.12)'}).bg}">
+                    <span class="material-symbols-outlined" style="font-size:22px;color:${(_skillCategories.find(x=>x.name===c.category)||{color:'#4d41df'}).color};font-variation-settings:'FILL' 1">${(_skillCategories.find(x=>x.name===c.category)||{icon:'school'}).icon}</span>
+                </div>
+                <div style="flex:1;min-width:0">
+                    <p style="font-size:14px;font-weight:700;color:#1b1b24;line-height:1.3">${c.title}</p>
+                    <p style="font-size:12px;color:#777587;margin-top:2px">${c.instructor} &bull; ${c.category}</p>
+                    <p style="font-size:12px;color:#464555;margin-top:5px;line-height:1.5">${c.desc}</p>
+                    <!-- Meta row -->
+                    <div style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap">
+                        <span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;${levelColor(c.level)}">${c.level}</span>
+                        <span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;${typeColor(c.type)}">${c.type}</span>
+                        <span style="display:flex;align-items:center;gap:3px;font-size:11px;color:#777587">
+                            <span class="material-symbols-outlined" style="font-size:13px;color:#9e9bb8;font-variation-settings:'FILL' 1">schedule</span>${c.durLabel}
+                        </span>
+                    </div>
+                    <!-- Rating + enrolled -->
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
+                        <div style="display:flex;align-items:center;gap:4px">
+                            ${stars(c.rating)}
+                            <span style="font-size:12px;font-weight:700;color:#1b1b24;margin-left:2px">${c.rating}</span>
+                            <span style="font-size:11px;color:#9e9bb8">(${c.enrolled.toLocaleString('en-IN')})</span>
+                        </div>
+                        <button onclick="enrollCourse(${c.id})" style="height:34px;padding:0 16px;border-radius:10px;border:none;background:linear-gradient(135deg,#4d41df,#5c51a0);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;transition:opacity 0.15s" onmouseenter="this.style.opacity='0.88'" onmouseleave="this.style.opacity='1'">Enroll</button>
+                    </div>
+                </div>
+            </div>
+        </div>`).join('');
+}
+
+function enrollCourse(courseId) {
+    const course = _allCourses.find(c => c.id === courseId);
+    if (!course) return;
+    showToast(`Enrolled in "${course.title}" ✓`);
+    addNotification('system', `Enrolled: ${course.title}`, `You have successfully enrolled in ${course.title} by ${course.instructor}.`);
+}
+window.enrollCourse = enrollCourse;
+
+function _renderSkillCategories() {
+    const container = document.getElementById('skill-categories-container');
+    if (!container) return;
+    // Show first 6 in the horizontal scroll
+    container.innerHTML = _skillCategories.slice(0, 6).map(c => `
+        <div onclick="filterBySkillCategory('${c.name}')"
+            style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;width:68px">
+            <div style="width:60px;height:60px;border-radius:50%;background:${c.bg};display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px -4px rgba(77,65,223,0.15);transition:transform 0.15s,box-shadow 0.15s"
+                onmouseenter="this.style.transform='scale(1.08)';this.style.boxShadow='0 8px 20px -4px rgba(77,65,223,0.22)'"
+                onmouseleave="this.style.transform='';this.style.boxShadow='0 4px 12px -4px rgba(77,65,223,0.15)'"
+                ontouchstart="this.style.transform='scale(0.94)'" ontouchend="this.style.transform=''">
+                <span class="material-symbols-outlined" style="font-size:26px;color:${c.color};font-variation-settings:'FILL' 1">${c.icon}</span>
+            </div>
+            <p style="font-size:11px;font-weight:600;color:#1b1b24;text-align:center;line-height:1.3;word-break:break-word">${c.name}</p>
+        </div>`).join('');
+}
+
+function filterBySkillCategory(name) {
+    // Clear other cat filters, set this one
+    _skillFilters.cat.clear();
+    _skillFilters.cat.add(name);
+    document.querySelectorAll('.skill-chip[data-sf="cat"]').forEach(b => {
+        const on = b.getAttribute('data-sv') === name;
+        b.style.background = on ? 'rgba(77,65,223,0.15)' : '';
+        b.style.color      = on ? '#4d41df' : '';
+        b.style.fontWeight = on ? '700' : '';
+    });
+    applySkillFilters();
+    // Scroll to courses section
+    document.getElementById('skill-courses-container')?.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+window.filterBySkillCategory = filterBySkillCategory;
+
+function openAllCategories() {
+    const grid = document.getElementById('all-categories-grid');
+    if (grid) {
+        grid.innerHTML = _skillCategories.map(c => `
+            <div onclick="navigateTo('skills');setTimeout(()=>filterBySkillCategory('${c.name}'),200)"
+                style="display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;padding:12px 4px;border-radius:16px;transition:background 0.15s"
+                onmouseenter="this.style.background='rgba(77,65,223,0.05)'"
+                onmouseleave="this.style.background=''">
+                <div style="width:64px;height:64px;border-radius:50%;background:${c.bg};display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px -4px rgba(77,65,223,0.15)">
+                    <span class="material-symbols-outlined" style="font-size:28px;color:${c.color};font-variation-settings:'FILL' 1">${c.icon}</span>
+                </div>
+                <p style="font-size:12px;font-weight:600;color:#1b1b24;text-align:center;line-height:1.3">${c.name}</p>
+                <p style="font-size:10px;color:#9e9bb8">${_allCourses.filter(x=>x.category===c.name).length} courses</p>
+            </div>`).join('');
+    }
+    navigateTo('skill-categories');
+}
+window.openAllCategories = openAllCategories;
+
+function initSkillsPage() {
+    _renderSkillCategories();
+    applySkillFilters();
+}
+window.initSkillsPage = initSkillsPage;
+
+// ============================================================
+// MARKETPLACE PAGE
+// ============================================================
+
+const _marketCategories = [
+    { name:'Handicrafts', icon:'category',        color:'#4d41df', bg:'rgba(77,65,223,0.12)'   },
+    { name:'Clothing',    icon:'checkroom',        color:'#875041', bg:'rgba(135,80,65,0.12)'   },
+    { name:'Jewellery',   icon:'diamond',          color:'#5c51a0', bg:'rgba(92,81,160,0.12)'   },
+    { name:'Food',        icon:'restaurant',       color:'#276749', bg:'rgba(45,106,79,0.12)'   },
+    { name:'Art',         icon:'palette',          color:'#675df9', bg:'rgba(103,93,249,0.12)'  },
+    { name:'Beauty',      icon:'spa',              color:'#c77dff', bg:'rgba(199,125,255,0.12)' },
+    { name:'Home Decor',  icon:'chair',            color:'#875041', bg:'rgba(135,80,65,0.10)'   },
+    { name:'Stationery',  icon:'edit_note',        color:'#4d41df', bg:'rgba(77,65,223,0.10)'   },
+];
+
+const _marketProducts = [
+    { id:'m1', image:'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=400&q=80', name:'Hand-embroidered Dupatta',  seller:'Meena Crafts',   sellerType:'user',    category:'Clothing',    price:850,  stock:12, rating:4.8, desc:'Beautifully hand-embroidered dupatta with traditional motifs.' },
+    { id:'m2', image:'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=400&q=80', name:'Terracotta Earrings Set',   seller:'Clay & Co.',     sellerType:'company', category:'Jewellery',   price:320,  stock:30, rating:4.7, desc:'Lightweight terracotta earrings, eco-friendly and unique.' },
+    { id:'m3', image:'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=400&q=80', name:'Organic Turmeric Powder',   seller:'Spice Garden',   sellerType:'user',    category:'Food',        price:180,  stock:50, rating:4.9, desc:'100% organic turmeric sourced directly from farms.' },
+    { id:'m4', image:'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=400&q=80', name:'Madhubani Art Print',        seller:'ArtByPriya',     sellerType:'user',    category:'Art',         price:1200, stock:5,  rating:4.6, desc:'Original Madhubani art print on handmade paper.' },
+    { id:'m5', image:'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&q=80', name:'Handwoven Jute Bag',         seller:'GreenWeave',     sellerType:'company', category:'Handicrafts', price:450,  stock:20, rating:4.5, desc:'Eco-friendly jute bag, perfect for daily use.' },
+    { id:'m6', image:'https://images.unsplash.com/photo-1607006344380-b6775a0824a7?w=400&q=80', name:'Rose & Sandalwood Soap',     seller:'NaturalGlow',    sellerType:'user',    category:'Beauty',      price:150,  stock:40, rating:4.8, desc:'Handmade cold-process soap with natural ingredients.' },
+    { id:'m7', image:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80', name:'Macramé Wall Hanging',       seller:'KnotArt Studio', sellerType:'company', category:'Home Decor',  price:2200, stock:8,  rating:4.7, desc:'Handcrafted macramé wall hanging, boho style.' },
+    { id:'m8', image:'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=400&q=80', name:'Handmade Greeting Cards',    seller:'PaperLove',      sellerType:'user',    category:'Stationery',  price:80,   stock:100,rating:4.4, desc:'Set of 5 handmade greeting cards for all occasions.' },
+    { id:'m9', image:'https://images.unsplash.com/photo-1611085583191-a3b181a88401?w=400&q=80', name:'Silk Thread Bangles',        seller:'Meena Crafts',   sellerType:'user',    category:'Jewellery',   price:250,  stock:25, rating:4.6, desc:'Colourful silk thread bangles, set of 6.' },
+    { id:'m10',name:'Handloom Cotton Saree',      seller:'WeaversHub',     sellerType:'company', category:'Clothing',    price:3500, stock:15, rating:4.9, desc:'Pure handloom cotton saree with natural dyes.' },
+];
+
+const _marketFilters = { cat: new Set(), price: new Set(), seller: new Set(), stock: new Set() };
+
+function toggleMarketFilters() {
+    const panel = document.getElementById('market-filter-panel');
+    const btn   = document.getElementById('market-filter-btn');
+    const hidden = panel.classList.toggle('hidden');
+    btn.style.background = hidden ? '' : 'rgba(77,65,223,0.12)';
+}
+window.toggleMarketFilters = toggleMarketFilters;
+
+function toggleMarketFilter(group, value) {
+    const set = _marketFilters[group];
+    if (set.has(value)) set.delete(value); else set.add(value);
+    document.querySelectorAll(`.market-chip[data-mf="${group}"][data-mv="${value}"]`).forEach(btn => {
+        const on = set.has(value);
+        btn.style.background = on ? 'rgba(77,65,223,0.15)' : '';
+        btn.style.color      = on ? '#4d41df' : '';
+        btn.style.fontWeight = on ? '700' : '';
+    });
+    applyMarketFilters();
+}
+window.toggleMarketFilter = toggleMarketFilter;
+
+function clearMarketFilters() {
+    Object.values(_marketFilters).forEach(s => s.clear());
+    document.querySelectorAll('.market-chip').forEach(b => { b.style.background = ''; b.style.color = ''; b.style.fontWeight = ''; });
+    const inp = document.getElementById('market-search-input');
+    if (inp) inp.value = '';
+    applyMarketFilters();
+}
+window.clearMarketFilters = clearMarketFilters;
+
+function _priceMatch(p, priceSet) {
+    if (priceSet.size === 0) return true;
+    if (priceSet.has('under500')  && p.price < 500)                    return true;
+    if (priceSet.has('500to2k')   && p.price >= 500 && p.price <= 2000) return true;
+    if (priceSet.has('above2k')   && p.price > 2000)                   return true;
+    return false;
+}
+
+function _getFilteredProducts() {
+    const q = (document.getElementById('market-search-input')?.value || '').toLowerCase();
+    const { cat, price, seller, stock } = _marketFilters;
+
+    // Merge catalogue + user's own shop products
+    const userProds = getShopProducts().map(p => ({
+        id: 'u' + p.id, name: p.name, seller: 'My Shop', sellerType: 'user',
+        category: p.category || 'Handicrafts', price: Number(p.price) || 0,
+        stock: Number(p.stock) || 0, rating: 0, image: p.image || '', desc: p.description || '',
+    }));
+    const all = [..._marketProducts, ...userProds];
+
+    return all.filter(p => {
+        if (q && !`${p.name} ${p.seller} ${p.category}`.toLowerCase().includes(q)) return false;
+        if (cat.size    && !cat.has(p.category))                                    return false;
+        if (!_priceMatch(p, price))                                                 return false;
+        if (seller.size && !seller.has(p.sellerType))                               return false;
+        if (stock.size) {
+            if (stock.has('instock')    && p.stock <= 0) return false;
+            if (stock.has('outofstock') && p.stock > 0)  return false;
+        }
+        return true;
+    });
+}
+
+function applyMarketFilters() {
+    const filtered = _getFilteredProducts();
+    _renderMarketAllProducts(filtered);
+}
+window.applyMarketFilters = applyMarketFilters;
+
+function _productCard(p, horizontal) {
+    const catMeta = _marketCategories.find(c => c.name === p.category) || { color:'#4d41df', bg:'rgba(77,65,223,0.10)', icon:'category' };
+    const stars = r => r > 0 ? Array.from({length:5}, (_,i) =>
+        `<span class="material-symbols-outlined" style="font-size:11px;color:${i < Math.floor(r) ? '#f59e0b' : '#d1d5db'};font-variation-settings:'FILL' 1">star</span>`
+    ).join('') : '';
+    const imgContent = p.image
+        ? `<img src="${p.image}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><span class="material-symbols-outlined" style="display:none;font-size:32px;color:${catMeta.color};font-variation-settings:'FILL' 1">${catMeta.icon}</span>`
+        : `<span class="material-symbols-outlined" style="font-size:32px;color:${catMeta.color};font-variation-settings:'FILL' 1">${catMeta.icon}</span>`;
+
+    if (horizontal) {
+        return `
+        <div style="flex-shrink:0;width:160px;background:#fff;border-radius:18px;border:1px solid #eae6f3;box-shadow:0 2px 10px -4px rgba(77,65,223,0.10);overflow:hidden;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s"
+            onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 18px -4px rgba(77,65,223,0.18)'"
+            onmouseleave="this.style.transform='';this.style.boxShadow='0 2px 10px -4px rgba(77,65,223,0.10)'"
+            ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform=''">
+            <div style="width:100%;height:110px;background:${catMeta.bg};display:flex;align-items:center;justify-content:center;overflow:hidden">${imgContent}</div>
+            <div style="padding:10px">
+                <p style="font-size:12px;font-weight:700;color:#1b1b24;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</p>
+                <p style="font-size:10px;color:#777587;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.seller}</p>
+                <div style="display:flex;align-items:center;gap:2px;margin-top:3px">${stars(p.rating)}</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
+                    <p style="font-size:13px;font-weight:800;color:#4d41df">&#8377;${p.price.toLocaleString('en-IN')}</p>
+                    <button onclick="event.stopPropagation();buyProduct('${p.id}')" style="height:26px;padding:0 10px;border-radius:8px;border:none;background:linear-gradient(135deg,#4d41df,#5c51a0);color:#fff;font-size:10px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif">Buy</button>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    return `
+    <div style="background:#fff;border-radius:18px;border:1px solid #eae6f3;box-shadow:0 2px 10px -4px rgba(77,65,223,0.08);overflow:hidden;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s"
+        onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 18px -4px rgba(77,65,223,0.16)'"
+        onmouseleave="this.style.transform='';this.style.boxShadow='0 2px 10px -4px rgba(77,65,223,0.08)'"
+        ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform=''">
+        <div style="width:100%;height:120px;background:${catMeta.bg};display:flex;align-items:center;justify-content:center;overflow:hidden">${imgContent}</div>
+        <div style="padding:10px">
+            <p style="font-size:12px;font-weight:700;color:#1b1b24;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${p.name}</p>
+            <p style="font-size:10px;color:#777587;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.seller}</p>
+            <div style="display:flex;align-items:center;gap:2px;margin-top:3px">${stars(p.rating)}</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;gap:4px">
+                <p style="font-size:13px;font-weight:800;color:#4d41df">&#8377;${p.price.toLocaleString('en-IN')}</p>
+                <button onclick="event.stopPropagation();buyProduct('${p.id}')" style="height:28px;padding:0 10px;border-radius:8px;border:none;background:linear-gradient(135deg,#4d41df,#5c51a0);color:#fff;font-size:10px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;white-space:nowrap">Buy</button>
+            </div>
+            ${p.stock <= 0 ? '<p style="font-size:10px;color:#ba1a1a;font-weight:600;margin-top:3px">Out of stock</p>' : ''}
+        </div>
+    </div>`;
+}
+
+function _renderMarketPopular() {
+    const container = document.getElementById('market-popular-container');
+    if (!container) return;
+    const popular = _marketProducts.slice(0, 6);
+    container.innerHTML = popular.map(p => _productCard(p, true)).join('');
+}
+
+function _renderMarketAllProducts(products) {
+    const container = document.getElementById('market-all-products');
+    const empty     = document.getElementById('market-empty-state');
+    const countEl   = document.getElementById('market-products-count');
+    if (!container) return;
+
+    if (products.length === 0) {
+        container.innerHTML = '';
+        if (empty)   empty.classList.remove('hidden');
+        if (countEl) countEl.textContent = '';
+        return;
+    }
+    if (empty)   empty.classList.add('hidden');
+    if (countEl) countEl.textContent = `${products.length} product${products.length !== 1 ? 's' : ''}`;
+    container.innerHTML = products.map(p => _productCard(p, false)).join('');
+}
+
+function showAllMarketProducts() {
+    clearMarketFilters();
+    document.getElementById('market-all-products')?.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+window.showAllMarketProducts = showAllMarketProducts;
+
+function buyProduct(productId) {
+    addToCart(productId);
+}
+window.buyProduct = buyProduct;
+
+function _renderMarketCategories() {
+    const container = document.getElementById('market-categories-container');
+    if (!container) return;
+    container.innerHTML = _marketCategories.slice(0, 6).map(c => `
+        <div onclick="filterByMarketCategory('${c.name}')"
+            style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;width:68px">
+            <div style="width:60px;height:60px;border-radius:50%;background:${c.bg};display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px -4px rgba(77,65,223,0.15);transition:transform 0.15s,box-shadow 0.15s"
+                onmouseenter="this.style.transform='scale(1.08)';this.style.boxShadow='0 8px 20px -4px rgba(77,65,223,0.22)'"
+                onmouseleave="this.style.transform='';this.style.boxShadow='0 4px 12px -4px rgba(77,65,223,0.15)'"
+                ontouchstart="this.style.transform='scale(0.94)'" ontouchend="this.style.transform=''">
+                <span class="material-symbols-outlined" style="font-size:26px;color:${c.color};font-variation-settings:'FILL' 1">${c.icon}</span>
+            </div>
+            <p style="font-size:11px;font-weight:600;color:#1b1b24;text-align:center;line-height:1.3;word-break:break-word">${c.name}</p>
+        </div>`).join('');
+}
+
+function filterByMarketCategory(name) {
+    _marketFilters.cat.clear();
+    _marketFilters.cat.add(name);
+    document.querySelectorAll('.market-chip[data-mf="cat"]').forEach(b => {
+        const on = b.getAttribute('data-mv') === name;
+        b.style.background = on ? 'rgba(77,65,223,0.15)' : '';
+        b.style.color      = on ? '#4d41df' : '';
+        b.style.fontWeight = on ? '700' : '';
+    });
+    applyMarketFilters();
+    document.getElementById('market-all-products')?.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+window.filterByMarketCategory = filterByMarketCategory;
+
+function openAllMarketCategories() {
+    const grid = document.getElementById('market-all-categories-grid');
+    if (grid) {
+        grid.innerHTML = _marketCategories.map(c => {
+            const count = _marketProducts.filter(p => p.category === c.name).length;
+            return `
+            <div onclick="navigateTo('shop');setTimeout(()=>filterByMarketCategory('${c.name}'),200)"
+                style="display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;padding:12px 4px;border-radius:16px;transition:background 0.15s"
+                onmouseenter="this.style.background='rgba(77,65,223,0.05)'"
+                onmouseleave="this.style.background=''">
+                <div style="width:64px;height:64px;border-radius:50%;background:${c.bg};display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px -4px rgba(77,65,223,0.15)">
+                    <span class="material-symbols-outlined" style="font-size:28px;color:${c.color};font-variation-settings:'FILL' 1">${c.icon}</span>
+                </div>
+                <p style="font-size:12px;font-weight:600;color:#1b1b24;text-align:center;line-height:1.3">${c.name}</p>
+                <p style="font-size:10px;color:#9e9bb8">${count} products</p>
+            </div>`;
+        }).join('');
+    }
+    navigateTo('market-categories');
+}
+window.openAllMarketCategories = openAllMarketCategories;
+
+function initMarketplace() {
+    _renderMarketCategories();
+    _renderMarketPopular();
+    applyMarketFilters();
+    renderShopProducts();   // keep existing My Listings in sync
+}
+window.initMarketplace = initMarketplace;
+
+// ============================================================
+// CART
+// ============================================================
+
+function _getCart() { return JSON.parse(localStorage.getItem('tarini_cart') || '[]'); }
+function _saveCart(c) { localStorage.setItem('tarini_cart', JSON.stringify(c)); }
+
+function _updateCartBadge() {
+    const cart = _getCart();
+    const total = cart.reduce((s, i) => s + i.qty, 0);
+    const badge = document.getElementById('cart-badge');
+    if (!badge) return;
+    if (total > 0) { badge.textContent = total > 9 ? '9+' : total; badge.classList.remove('hidden'); }
+    else badge.classList.add('hidden');
+}
+
+function addToCart(productId) {
+    const all = [..._marketProducts, ...getShopProducts().map(p => ({
+        id: 'u' + p.id, name: p.name, price: Number(p.price) || 0,
+        image: p.image || '', category: p.category || 'Handicrafts',
+        seller: 'My Shop', stock: Number(p.stock) || 0,
+    }))];
+    const p = all.find(x => x.id === productId);
+    if (!p) return;
+    const cart = _getCart();
+    const existing = cart.find(i => i.id === productId);
+    if (existing) { existing.qty = Math.min(existing.qty + 1, p.stock || 99); }
+    else { cart.push({ id: p.id, name: p.name, price: p.price, image: p.image, seller: p.seller || '', qty: 1, stock: p.stock || 99 }); }
+    _saveCart(cart);
+    _updateCartBadge();
+    showToast(`"${p.name}" added to cart ✓`);
+}
+window.addToCart = addToCart;
+
+function removeFromCart(productId) {
+    _saveCart(_getCart().filter(i => i.id !== productId));
+    _updateCartBadge();
+    renderCart();
+}
+window.removeFromCart = removeFromCart;
+
+function updateCartQty(productId, delta) {
+    const cart = _getCart();
+    const item = cart.find(i => i.id === productId);
+    if (!item) return;
+    item.qty = Math.max(1, Math.min(item.qty + delta, item.stock || 99));
+    _saveCart(cart);
+    _updateCartBadge();
+    renderCart();
+}
+window.updateCartQty = updateCartQty;
+
+function clearCart() {
+    _saveCart([]);
+    _updateCartBadge();
+    renderCart();
+}
+window.clearCart = clearCart;
+
+function renderCart() {
+    const cart = _getCart();
+    const listEl   = document.getElementById('cart-items-list');
+    const emptyEl  = document.getElementById('cart-empty');
+    const barEl    = document.getElementById('cart-checkout-bar');
+    const totalEl  = document.getElementById('cart-total');
+    const countEl  = document.getElementById('cart-item-count-label');
+    if (!listEl) return;
+
+    const itemCount = cart.reduce((s, i) => s + i.qty, 0);
+    if (countEl) countEl.textContent = `${itemCount} item${itemCount !== 1 ? 's' : ''}`;
+
+    if (cart.length === 0) {
+        listEl.innerHTML = '';
+        if (emptyEl) emptyEl.classList.remove('hidden');
+        if (barEl)   barEl.classList.add('hidden');
+        return;
+    }
+    if (emptyEl) emptyEl.classList.add('hidden');
+    if (barEl)   barEl.classList.remove('hidden');
+
+    const grandTotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
+    if (totalEl) totalEl.textContent = '₹' + grandTotal.toLocaleString('en-IN');
+
+    listEl.innerHTML = cart.map(item => `
+        <div style="background:#fff;border-radius:18px;padding:14px;border:1px solid #eae6f3;box-shadow:0 2px 10px -4px rgba(77,65,223,0.08);display:flex;align-items:center;gap:12px">
+            <div style="width:72px;height:72px;border-radius:14px;overflow:hidden;flex-shrink:0;background:rgba(77,65,223,0.08);display:flex;align-items:center;justify-content:center">
+                ${item.image
+                    ? `<img src="${item.image}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><span class="material-symbols-outlined" style="display:none;font-size:28px;color:#4d41df;font-variation-settings:'FILL' 1">image</span>`
+                    : `<span class="material-symbols-outlined" style="font-size:28px;color:#4d41df;font-variation-settings:'FILL' 1">image</span>`}
+            </div>
+            <div style="flex:1;min-width:0">
+                <p style="font-size:13px;font-weight:700;color:#1b1b24;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${item.name}</p>
+                <p style="font-size:11px;color:#777587;margin-top:1px">${item.seller}</p>
+                <p style="font-size:14px;font-weight:800;color:#4d41df;margin-top:4px">₹${(item.price * item.qty).toLocaleString('en-IN')}</p>
+                <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+                    <button onclick="updateCartQty('${item.id}',-1)" style="width:28px;height:28px;border-radius:8px;border:1px solid #eae6f3;background:#f6f2ff;color:#4d41df;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
+                    <span style="font-size:14px;font-weight:700;color:#1b1b24;min-width:20px;text-align:center">${item.qty}</span>
+                    <button onclick="updateCartQty('${item.id}',1)" style="width:28px;height:28px;border-radius:8px;border:1px solid #eae6f3;background:#f6f2ff;color:#4d41df;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
+                    <button onclick="removeFromCart('${item.id}')" style="margin-left:auto;width:28px;height:28px;border-radius:8px;border:none;background:rgba(186,26,26,0.08);color:#ba1a1a;cursor:pointer;display:flex;align-items:center;justify-content:center">
+                        <span class="material-symbols-outlined" style="font-size:16px">delete</span>
+                    </button>
+                </div>
+            </div>
+        </div>`).join('');
+}
+window.renderCart = renderCart;
+
+function proceedToCheckout() {
+    const cart = _getCart();
+    if (cart.length === 0) return;
+    const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+    cart.forEach(item => addNotification('order', `Order: ${item.name}`, `Your order for ${item.name} (×${item.qty}) has been placed.`));
+    clearCart();
+    showToast(`Order placed! Total: ₹${total.toLocaleString('en-IN')} ✓`);
+    navigateTo('shop');
+}
+window.proceedToCheckout = proceedToCheckout;
+
+// ============================================================
+// MY SHOP (Seller View)
+// ============================================================
+
+function initMyShop() {
+    const products = getShopProducts();
+    const listEl   = document.getElementById('myshop-products-list');
+    const emptyEl  = document.getElementById('myshop-empty');
+    const totalEl  = document.getElementById('myshop-total-count');
+    const instockEl= document.getElementById('myshop-instock-count');
+    const soldEl   = document.getElementById('myshop-sold-count');
+    if (!listEl) return;
+
+    if (totalEl)   totalEl.textContent   = products.length;
+    if (instockEl) instockEl.textContent = products.filter(p => Number(p.stock) > 0).length;
+    if (soldEl)    soldEl.textContent    = products.filter(p => Number(p.stock) === 0).length;
+
+    if (products.length === 0) {
+        listEl.innerHTML = '';
+        if (emptyEl) emptyEl.classList.remove('hidden');
+        return;
+    }
+    if (emptyEl) emptyEl.classList.add('hidden');
+
+    listEl.innerHTML = products.slice().reverse().map(p => {
+        const inStock = Number(p.stock) > 0;
+        const statusStyle = inStock
+            ? 'background:rgba(45,106,79,0.10);color:#276749'
+            : 'background:rgba(186,26,26,0.08);color:#ba1a1a';
+        const statusLabel = inStock ? 'Available' : 'Sold Out';
+        return `
+        <div style="background:#fff;border-radius:18px;padding:14px;border:1px solid #eae6f3;box-shadow:0 2px 10px -4px rgba(77,65,223,0.08);display:flex;align-items:center;gap:12px">
+            <div style="width:72px;height:72px;border-radius:14px;overflow:hidden;flex-shrink:0;background:rgba(77,65,223,0.08);display:flex;align-items:center;justify-content:center">
+                ${p.image
+                    ? `<img src="${p.image}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><span class="material-symbols-outlined" style="display:none;font-size:28px;color:#4d41df;font-variation-settings:'FILL' 1">image</span>`
+                    : `<span class="material-symbols-outlined" style="font-size:28px;color:#4d41df;font-variation-settings:'FILL' 1">image</span>`}
+            </div>
+            <div style="flex:1;min-width:0">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+                    <p style="font-size:13px;font-weight:700;color:#1b1b24;line-height:1.3;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</p>
+                    <span style="flex-shrink:0;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;${statusStyle}">${statusLabel}</span>
+                </div>
+                <p style="font-size:14px;font-weight:800;color:#4d41df;margin-top:3px">₹${Number(p.price).toLocaleString('en-IN')}</p>
+                <p style="font-size:11px;color:#777587;margin-top:1px">Stock: ${p.stock} &bull; ${p.category || 'Uncategorised'}</p>
+                <div style="display:flex;gap:8px;margin-top:8px">
+                    <button onclick="openPostProduct(${p.id})" style="height:28px;padding:0 12px;border-radius:8px;border:1px solid rgba(77,65,223,0.25);background:rgba(77,65,223,0.06);color:#4d41df;font-size:11px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;display:flex;align-items:center;gap:4px">
+                        <span class="material-symbols-outlined" style="font-size:13px">edit</span>Edit
+                    </button>
+                    <button onclick="deleteMyShopProduct(${p.id})" style="height:28px;padding:0 12px;border-radius:8px;border:1px solid rgba(186,26,26,0.20);background:rgba(186,26,26,0.06);color:#ba1a1a;font-size:11px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;display:flex;align-items:center;gap:4px">
+                        <span class="material-symbols-outlined" style="font-size:13px">delete</span>Delete
+                    </button>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+window.initMyShop = initMyShop;
+
+function deleteMyShopProduct(productId) {
+    if (!confirm('Delete this product?')) return;
+    saveShopProducts(getShopProducts().filter(p => p.id !== productId));
+    initMyShop();
+    initMarketplace();
+}
+window.deleteMyShopProduct = deleteMyShopProduct;
+
+// ── Initialise cart badge on page load ──
+document.addEventListener('DOMContentLoaded', () => { _updateCartBadge(); });
