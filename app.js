@@ -31,7 +31,6 @@ function navigateTo(screenId) {
         }
         targetScreen.classList.add('active');
         updateBottomNav(screenId);
-        if (screenId === 'shop') renderShopProducts();
         if (screenId === 'profile') loadProfileScreen();
         if (screenId === 'dashboard') loadDashboardEarnings();
         if (screenId === 'notifications') loadNotificationsScreen();
@@ -59,13 +58,15 @@ function navigateToWithOutHistory(screenId) {
     if (targetScreen) {
         targetScreen.classList.add('active');
         updateBottomNav(screenId);
-        if (screenId === 'shop') renderShopProducts();
         if (screenId === 'profile') loadProfileScreen();
         if (screenId === 'dashboard') loadDashboardEarnings();
         if (screenId === 'notifications') loadNotificationsScreen();
         if (screenId === 'jobs') initJobsPage();
         if (screenId === 'applications') loadApplicationsScreen();
         if (screenId === 'skills') initSkillsPage();
+        if (screenId === 'shop') initMarketplace();
+        if (screenId === 'my-shop') initMyShop();
+        if (screenId === 'cart') renderCart();
     }
 }
 
