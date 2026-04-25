@@ -16,6 +16,8 @@ const db = firebase.firestore();
 
 // List of screens that should hide the bottom navigation
 const screensWithoutNav = ['login', 'notifications', 'ai-assistant', 'post-product', 'product-detail', 'edit-profile', 'job-detail', 'job-apply', 'skill-categories', 'market-categories'];
+// Screens that show the nav but don't have a matching nav tab (no active highlight needed)
+const mainNavScreens = ['dashboard', 'jobs', 'skills', 'shop', 'profile'];
 const _navStack = [];
 
 function navigateTo(screenId) {
@@ -84,6 +86,16 @@ function updateBottomNav(screenId) {
     }
 
     // Update active state on nav items using Tailwind classes
+    // For sub-screens (my-shop, cart, applications, rewards), keep parent tab highlighted
+    const navTargetMap = {
+        'my-shop': 'shop', 'cart': 'shop', 'market-categories': 'shop',
+        'applications': 'jobs', 'job-detail': 'jobs', 'job-apply': 'jobs',
+        'skill-categories': 'skills',
+        'notifications': 'dashboard', 'ai-assistant': 'dashboard', 'rewards': 'dashboard',
+        'edit-profile': 'profile',
+    };
+    const activeTarget = navTargetMap[screenId] || screenId;
+
     const navItems = document.querySelectorAll('.nav-item');
     navItems.forEach(item => {
         // Reset to inactive state
@@ -93,7 +105,7 @@ function updateBottomNav(screenId) {
         const icon = item.querySelector('.nav-icon');
         if (icon) icon.style.fontVariationSettings = "'FILL' 0";
 
-        if (item.getAttribute('data-target') === screenId) {
+        if (item.getAttribute('data-target') === activeTarget) {
             // Set to active state
             item.classList.remove('text-slate-400', 'dark:text-slate-500');
             item.classList.add('text-indigo-600', 'dark:text-indigo-400', 'scale-110');
@@ -658,8 +670,10 @@ function renderShopProducts(viewAll) {
 }
 window.renderShopProducts = renderShopProducts;
 
-// ---- Full post product form ----
+let _postProductOrigin = 'shop';
+
 function openPostProduct(productId) {
+    _postProductOrigin = document.querySelector('.screen.active')?.id?.replace('screen-', '') || 'shop';
     const form = document.getElementById('post-product-form');
     form.reset();
     document.getElementById('edit-product-id').value = '';
@@ -744,7 +758,7 @@ window.submitProductForm = submitProductForm;
 function closeProductSuccess() {
     const modal = document.getElementById('product-success-modal');
     if (modal) modal.classList.add('hidden');
-    navigateTo('shop');
+    navigateTo('my-shop');
 }
 window.closeProductSuccess = closeProductSuccess;
 
@@ -2613,10 +2627,10 @@ function initMyShop() {
 
     if (products.length === 0) {
         listEl.innerHTML = '';
-        if (emptyEl) emptyEl.classList.remove('hidden');
+        if (emptyEl) { emptyEl.classList.remove('hidden'); emptyEl.style.display = ''; }
         return;
     }
-    if (emptyEl) emptyEl.classList.add('hidden');
+    if (emptyEl) { emptyEl.classList.add('hidden'); emptyEl.style.display = 'none'; }
 
     listEl.innerHTML = products.slice().reverse().map(p => {
         const inStock = Number(p.stock) > 0;
