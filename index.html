@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -6,9 +6,7 @@
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
     <title>Tarini Women Empowerment Platform</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Be+Vietnam+Pro:wght@400;500;700&display=swap"
-        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Be+Vietnam+Pro:wght@400;500;700&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         rel="stylesheet" />
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -65,6 +63,8 @@
         body {
             min-height: max(884px, 100dvh);
             -webkit-tap-highlight-color: transparent;
+            font-family: 'Poppins', sans-serif;
+            background-image: radial-gradient(circle at 20% 10%, rgba(77, 65, 223, 0.08), transparent 18%), radial-gradient(circle at 85% 90%, rgba(135, 80, 65, 0.06), transparent 20%);
         }
 
         .screen {
@@ -95,6 +95,195 @@
         .hidden {
             display: none !important;
         }
+
+        /* Dashboard job cards */
+        .dash-job-card {
+            background: #ffffff;
+            border-radius: 18px;
+            padding: 16px;
+            border: 1px solid #eae6f3;
+            box-shadow: 0 2px 12px -4px rgba(77,65,223,0.10);
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+            cursor: pointer;
+        }
+        .dash-job-card:active {
+            transform: scale(0.97);
+            box-shadow: 0 1px 6px -2px rgba(77,65,223,0.08);
+        }
+        .dash-job-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 800;
+            flex-shrink: 0;
+            color: #ffffff;
+        }
+        .dash-job-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 9px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
+        /* ============================================
+           DARK MODE — full theme override
+           ============================================ */
+        .dark body,
+        .dark-theme body {
+            background-image: radial-gradient(circle at 20% 10%, rgba(100,90,255,0.06), transparent 18%),
+                              radial-gradient(circle at 85% 90%, rgba(135,80,65,0.04), transparent 20%);
+        }
+
+        /* Page & screen backgrounds */
+        .dark .screen,
+        .dark-theme .screen {
+            background-color: #0f0e17;
+        }
+        .dark #app-container,
+        .dark-theme #app-container {
+            background-color: #0f0e17;
+        }
+
+        /* Global header */
+        .dark #global-header,
+        .dark-theme #global-header {
+            background: rgba(15,14,23,0.92) !important;
+            border-bottom-color: rgba(100,90,255,0.15) !important;
+            box-shadow: 0 1px 12px rgba(0,0,0,0.4) !important;
+        }
+
+        /* Bottom nav */
+        .dark #bottom-nav,
+        .dark-theme #bottom-nav {
+            background: rgba(15,14,23,0.95) !important;
+            border-top-color: rgba(100,90,255,0.12) !important;
+        }
+
+        /* Dashboard greeting banner */
+        .dark #screen-dashboard section:first-child,
+        .dark-theme #screen-dashboard section:first-child {
+            background: linear-gradient(135deg, rgba(77,65,223,0.12) 0%, rgba(92,81,160,0.08) 50%, rgba(135,80,65,0.06) 100%) !important;
+        }
+
+        /* White cards → dark surface */
+        .dark .bg-white,
+        .dark-theme .bg-white,
+        .dark .bg-surface-container-lowest,
+        .dark-theme .bg-surface-container-lowest {
+            background-color: #1c1b2e !important;
+        }
+        .dark .bg-surface-container-low,
+        .dark-theme .bg-surface-container-low {
+            background-color: #252438 !important;
+        }
+        .dark .bg-surface-container,
+        .dark-theme .bg-surface-container {
+            background-color: #1e1d30 !important;
+        }
+        .dark .bg-surface-container-high,
+        .dark-theme .bg-surface-container-high {
+            background-color: #2a2840 !important;
+        }
+
+        /* Borders */
+        .dark .border-surface-container-high,
+        .dark-theme .border-surface-container-high {
+            border-color: #2a2840 !important;
+        }
+        .dark .border-outline-variant,
+        .dark-theme .border-outline-variant {
+            border-color: #3a3850 !important;
+        }
+        .dark .border-indigo-100\/30,
+        .dark-theme .border-indigo-100\/30 {
+            border-color: rgba(100,90,255,0.15) !important;
+        }
+
+        /* Text colors */
+        .dark .text-on-surface,
+        .dark-theme .text-on-surface {
+            color: #e8e6f4 !important;
+        }
+        .dark .text-on-surface-variant,
+        .dark-theme .text-on-surface-variant {
+            color: #9e9bb8 !important;
+        }
+        .dark .text-outline,
+        .dark-theme .text-outline {
+            color: #7a7890 !important;
+        }
+
+        /* Inputs */
+        .dark input,
+        .dark-theme input,
+        .dark textarea,
+        .dark-theme textarea,
+        .dark select,
+        .dark-theme select {
+            background-color: #252438 !important;
+            color: #e8e6f4 !important;
+            border-color: #3a3850 !important;
+        }
+        .dark input::placeholder,
+        .dark-theme input::placeholder,
+        .dark textarea::placeholder,
+        .dark-theme textarea::placeholder {
+            color: #6b6880 !important;
+        }
+
+        /* Dashboard bento cards */
+        .dark .dash-job-card,
+        .dark-theme .dash-job-card {
+            background: #1c1b2e !important;
+            border-color: #2a2840 !important;
+            box-shadow: 0 2px 12px -4px rgba(0,0,0,0.4) !important;
+        }
+        .dark .dash-job-card p[style*="color:#1b1b24"],
+        .dark-theme .dash-job-card p[style*="color:#1b1b24"] {
+            color: #e8e6f4 !important;
+        }
+        .dark .dash-job-card p[style*="color:#777587"],
+        .dark-theme .dash-job-card p[style*="color:#777587"] {
+            color: #9e9bb8 !important;
+        }
+
+        /* Profile & section cards */
+        .dark section.bg-white,
+        .dark-theme section.bg-white {
+            background-color: #1c1b2e !important;
+        }
+        .dark .divide-surface-container-high > * + *,
+        .dark-theme .divide-surface-container-high > * + * {
+            border-top-color: #2a2840 !important;
+        }
+
+        /* Login / auth card */
+        .dark .glow-shadow,
+        .dark-theme .glow-shadow {
+            box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5) !important;
+        }
+
+        /* Role selector cards */
+        .dark .bg-surface-container-low.rounded-2xl,
+        .dark-theme .bg-surface-container-low.rounded-2xl {
+            background-color: #252438 !important;
+        }
+
+        /* Smooth theme transition */
+        body, .screen, #global-header, #bottom-nav,
+        .bg-white, .bg-surface-container-lowest,
+        .bg-surface-container-low, .bg-surface-container,
+        input, textarea, select, .dash-job-card {
+            transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+        }
+
     </style>
     <script id="tailwind-config">
         tailwind.config = {
@@ -143,16 +332,19 @@
 
         <!-- Global Header -->
         <header id="global-header"
-            class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-50 border-b border-indigo-100/20 dark:border-indigo-900/30 shadow-sm shadow-indigo-500/10 flex justify-between items-center px-6 py-4 max-w-full font-['Plus_Jakarta_Sans'] antialiased hidden">
-            <div class="flex items-center gap-2 sm:gap-4">
-                <img src="tarini%20logo%20png.png" alt="Tarini Logo" class="w-[110px] sm:w-[120px] h-auto object-contain py-1">
+            class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl sticky top-0 z-50 border-b border-primary/8 shadow-[0_1px_12px_rgba(77,65,223,0.08)] flex justify-between items-center px-5 py-3 max-w-full font-['Plus_Jakarta_Sans'] antialiased hidden">
+            <div class="flex items-center gap-2">
+                <img src="tarini%20logo%20png.png" alt="Tarini Logo" class="w-[100px] sm:w-[110px] h-auto object-contain">
             </div>
-            <div class="flex items-center gap-4">
-                <button class="material-symbols-outlined text-slate-500 dark:text-slate-400 hover:text-indigo-600"
-                    onclick="toggleTheme()">dark_mode</button>
-                <div class="w-10 h-10 rounded-full bg-surface-container-high overflow-hidden border-2 border-primary-container/20 flex items-center justify-center text-primary cursor-pointer"
+            <div class="flex items-center gap-2">
+                <button class="w-9 h-9 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant hover:bg-primary/10 hover:text-primary transition-all active:scale-90"
+                    onclick="toggleTheme()">
+                    <span class="material-symbols-outlined" style="font-size:20px">dark_mode</span>
+                </button>
+                <div class="w-9 h-9 rounded-full bg-gradient-to-br from-primary/20 to-tertiary/20 border border-primary/20 overflow-hidden flex items-center justify-center text-primary cursor-pointer hover:scale-105 transition-all active:scale-90"
                     onclick="navigateTo('profile')">
-                    <span class="material-symbols-outlined text-2xl">account_circle</span>
+                    <img id="header-avatar-img" class="w-full h-full object-cover hidden" alt="" />
+                    <span id="header-avatar-icon" class="material-symbols-outlined" style="font-size:22px">account_circle</span>
                 </div>
             </div>
         </header>
@@ -185,8 +377,8 @@
                                 <div class="flex justify-center lg:justify-start mb-6 w-full">
                                     <img src="tarini%20logo%20png.png" alt="Tarini Logo" class="w-[180px] sm:w-[220px] md:w-[260px] h-auto object-contain mx-auto lg:mx-0">
                                 </div>
-                                <h2 class="font-h2 text-h2 text-on-surface mb-xs" id="auth-title">Sign In</h2>
-                                <p class="font-body-md text-on-surface-variant">Welcome back to Tarini</p>
+                                <h2 class="font-['Plus_Jakarta_Sans'] text-[32px] font-extrabold tracking-[-0.02em] text-on-surface mb-2 leading-[1.15]" id="auth-title">Sign In</h2>
+                                <p class="text-[15px] font-normal text-on-surface-variant leading-relaxed tracking-[0.01em]" id="auth-subtitle">Welcome back to Tarini</p>
                             </div>
 
                             <div id="auth-error-msg" class="text-error text-center text-sm font-bold mb-4"
@@ -202,55 +394,176 @@
                                         placeholder="name@example.com" />
                                 </div>
                                 <div class="space-y-xs">
-                                    <label
-                                        class="font-label-caps text-label-caps text-on-surface-variant px-1">PASSWORD</label>
-                                    <input type="password" id="login-password"
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">PASSWORD</label>
+                                    <input type="password" id="login-password" autocomplete="current-password"
                                         class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all"
-                                        placeholder="••••••••" />
+                                        placeholder="Password" />
+                                    <div class="flex justify-end pt-xs">
+                                        <a class="text-sm font-semibold text-primary hover:underline cursor-pointer" onclick="handleForgotPassword()">Forgot Password?</a>
+                                    </div>
                                 </div>
                                 <div class="pt-sm">
                                     <button id="login-btn" type="submit"
-                                        class="w-full h-14 bg-gradient-to-r from-primary to-tertiary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">Sign
-                                        In</button>
+                                        class="w-full h-14 bg-gradient-to-r from-primary to-tertiary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">Sign In</button>
                                 </div>
+                                <!-- Divider -->
+                                <div class="flex items-center gap-3 py-xs">
+                                    <div class="flex-1 h-px bg-outline-variant"></div>
+                                    <span class="text-xs text-on-surface-variant font-medium">or</span>
+                                    <div class="flex-1 h-px bg-outline-variant"></div>
+                                </div>
+                                <!-- Google Sign In -->
+                                <button type="button" onclick="handleGoogleSignIn()"
+                                    class="w-full h-14 bg-white border border-outline-variant rounded-xl flex items-center justify-center gap-3 font-semibold text-on-surface text-sm hover:bg-surface-container-low active:scale-95 transition-all shadow-sm">
+                                    <svg width="20" height="20" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                                        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                                        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                                        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                                        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                                    </svg>
+                                    Sign in with Google
+                                </button>
                             </form>
 
-                            <!-- Register Form -->
-                            <form id="register-form" class="space-y-md" style="display: none;"
-                                onsubmit="event.preventDefault(); handleRegister();">
+                            <!-- Register: Role Selector -->
+                            <div id="register-role-selector" style="display:none;">
+                                <h2 class="font-['Plus_Jakarta_Sans'] text-[22px] font-bold tracking-[-0.01em] text-on-surface mb-1 leading-snug">Choose Your Role</h2>
+                                <p class="text-[13px] font-normal text-on-surface-variant leading-relaxed mb-5">Select the role that best describes you</p>
+                                <div class="flex flex-col gap-gutter">
+                                    <!-- Woman -->
+                                    <div onclick="showRegisterForm('woman')" class="flex items-center gap-md p-md bg-surface-container-low rounded-2xl border-2 border-transparent hover:border-primary active:scale-[0.98] cursor-pointer transition-all">
+                                        <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                            <span class="material-symbols-outlined text-primary" style="font-variation-settings:'FILL' 1">woman</span>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="font-bold text-on-surface text-[15px]">Woman Users</p>
+                                            <p class="text-on-surface-variant text-[12px] leading-snug mt-0.5">For individuals looking for jobs, selling products, and learning new skills</p>
+                                        </div>
+                                        <span class="material-symbols-outlined text-outline flex-shrink-0">chevron_right</span>
+                                    </div>
+                                    <!-- Company -->
+                                    <div onclick="showRegisterForm('company')" class="flex items-center gap-md p-md bg-surface-container-low rounded-2xl border-2 border-transparent hover:border-tertiary active:scale-[0.98] cursor-pointer transition-all">
+                                        <div class="w-12 h-12 rounded-xl bg-tertiary/10 flex items-center justify-center flex-shrink-0">
+                                            <span class="material-symbols-outlined text-tertiary" style="font-variation-settings:'FILL' 1">business</span>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="font-bold text-on-surface text-[15px]">Company</p>
+                                            <p class="text-on-surface-variant text-[12px] leading-snug mt-0.5">For companies who want to post jobs and hire skilled talent</p>
+                                        </div>
+                                        <span class="material-symbols-outlined text-outline flex-shrink-0">chevron_right</span>
+                                    </div>
+                                    <!-- Admin -->
+                                    <div onclick="showRegisterForm('admin')" class="flex items-center gap-md p-md bg-surface-container-low rounded-2xl border-2 border-transparent hover:border-secondary active:scale-[0.98] cursor-pointer transition-all">
+                                        <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style="background:rgba(135,80,65,0.10)">
+                                            <span class="material-symbols-outlined text-secondary" style="font-variation-settings:'FILL' 1">admin_panel_settings</span>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="font-bold text-on-surface text-[15px]">Admin</p>
+                                            <p class="text-on-surface-variant text-[12px] leading-snug mt-0.5">For platform management and user control access</p>
+                                        </div>
+                                        <span class="material-symbols-outlined text-outline flex-shrink-0">chevron_right</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Register: Woman Form -->
+                            <form id="register-form-woman" class="space-y-md" style="display:none;" onsubmit="event.preventDefault(); handleRegister('woman');">
+                                <button type="button" onclick="showRegisterRole()" class="flex items-center gap-2 text-primary text-sm font-semibold mb-xs active:scale-95 transition-all">
+                                    <span class="material-symbols-outlined text-lg">arrow_back</span> Back
+                                </button>
+                                <p class="font-label-caps text-label-caps text-primary uppercase tracking-widest">Woman Registration</p>
                                 <div class="space-y-xs">
-                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">FULL
-                                        NAME</label>
-                                    <input type="text" id="register-name"
-                                        class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all"
-                                        placeholder="Sarah Jane" />
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">FULL NAME</label>
+                                    <input type="text" id="w-name" required class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="Your full name" />
                                 </div>
                                 <div class="space-y-xs">
-                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">EMAIL
-                                        ADDRESS</label>
-                                    <input type="email" id="register-email"
-                                        class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all"
-                                        placeholder="name@example.com" />
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">EMAIL ADDRESS</label>
+                                    <input type="email" id="w-email" required class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="name@example.com" />
                                 </div>
                                 <div class="space-y-xs">
-                                    <label
-                                        class="font-label-caps text-label-caps text-on-surface-variant px-1">PASSWORD</label>
-                                    <input type="password" id="register-password"
-                                        class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all"
-                                        placeholder="••••••••" />
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">PASSWORD</label>
+                                    <input type="password" id="w-password" required autocomplete="new-password" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="Password" />
                                 </div>
-                                <div class="pt-sm">
-                                    <button id="register-btn" type="submit"
-                                        class="w-full h-14 bg-gradient-to-r from-primary to-tertiary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">Sign
-                                        Up</button>
+                                <div class="space-y-xs">
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">SKILLS</label>
+                                    <input type="text" id="w-skills" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="e.g. Sewing, Handicrafts, Teaching" />
                                 </div>
+                                <div class="space-y-xs">
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">JOB PREFERENCE</label>
+                                    <select id="w-job-pref" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all">
+                                        <option value="">Select preference</option>
+                                        <option>Full-time</option>
+                                        <option>Part-time</option>
+                                        <option>Freelance</option>
+                                        <option>Remote</option>
+                                    </select>
+                                </div>
+                                <button id="register-btn" type="submit" class="w-full h-14 bg-gradient-to-r from-primary to-tertiary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">Create Account</button>
                             </form>
 
-                            <p class="text-center mt-lg text-on-surface-variant font-body-md" id="toggle-to-register">
+                            <!-- Register: Company Form -->
+                            <form id="register-form-company" class="space-y-md" style="display:none;" onsubmit="event.preventDefault(); handleRegister('company');">
+                                <button type="button" onclick="showRegisterRole()" class="flex items-center gap-2 text-primary text-sm font-semibold mb-xs active:scale-95 transition-all">
+                                    <span class="material-symbols-outlined text-lg">arrow_back</span> Back
+                                </button>
+                                <p class="font-label-caps text-label-caps text-tertiary uppercase tracking-widest">Company Registration</p>
+                                <div class="space-y-xs">
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">COMPANY NAME</label>
+                                    <input type="text" id="c-name" required class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="Acme Pvt. Ltd." />
+                                </div>
+                                <div class="space-y-xs">
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">INDUSTRY</label>
+                                    <select id="c-industry" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all">
+                                        <option value="">Select industry</option>
+                                        <option>Technology</option>
+                                        <option>Manufacturing</option>
+                                        <option>Retail</option>
+                                        <option>Healthcare</option>
+                                        <option>Education</option>
+                                        <option>Other</option>
+                                    </select>
+                                </div>
+                                <div class="space-y-xs">
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">CONTACT EMAIL</label>
+                                    <input type="email" id="c-email" required class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="hr@company.com" />
+                                </div>
+                                <div class="space-y-xs">
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">PASSWORD</label>
+                                    <input type="password" id="c-password" required autocomplete="new-password" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="Password" />
+                                </div>
+                                <div class="space-y-xs">
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">ADDRESS</label>
+                                    <input type="text" id="c-address" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="City, State" />
+                                </div>
+                                <button id="register-btn-company" type="submit" class="w-full h-14 bg-gradient-to-r from-primary to-tertiary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">Register Company</button>
+                            </form>
+
+                            <!-- Register: Admin Form -->
+                            <form id="register-form-admin" class="space-y-md" style="display:none;" onsubmit="event.preventDefault(); handleRegister('admin');">
+                                <button type="button" onclick="showRegisterRole()" class="flex items-center gap-2 text-primary text-sm font-semibold mb-xs active:scale-95 transition-all">
+                                    <span class="material-symbols-outlined text-lg">arrow_back</span> Back
+                                </button>
+                                <p class="font-label-caps text-label-caps text-secondary uppercase tracking-widest">Admin Registration</p>
+                                <div class="space-y-xs">
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">FULL NAME</label>
+                                    <input type="text" id="a-name" required class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="Admin name" />
+                                </div>
+                                <div class="space-y-xs">
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">EMAIL ADDRESS</label>
+                                    <input type="email" id="a-email" required class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="admin@tarini.com" />
+                                </div>
+                                <div class="space-y-xs">
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">PASSWORD</label>
+                                    <input type="password" id="a-password" required autocomplete="new-password" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="Password" />
+                                </div>
+                                <button id="register-btn-admin" type="submit" class="w-full h-14 bg-gradient-to-r from-primary to-tertiary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">Register as Admin</button>
+                            </form>
+
+                            <p class="text-center mt-lg text-[14px] font-medium text-on-surface-variant" id="toggle-to-register">
                                 New to Tarini? <a class="text-primary font-bold hover:underline cursor-pointer"
-                                    onclick="toggleAuthMode('register')">Create an account</a>
+                                    onclick="toggleAuthMode('register')">Sign Up</a>
                             </p>
-                            <p class="text-center mt-lg text-on-surface-variant font-body-md" id="toggle-to-login"
+                            <p class="text-center mt-lg text-[14px] font-medium text-on-surface-variant" id="toggle-to-login"
                                 style="display: none;">
                                 Already have an account? <a
                                     class="text-primary font-bold hover:underline cursor-pointer"
@@ -264,95 +577,141 @@
 
         <!-- SCREEN: DASHBOARD -->
         <div id="screen-dashboard" class="screen">
-            <main class="px-container-padding pt-base space-y-lg max-w-2xl mx-auto">
-                <!-- Welcome Section -->
-                <section class="mt-md">
-                    <div class="flex flex-col gap-1">
-                        <p class="text-label-caps font-label-caps text-secondary uppercase">Welcome back,</p>
-                        <h2 class="text-h2 font-h2 text-on-surface" id="dashboard-user-name">User</h2>
-                        <p class="text-on-surface-variant font-body-md">Your professional journey is glowing today.</p>
+            <main class="max-w-2xl mx-auto pb-32">
+
+                <!-- ── GREETING SECTION ── -->
+                <section class="relative overflow-hidden px-5 pt-6 pb-7 mb-1"
+                    style="background: linear-gradient(135deg, rgba(77,65,223,0.07) 0%, rgba(92,81,160,0.05) 50%, rgba(135,80,65,0.04) 100%)">
+                    <!-- Decorative blobs -->
+                    <div class="absolute top-0 right-0 w-40 h-40 rounded-full pointer-events-none"
+                        style="background:radial-gradient(circle,rgba(77,65,223,0.12) 0%,transparent 70%);transform:translate(30%,-30%)"></div>
+                    <div class="absolute bottom-0 left-0 w-28 h-28 rounded-full pointer-events-none"
+                        style="background:radial-gradient(circle,rgba(135,80,65,0.08) 0%,transparent 70%);transform:translate(-20%,20%)"></div>
+                    <div class="relative z-10">
+                        <p class="text-[11px] font-semibold tracking-[0.12em] uppercase mb-1" style="color:#875041">Welcome back ✦</p>
+                        <h2 class="font-['Plus_Jakarta_Sans'] text-[26px] font-extrabold tracking-tight text-on-surface leading-tight" id="dashboard-user-name">User</h2>
+                        <p class="text-[13px] font-normal text-on-surface-variant mt-1 leading-relaxed">Your professional journey is glowing today. ✨</p>
                     </div>
                 </section>
 
-                <!-- Profile Summary Bento Card -->
-                <section class="grid grid-cols-1 md:grid-cols-2 gap-md">
-                    <div
-                        class="bg-white p-md rounded-[24px] border border-surface-container-high shadow-lg shadow-indigo-500/5 flex flex-col justify-between min-h-[180px] relative overflow-hidden">
-                        <div class="z-10">
-                            <p class="text-label-caps font-label-caps text-outline mb-1">CURRENT EARNINGS</p>
-                            <h3 class="text-h3 font-h3 text-on-surface">₹0.00</h3>
+                <div class="px-5 space-y-6 pt-5">
+
+                <!-- ── BENTO STATS CARDS ── -->
+                <section class="grid grid-cols-2 gap-3">
+                    <!-- Earnings card -->
+                    <div class="relative overflow-hidden rounded-[20px] p-4 flex flex-col justify-between min-h-[130px]"
+                        style="background:linear-gradient(135deg,#4d41df 0%,#675df9 100%);box-shadow:0 8px 24px -6px rgba(77,65,223,0.35)">
+                        <div class="absolute -top-4 -right-4 w-20 h-20 rounded-full" style="background:rgba(255,255,255,0.12)"></div>
+                        <div>
+                            <p class="text-[10px] font-bold tracking-[0.1em] uppercase text-white/70 mb-1">EARNINGS</p>
+                            <h3 id="dashboard-earnings" class="text-[22px] font-extrabold text-white leading-tight">&#8377;0.00</h3>
                         </div>
-                        <div class="absolute -bottom-10 -right-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl"></div>
+                        <span class="inline-flex items-center gap-1 bg-white/20 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full w-fit">
+                            <span class="material-symbols-outlined" style="font-size:11px">trending_up</span> This month
+                        </span>
                     </div>
-                    <div
-                        class="bg-white p-md rounded-[24px] border border-surface-container-high shadow-lg shadow-indigo-500/5 flex flex-col justify-between min-h-[180px] relative overflow-hidden">
-                        <div class="z-10">
-                            <p class="text-label-caps font-label-caps text-outline mb-1">PROFILE STRENGTH</p>
-                            <h3 class="text-h3 font-h3 text-on-surface">20% Complete</h3>
+                    <!-- Profile strength card (hidden when complete) -->
+                    <div id="dash-profile-card" class="relative overflow-hidden rounded-[20px] p-4 bg-white border border-surface-container-high flex flex-col justify-between min-h-[130px] transition-all duration-500"
+                        style="box-shadow:0 4px 16px -4px rgba(77,65,223,0.10)">
+                        <div class="absolute -bottom-6 -right-6 w-20 h-20 rounded-full" style="background:rgba(77,65,223,0.06)"></div>
+                        <div>
+                            <p class="text-[10px] font-bold tracking-[0.1em] uppercase text-outline mb-1">PROFILE</p>
+                            <h3 id="profile-progress-label" class="text-[22px] font-extrabold text-on-surface leading-tight">20%</h3>
+                            <p class="text-[11px] text-on-surface-variant">Complete</p>
                         </div>
-                        <div class="w-full bg-surface-container h-2 rounded-full mt-4 relative z-10">
-                            <div class="bg-secondary h-full rounded-full w-[20%] shadow-[0_0_8px_rgba(135,80,65,0.4)]">
+                        <div>
+                            <div class="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
+                                <div id="profile-progress-bar" class="h-full rounded-full transition-all duration-500" style="width:20%;background:linear-gradient(90deg,#875041,#feb5a2)"></div>
+                            </div>
+                            <button id="profile-progress-cta" class="text-[11px] font-semibold text-primary mt-2 flex items-center gap-0.5 hover:underline active:scale-95 transition-all"
+                                onclick="navigateTo('profile')">
+                                Complete <span class="material-symbols-outlined" style="font-size:13px">arrow_forward</span>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Notifications card (shown when profile is complete) -->
+                    <div id="dash-notif-card" class="relative overflow-hidden rounded-[20px] p-4 bg-white border border-surface-container-high flex flex-col justify-between min-h-[130px] cursor-pointer active:scale-[0.97] transition-all duration-200 hidden"
+                        style="box-shadow:0 4px 16px -4px rgba(77,65,223,0.10)"
+                        onclick="navigateTo('notifications')">
+                        <div class="absolute -bottom-6 -right-6 w-20 h-20 rounded-full" style="background:rgba(77,65,223,0.06)"></div>
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <p class="text-[10px] font-bold tracking-[0.1em] uppercase text-outline mb-1">NOTIFICATIONS</p>
+                                <h3 id="dash-notif-count" class="text-[22px] font-extrabold text-on-surface leading-tight">0</h3>
+                                <p class="text-[11px] text-on-surface-variant">New updates</p>
+                            </div>
+                            <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(77,65,223,0.10)">
+                                <span class="material-symbols-outlined text-primary" style="font-size:20px;font-variation-settings:'FILL' 1">notifications</span>
                             </div>
                         </div>
-                        <button class="text-sm font-semibold text-primary mt-2 text-left z-10 hover:underline"
-                            onclick="navigateTo('profile')">Complete profile</button>
+                        <p id="dash-notif-preview" class="text-[11px] text-on-surface-variant leading-snug line-clamp-2 mt-1">Tap to view all notifications</p>
                     </div>
                 </section>
 
-                <!-- Quick Actions -->
+                <!-- ── QUICK ACTIONS ── -->
                 <section>
-                    <div class="flex items-center justify-between mb-sm">
-                        <h3 class="text-h3 font-h3">Quick Actions</h3>
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="font-['Plus_Jakarta_Sans'] text-[16px] font-bold text-on-surface tracking-tight">Quick Actions</h3>
                     </div>
-                    <div class="flex overflow-x-auto gap-md hide-scrollbar py-2 -mx-2 px-2">
-                        <div class="flex-shrink-0 w-32 group cursor-pointer" onclick="navigateTo('jobs')">
-                            <div
-                                class="w-full aspect-square bg-primary-container/10 rounded-3xl flex items-center justify-center mb-2 group-active:scale-95 transition-transform duration-200 border border-primary/10">
-                                <span class="material-symbols-outlined text-primary text-3xl">work</span>
+                    <div class="grid grid-cols-4 gap-3">
+                        <!-- Find Jobs -->
+                        <div class="group cursor-pointer flex flex-col items-center gap-2" onclick="navigateTo('jobs')">
+                            <div class="w-full aspect-square rounded-[18px] flex items-center justify-center active:scale-90 transition-all duration-200"
+                                style="background:linear-gradient(135deg,rgba(77,65,223,0.15),rgba(77,65,223,0.08));box-shadow:0 4px 12px -4px rgba(77,65,223,0.20)">
+                                <span class="material-symbols-outlined text-primary" style="font-size:26px;font-variation-settings:'FILL' 1">work</span>
                             </div>
-                            <p class="text-center text-sm font-semibold text-on-surface">Find Job</p>
+                            <p class="text-[11px] font-semibold text-on-surface text-center leading-tight">Find Jobs</p>
+                            <span id="qa-jobs-badge" class="text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-tight hidden" style="background:rgba(77,65,223,0.12);color:#4d41df"></span>
                         </div>
-                        <div class="flex-shrink-0 w-32 group cursor-pointer" onclick="navigateTo('skills')">
-                            <div
-                                class="w-full aspect-square bg-secondary-container/20 rounded-3xl flex items-center justify-center mb-2 group-active:scale-95 transition-transform duration-200 border border-secondary/10">
-                                <span class="material-symbols-outlined text-secondary text-3xl">school</span>
+                        <!-- My Applications -->
+                        <div class="group cursor-pointer flex flex-col items-center gap-2" onclick="navigateTo('applications')">
+                            <div class="w-full aspect-square rounded-[18px] flex items-center justify-center active:scale-90 transition-all duration-200"
+                                style="background:linear-gradient(135deg,rgba(135,80,65,0.15),rgba(135,80,65,0.08));box-shadow:0 4px 12px -4px rgba(135,80,65,0.18)">
+                                <span class="material-symbols-outlined text-secondary" style="font-size:26px;font-variation-settings:'FILL' 1">assignment</span>
                             </div>
-                            <p class="text-center text-sm font-semibold text-on-surface">Learning</p>
+                            <p class="text-[11px] font-semibold text-on-surface text-center leading-tight">Applications</p>
+                            <span id="qa-apps-badge" class="text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-tight hidden" style="background:rgba(135,80,65,0.12);color:#875041"></span>
                         </div>
-                        <div class="flex-shrink-0 w-32 group cursor-pointer" onclick="navigateTo('shop')">
-                            <div
-                                class="w-full aspect-square bg-surface-container-high rounded-3xl flex items-center justify-center mb-2 group-active:scale-95 transition-transform duration-200 border border-outline-variant">
-                                <span class="material-symbols-outlined text-tertiary text-3xl">storefront</span>
+                        <!-- Marketplace -->
+                        <div class="group cursor-pointer flex flex-col items-center gap-2" onclick="navigateTo('shop')">
+                            <div class="w-full aspect-square rounded-[18px] flex items-center justify-center active:scale-90 transition-all duration-200"
+                                style="background:linear-gradient(135deg,rgba(92,81,160,0.15),rgba(92,81,160,0.08));box-shadow:0 4px 12px -4px rgba(92,81,160,0.18)">
+                                <span class="material-symbols-outlined text-tertiary" style="font-size:26px;font-variation-settings:'FILL' 1">storefront</span>
                             </div>
-                            <p class="text-center text-sm font-semibold text-on-surface">My Shop</p>
+                            <p class="text-[11px] font-semibold text-on-surface text-center leading-tight">Marketplace</p>
+                            <span id="qa-orders-badge" class="text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-tight hidden" style="background:rgba(92,81,160,0.12);color:#5c51a0"></span>
                         </div>
-                        <div class="flex-shrink-0 w-32 group cursor-pointer" onclick="navigateTo('rewards')">
-                            <div
-                                class="w-full aspect-square bg-indigo-50 rounded-3xl flex items-center justify-center mb-2 group-active:scale-95 transition-transform duration-200 border border-indigo-100">
-                                <span class="material-symbols-outlined text-indigo-400 text-3xl">military_tech</span>
+                        <!-- Rewards -->
+                        <div class="group cursor-pointer flex flex-col items-center gap-2" onclick="navigateTo('rewards')">
+                            <div class="w-full aspect-square rounded-[18px] flex items-center justify-center active:scale-90 transition-all duration-200"
+                                style="background:linear-gradient(135deg,rgba(99,91,240,0.15),rgba(196,192,255,0.20));box-shadow:0 4px 12px -4px rgba(99,91,240,0.18)">
+                                <span class="material-symbols-outlined" style="font-size:26px;font-variation-settings:'FILL' 1;color:#675df9">military_tech</span>
                             </div>
-                            <p class="text-center text-sm font-semibold text-on-surface">Rewards</p>
+                            <p class="text-[11px] font-semibold text-on-surface text-center leading-tight">Rewards</p>
                         </div>
                     </div>
                 </section>
 
-                <!-- Recommended Jobs -->
+                <!-- ── RECOMMENDED JOBS ── -->
                 <section>
-                    <div class="flex items-center justify-between mb-md">
-                        <h3 class="text-h3 font-h3">Recommended Jobs</h3>
-                        <span class="text-primary font-semibold text-sm cursor-pointer"
-                            onclick="navigateTo('jobs')">View all</span>
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="font-['Plus_Jakarta_Sans'] text-[16px] font-bold text-on-surface tracking-tight">Recommended Jobs</h3>
+                        <button class="text-[12px] font-semibold text-primary flex items-center gap-0.5 hover:underline active:scale-95 transition-all"
+                            onclick="navigateTo('jobs')">View all <span class="material-symbols-outlined" style="font-size:14px">chevron_right</span></button>
                     </div>
-                    <div id="dashboard-featured-jobs" class="space-y-gutter">
+                    <div id="dashboard-featured-jobs" class="space-y-3">
                         <!-- Dynamic jobs will be loaded here -->
                     </div>
                 </section>
+
+                </div><!-- end px-5 -->
             </main>
             <!-- Floating Action Button for AI -->
-            <div class="fixed bottom-32 right-6 z-50">
+            <div class="fixed bottom-32 right-5 z-50">
                 <button onclick="navigateTo('ai-assistant')"
-                    class="w-16 h-16 bg-gradient-to-br from-primary to-tertiary text-white rounded-full shadow-2xl shadow-primary/40 flex items-center justify-center cursor-pointer active:scale-90 transition-all duration-200">
-                    <span class="material-symbols-outlined text-3xl"
+                    class="w-14 h-14 bg-gradient-to-br from-primary to-tertiary text-white rounded-full shadow-2xl shadow-primary/40 flex items-center justify-center cursor-pointer active:scale-90 transition-all duration-200"
+                    style="box-shadow:0 8px 24px -4px rgba(77,65,223,0.45)">
+                    <span class="material-symbols-outlined text-2xl"
                         style="font-variation-settings: 'FILL' 1;">smart_toy</span>
                 </button>
             </div>
@@ -375,7 +734,7 @@
                     <button
                         class="w-full py-5 rounded-[24px] bg-gradient-to-r from-primary via-tertiary to-primary-container text-white font-h3 flex items-center justify-center gap-3 shadow-xl shadow-primary/25 active:scale-[0.98] transition-all">
                         <span class="material-symbols-outlined" data-weight="fill">auto_awesome</span>
-                        <span>✨ Match Jobs with AI</span>
+                        <span>Ã¢Å“Â¨ Match Jobs with AI</span>
                     </button>
                 </div>
 
@@ -711,7 +1070,7 @@
                         <div class="px-md py-sm flex justify-between items-center">
                             <div>
                                 <p class="text-xs text-outline font-semibold uppercase mb-1">Full Name</p>
-                                <p class="text-on-surface text-sm" id="profile-display-fullname">—</p>
+                                <p class="text-on-surface text-sm" id="profile-display-fullname">Ã¢â‚¬â€</p>
                             </div>
                         </div>
                         <div class="px-md py-sm pb-md flex justify-between items-center">
@@ -925,6 +1284,22 @@
             </main>
         </div>
 
+        <!-- SCREEN: NOTIFICATIONS -->
+        <div id="screen-notifications" class="screen">
+            <main class="max-w-2xl mx-auto px-5 py-md pb-32">
+                <div class="flex items-center gap-3 mb-5">
+                    <button onclick="navigateTo('dashboard')" class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center active:scale-90 transition-all">
+                        <span class="material-symbols-outlined">arrow_back</span>
+                    </button>
+                    <h2 class="font-['Plus_Jakarta_Sans'] text-[20px] font-bold text-on-surface tracking-tight">Notifications</h2>
+                    <button id="notif-mark-all-read" onclick="markAllNotifsRead()" class="ml-auto text-[12px] font-semibold text-primary hover:underline active:scale-95 transition-all">Mark all read</button>
+                </div>
+                <div id="notifications-list" class="space-y-3">
+                    <!-- Populated by JS -->
+                </div>
+            </main>
+        </div>
+
         <!-- BOTTOM NAVIGATION -->
         <nav id="bottom-nav"
             class="fixed bottom-0 left-0 w-full z-50 bg-white/90 dark:bg-slate-950/90 backdrop-blur-2xl border-t border-indigo-100/20 dark:border-indigo-900/20 shadow-[0_-8px_30px_rgb(108,99,255,0.08)] rounded-t-[32px] flex justify-around items-center px-4 pt-3 pb-8 hidden">
@@ -961,3 +1336,4 @@
 </body>
 
 </html>
+

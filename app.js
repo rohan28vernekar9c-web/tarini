@@ -14,31 +14,20 @@ const app = firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// History stack to support back navigation
-let historyStack = ['login'];
-
 // List of screens that should hide the bottom navigation
-const screensWithoutNav = ['login', 'ai-assistant', 'applications', 'rewards', 'post-product', 'product-detail', 'edit-profile'];
+const screensWithoutNav = ['login', 'notifications', 'ai-assistant', 'applications', 'rewards', 'post-product', 'product-detail', 'edit-profile'];
 
 function navigateTo(screenId) {
-    // Hide all screens
     const screens = document.querySelectorAll('.screen');
     screens.forEach(s => s.classList.remove('active'));
-
-    // Show the target screen
     const targetScreen = document.getElementById(`screen-${screenId}`);
     if (targetScreen) {
         targetScreen.classList.add('active');
-        
-        // Manage history stack (prevent duplicate consecutive entries)
-        if (historyStack[historyStack.length - 1] !== screenId) {
-            historyStack.push(screenId);
-        }
-
         updateBottomNav(screenId);
-
         if (screenId === 'shop') renderShopProducts();
         if (screenId === 'profile') loadProfileScreen();
+        if (screenId === 'dashboard') loadDashboardEarnings();
+        if (screenId === 'notifications') loadNotificationsScreen();
     } else {
         console.error(`Screen 'screen-${screenId}' not found.`);
     }
@@ -46,24 +35,21 @@ function navigateTo(screenId) {
 window.navigateTo = navigateTo;
 
 function goBack() {
-    if (historyStack.length > 1) {
-        historyStack.pop(); // remove current screen
-        const previousScreen = historyStack[historyStack.length - 1];
-        navigateToWithOutHistory(previousScreen);
-    }
+    window.history.back();
 }
 window.goBack = goBack;
 
 function navigateToWithOutHistory(screenId) {
     const screens = document.querySelectorAll('.screen');
     screens.forEach(s => s.classList.remove('active'));
-
     const targetScreen = document.getElementById(`screen-${screenId}`);
     if (targetScreen) {
         targetScreen.classList.add('active');
         updateBottomNav(screenId);
         if (screenId === 'shop') renderShopProducts();
         if (screenId === 'profile') loadProfileScreen();
+        if (screenId === 'dashboard') loadDashboardEarnings();
+        if (screenId === 'notifications') loadNotificationsScreen();
     }
 }
 
@@ -98,6 +84,305 @@ function updateBottomNav(screenId) {
             if (icon) icon.style.fontVariationSettings = "'FILL' 1";
         }
     });
+}
+
+function goToLogin() {
+    toggleAuthMode('login');
+    navigateTo('login');
+}
+window.goToLogin = goToLogin;
+
+function goToSignup() {
+    toggleAuthMode('register');
+    navigateTo('login');
+}
+window.goToSignup = goToSignup;
+
+// --- PROFILE PROGRESS ---
+
+function computeProfileProgress() {
+    const d = getProfileData();
+    const fields = [
+        !!d.avatar,
+        !!(d.name && d.name.trim()),
+        !!(d.bio && d.bio.trim()),
+        !!(d.location && d.location.trim()),
+        !!(d.skills && d.skills.trim()),
+        !!(d.title && d.title.trim()),
+        !!(d.website && d.website.trim()),
+        !!(d.resumeName),
+    ];
+    const filled = fields.filter(Boolean).length;
+    return Math.round((filled / fields.length) * 100);
+}
+
+function updateProfileProgressUI() {
+    const pct = computeProfileProgress();
+    const bar = document.getElementById('profile-progress-bar');
+    const label = document.getElementById('profile-progress-label');
+    const cta = document.getElementById('profile-progress-cta');
+    const profileCard = document.getElementById('dash-profile-card');
+    const notifCard = document.getElementById('dash-notif-card');
+    if (!bar || !label) return;
+    bar.style.width = pct + '%';
+    if (pct >= 100) {
+        label.textContent = 'Profile Completed ✓';
+        label.style.color = '#276749';
+        if (cta) cta.style.display = 'none';
+        if (profileCard && notifCard && !notifCard.classList.contains('notif-shown')) {
+            notifCard.classList.add('notif-shown');
+            profileCard.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+            profileCard.style.opacity = '0';
+            profileCard.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                profileCard.classList.add('hidden');
+                notifCard.classList.remove('hidden');
+                notifCard.style.opacity = '0';
+                notifCard.style.transform = 'scale(0.95)';
+                requestAnimationFrame(() => {
+                    notifCard.style.transition = 'opacity 0.35s ease, transform 0.35s ease';
+                    notifCard.style.opacity = '1';
+                    notifCard.style.transform = 'scale(1)';
+                });
+            }, 300);
+        } else if (profileCard && notifCard) {
+            profileCard.classList.add('hidden');
+            notifCard.classList.remove('hidden');
+        }
+        refreshNotifCard();
+    } else {
+        label.textContent = pct + '% Complete';
+        label.style.color = '';
+        if (cta) cta.style.display = '';
+        if (profileCard) { profileCard.classList.remove('hidden'); profileCard.style.opacity = '1'; profileCard.style.transform = ''; }
+        if (notifCard) { notifCard.classList.add('hidden'); notifCard.classList.remove('notif-shown'); }
+    }
+}
+
+// --- HEADER AVATAR ---
+
+function updateHeaderAvatar() {
+    const d = getProfileData();
+    const img = document.getElementById('header-avatar-img');
+    const icon = document.getElementById('header-avatar-icon');
+    if (!img || !icon) return;
+    if (d.avatar) {
+        img.src = d.avatar;
+        img.classList.remove('hidden');
+        icon.classList.add('hidden');
+    } else {
+        img.classList.add('hidden');
+        icon.classList.remove('hidden');
+    }
+}
+
+// --- NOTIFICATIONS ---
+
+const _NOTIF_KEY = 'tarini_notifications';
+
+function getNotifications() {
+    return JSON.parse(localStorage.getItem(_NOTIF_KEY) || '[]');
+}
+
+function saveNotifications(list) {
+    localStorage.setItem(_NOTIF_KEY, JSON.stringify(list));
+}
+
+function addNotification(type, title, description) {
+    const list = getNotifications();
+    list.unshift({ id: Date.now(), type, title, description, time: new Date().toISOString(), read: false });
+    saveNotifications(list.slice(0, 50));
+    refreshNotifCard();
+}
+window.addNotification = addNotification;
+
+function refreshNotifCard() {
+    const list = getNotifications();
+    const unread = list.filter(n => !n.read);
+    const countEl = document.getElementById('dash-notif-count');
+    const previewEl = document.getElementById('dash-notif-preview');
+    if (countEl) countEl.textContent = unread.length;
+    if (previewEl) previewEl.textContent = unread.length > 0 ? unread[0].title : "You're all caught up!";
+}
+
+function loadNotificationsScreen() {
+    const container = document.getElementById('notifications-list');
+    if (!container) return;
+    const list = getNotifications();
+    if (list.length === 0) {
+        container.innerHTML = `
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:64px 0;text-align:center">
+                <div style="width:64px;height:64px;border-radius:50%;background:rgba(77,65,223,0.10);display:flex;align-items:center;justify-content:center;margin-bottom:16px">
+                    <span class="material-symbols-outlined" style="font-size:32px;color:#4d41df;font-variation-settings:'FILL' 1">notifications_none</span>
+                </div>
+                <p style="font-size:15px;font-weight:600;color:#1b1b24">No notifications yet</p>
+                <p style="font-size:13px;color:#777587;margin-top:4px">We'll notify you about jobs, orders, and updates</p>
+            </div>`;
+        return;
+    }
+    const _icon = { job: 'work', application: 'assignment', order: 'shopping_bag', system: 'info' };
+    const _color = { job: '#4d41df', application: '#875041', order: '#5c51a0', system: '#777587' };
+    const _bg = { job: 'rgba(77,65,223,0.10)', application: 'rgba(135,80,65,0.10)', order: 'rgba(92,81,160,0.10)', system: 'rgba(119,117,135,0.10)' };
+    container.innerHTML = list.map(n => {
+        const ic = _icon[n.type] || 'notifications';
+        const col = _color[n.type] || '#4d41df';
+        const bg = _bg[n.type] || 'rgba(77,65,223,0.10)';
+        return `
+        <div onclick="markNotifRead(${n.id})" style="display:flex;align-items:flex-start;gap:12px;padding:16px;border-radius:18px;cursor:pointer;background:${n.read ? '#ffffff' : 'rgba(77,65,223,0.04)'};border:1px solid ${n.read ? '#eae6f3' : 'rgba(77,65,223,0.15)'};transition:transform 0.15s" onmousedown="this.style.transform='scale(0.98)'" onmouseup="this.style.transform=''" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform=''">
+            <div style="width:40px;height:40px;border-radius:12px;background:${bg};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <span class="material-symbols-outlined" style="font-size:20px;color:${col};font-variation-settings:'FILL' 1">${ic}</span>
+            </div>
+            <div style="flex:1;min-width:0">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                    <p style="font-size:13px;font-weight:${n.read ? 500 : 700};color:#1b1b24;line-height:1.3">${n.title}</p>
+                    ${!n.read ? '<span style="width:8px;height:8px;border-radius:50%;background:#4d41df;flex-shrink:0"></span>' : ''}
+                </div>
+                <p style="font-size:12px;color:#777587;margin-top:2px;line-height:1.4">${n.description}</p>
+                <p style="font-size:11px;color:#9e9bb8;margin-top:4px">${_timeAgo(n.time)}</p>
+            </div>
+        </div>`;
+    }).join('');
+    saveNotifications(list.map(n => ({ ...n, read: true })));
+    refreshNotifCard();
+}
+window.loadNotificationsScreen = loadNotificationsScreen;
+
+function markNotifRead(id) {
+    saveNotifications(getNotifications().map(n => n.id === id ? { ...n, read: true } : n));
+    loadNotificationsScreen();
+}
+window.markNotifRead = markNotifRead;
+
+function markAllNotifsRead() {
+    saveNotifications(getNotifications().map(n => ({ ...n, read: true })));
+    loadNotificationsScreen();
+    refreshNotifCard();
+}
+window.markAllNotifsRead = markAllNotifsRead;
+
+function _timeAgo(iso) {
+    const diff = Math.floor((Date.now() - new Date(iso)) / 1000);
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    return Math.floor(diff / 86400) + 'd ago';
+}
+
+// --- DASHBOARD EARNINGS ---
+
+function formatCurrency(value) {
+    const num = parseFloat(value);
+    if (value === null || value === undefined || value === '' || typeof value === 'object' || isNaN(num)) {
+        return '\u20b90.00';
+    }
+    return '\u20b9' + num.toFixed(2);
+}
+
+function loadDashboardEarnings() {
+    const el = document.getElementById('dashboard-earnings');
+    if (!el) return;
+    const user = auth.currentUser;
+    if (!user) { el.textContent = '\u20b90.00'; return; }
+    db.collection('earnings').doc(user.uid).get()
+        .then(doc => {
+            const amount = doc.exists ? doc.data().amount : 0;
+            el.textContent = formatCurrency(amount);
+        })
+        .catch(() => { el.textContent = '\u20b90.00'; });
+    loadQuickActionStats();
+    renderDashboardJobs();
+    updateProfileProgressUI();
+}
+
+function _setQaBadge(id, text) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = text;
+    el.classList.remove('hidden');
+}
+
+function loadQuickActionStats() {
+    const user = auth.currentUser;
+    if (!user) return;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // 1. New jobs posted today
+    db.collection('jobs')
+        .where('postedAt', '>=', today)
+        .get()
+        .then(snap => {
+            const count = snap.size;
+            _setQaBadge('qa-jobs-badge', count > 0 ? `${count} New Today` : 'Browse Jobs');
+        })
+        .catch(() => _setQaBadge('qa-jobs-badge', 'Find Jobs'));
+
+    // 2. User's total applications
+    db.collection('applications')
+        .where('userId', '==', user.uid)
+        .get()
+        .then(snap => {
+            const count = snap.size;
+            _setQaBadge('qa-apps-badge', count > 0 ? `${count} Applied` : 'Apply Now');
+        })
+        .catch(() => _setQaBadge('qa-apps-badge', 'My Apps'));
+
+    // 3. New orders received today in the marketplace
+    db.collection('orders')
+        .where('sellerId', '==', user.uid)
+        .where('createdAt', '>=', today)
+        .get()
+        .then(snap => {
+            const count = snap.size;
+            _setQaBadge('qa-orders-badge', count > 0 ? `${count} New Orders` : 'Marketplace');
+        })
+        .catch(() => _setQaBadge('qa-orders-badge', 'Marketplace'));
+}
+
+// Avatar gradient palettes for company logos
+const _avatarGradients = [
+    'linear-gradient(135deg,#4d41df,#675df9)',
+    'linear-gradient(135deg,#875041,#feb5a2)',
+    'linear-gradient(135deg,#5c51a0,#c8bfff)',
+    'linear-gradient(135deg,#2d6a4f,#74c69d)',
+    'linear-gradient(135deg,#c77dff,#7b2d8b)',
+];
+
+function renderDashboardJobs() {
+    const container = document.getElementById('dashboard-featured-jobs');
+    if (!container) return;
+    const sampleJobs = [
+        { title: 'Tailoring Instructor', company: 'Craft India', location: 'Mumbai', type: 'Part-time', salary: '\u20b912,000/mo' },
+        { title: 'Data Entry Operator', company: 'TechSeva', location: 'Remote', type: 'Full-time', salary: '\u20b915,000/mo' },
+        { title: 'Beauty Consultant', company: 'GlowUp Studio', location: 'Delhi', type: 'Freelance', salary: '\u20b98,000/mo' },
+    ];
+    container.innerHTML = sampleJobs.map((job, i) => {
+        const grad = _avatarGradients[i % _avatarGradients.length];
+        const initials = job.company.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+        const typeColor = job.type === 'Full-time' ? 'background:rgba(77,65,223,0.10);color:#4d41df'
+            : job.type === 'Part-time' ? 'background:rgba(135,80,65,0.10);color:#875041'
+            : 'background:rgba(92,81,160,0.10);color:#5c51a0';
+        return `
+        <div class="dash-job-card" onclick="navigateTo('jobs')">
+            <div style="display:flex;align-items:flex-start;gap:12px">
+                <div class="dash-job-avatar" style="background:${grad}">${initials}</div>
+                <div style="flex:1;min-width:0">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                        <p style="font-size:14px;font-weight:700;color:#1b1b24;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${job.title}</p>
+                        <button onclick="event.stopPropagation()" style="flex-shrink:0;width:30px;height:30px;border-radius:50%;background:rgba(77,65,223,0.08);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background 0.15s" onmouseenter="this.style.background='rgba(77,65,223,0.16)'" onmouseleave="this.style.background='rgba(77,65,223,0.08)'">
+                            <span class="material-symbols-outlined" style="font-size:16px;color:#4d41df">bookmark</span>
+                        </button>
+                    </div>
+                    <p style="font-size:12px;color:#777587;margin-top:2px">${job.company} &bull; ${job.location}</p>
+                    <div style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap">
+                        <span class="dash-job-badge" style="${typeColor}">${job.type}</span>
+                        <span class="dash-job-badge" style="background:rgba(56,161,105,0.10);color:#276749">${job.salary}</span>
+                    </div>
+                </div>
+            </div>
+            <button onclick="event.stopPropagation();navigateTo('jobs')" style="margin-top:12px;width:100%;height:38px;border-radius:10px;border:none;background:linear-gradient(135deg,#4d41df,#5c51a0);color:#fff;font-size:13px;font-weight:700;cursor:pointer;transition:opacity 0.15s;font-family:'Poppins',sans-serif" onmouseenter="this.style.opacity='0.88'" onmouseleave="this.style.opacity='1'">Apply Now</button>
+        </div>`;
+    }).join('');
 }
 
 // --- PROFILE LOGIC ---
@@ -178,6 +463,7 @@ function saveProfile() {
     if (!d.joined) d.joined = 'Joined ' + new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
     saveProfileData(d);
     navigateTo('profile');
+    updateProfileProgressUI();
 }
 window.saveProfile = saveProfile;
 
@@ -190,6 +476,8 @@ function handleProfilePicChange(event) {
         d.avatar = e.target.result;
         saveProfileData(d);
         loadProfileScreen();
+        updateProfileProgressUI();
+        updateHeaderAvatar();
     };
     reader.readAsDataURL(file);
 }
@@ -212,6 +500,7 @@ function handleResumeUpload(event) {
     saveProfileData(d);
     document.getElementById('profile-resume-name').textContent = d.resumeName;
     document.getElementById('profile-resume-date').textContent = d.resumeDate;
+    updateProfileProgressUI();
 }
 window.handleResumeUpload = handleResumeUpload;
 
@@ -490,11 +779,10 @@ function resetImagePreview(previewId, iconId, textId) {
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
-    // We start on the login screen, so bottom nav should be hidden initially
-    updateBottomNav('login');
-    
     renderShopProducts();
     loadProfileScreen();
+    updateHeaderAvatar();
+    refreshNotifCard();
 
     // Load theme from localStorage
     const savedTheme = localStorage.getItem('theme');
@@ -522,20 +810,59 @@ function showError(msg) {
 
 function toggleAuthMode(mode) {
     const loginForm = document.getElementById('login-form');
-    const registerForm = document.getElementById('register-form');
+    const roleSelector = document.getElementById('register-role-selector');
     const errorEl = document.getElementById('auth-error-msg');
-    
-    errorEl.style.display = 'none'; // clear errors
-
+    const title = document.getElementById('auth-title');
+    const subtitle = document.getElementById('auth-subtitle');
+    const toggleToRegister = document.getElementById('toggle-to-register');
+    const toggleToLogin = document.getElementById('toggle-to-login');
+    errorEl.style.display = 'none';
+    ['woman', 'company', 'admin'].forEach(r => {
+        document.getElementById(`register-form-${r}`).style.display = 'none';
+    });
     if (mode === 'register') {
         loginForm.style.display = 'none';
-        registerForm.style.display = 'block';
+        roleSelector.style.display = 'block';
+        title.textContent = 'Sign Up';
+        subtitle.textContent = '✦ Tarini Welcomes You';
+        toggleToRegister.style.display = 'none';
+        toggleToLogin.style.display = 'block';
     } else {
-        registerForm.style.display = 'none';
+        roleSelector.style.display = 'none';
         loginForm.style.display = 'block';
+        title.textContent = 'Sign In';
+        subtitle.textContent = 'Welcome back to Tarini';
+        toggleToRegister.style.display = 'block';
+        toggleToLogin.style.display = 'none';
     }
 }
 window.toggleAuthMode = toggleAuthMode;
+
+async function handleForgotPassword() {
+    const email = document.getElementById('login-email').value.trim();
+    if (!email) {
+        showError('Enter your email address above, then tap Forgot Password.');
+        return;
+    }
+    try {
+        await auth.sendPasswordResetEmail(email);
+        showToast('Password reset email sent! Check your inbox.');
+    } catch (error) {
+        showError(error.message);
+    }
+}
+window.handleForgotPassword = handleForgotPassword;
+
+async function handleGoogleSignIn() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    try {
+        await auth.signInWithPopup(provider);
+        // onAuthStateChanged will handle navigation
+    } catch (error) {
+        if (error.code !== 'auth/popup-closed-by-user') showError(error.message);
+    }
+}
+window.handleGoogleSignIn = handleGoogleSignIn;
 
 async function handleLogin() {
     const email = document.getElementById('login-email').value;
@@ -560,32 +887,57 @@ async function handleLogin() {
 }
 window.handleLogin = handleLogin;
 
-async function handleRegister() {
-    const email = document.getElementById('register-email').value;
-    const password = document.getElementById('register-password').value;
-    const name = document.getElementById('register-name').value;
-    const btn = document.getElementById('register-btn');
+function showRegisterForm(role) {
+    document.getElementById('register-role-selector').style.display = 'none';
+    document.getElementById(`register-form-${role}`).style.display = 'block';
+}
+window.showRegisterForm = showRegisterForm;
 
-    if (!email || !password || !name) {
-        showError("Please fill in all fields.");
-        return;
+function showRegisterRole() {
+    ['woman', 'company', 'admin'].forEach(r => {
+        document.getElementById(`register-form-${r}`).style.display = 'none';
+    });
+    document.getElementById('register-role-selector').style.display = 'block';
+}
+window.showRegisterRole = showRegisterRole;
+
+async function handleRegister(role) {
+    let email, password, name, btn;
+    if (role === 'woman') {
+        name = document.getElementById('w-name').value;
+        email = document.getElementById('w-email').value;
+        password = document.getElementById('w-password').value;
+        btn = document.getElementById('register-btn');
+    } else if (role === 'company') {
+        name = document.getElementById('c-name').value;
+        email = document.getElementById('c-email').value;
+        password = document.getElementById('c-password').value;
+        btn = document.getElementById('register-btn-company');
+    } else {
+        name = document.getElementById('a-name').value;
+        email = document.getElementById('a-email').value;
+        password = document.getElementById('a-password').value;
+        btn = document.getElementById('register-btn-admin');
     }
-
+    if (!email || !password || !name) { showError('Please fill in all required fields.'); return; }
     try {
-        btn.textContent = "Signing Up...";
+        btn.textContent = 'Creating...';
         btn.disabled = true;
-        
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-        
-        // Update user profile with name
-        await userCredential.user.updateProfile({
-            displayName: name
-        });
-
-        // onAuthStateChanged will handle navigation
+        const cred = await auth.createUserWithEmailAndPassword(email, password);
+        await cred.user.updateProfile({ displayName: name });
+        const d = getProfileData();
+        d.role = role;
+        if (role === 'woman') {
+            d.skills = document.getElementById('w-skills').value;
+            d.jobPref = document.getElementById('w-job-pref').value;
+        } else if (role === 'company') {
+            d.industry = document.getElementById('c-industry').value;
+            d.address = document.getElementById('c-address').value;
+        }
+        saveProfileData(d);
     } catch (error) {
         showError(error.message);
-        btn.textContent = "Sign Up";
+        btn.textContent = role === 'woman' ? 'Create Account' : role === 'company' ? 'Register Company' : 'Register as Admin';
         btn.disabled = false;
     }
 }
@@ -607,7 +959,7 @@ auth.onAuthStateChanged((user) => {
     const regBtn = document.getElementById('register-btn');
     
     if (loginBtn) { loginBtn.textContent = "Sign In"; loginBtn.disabled = false; }
-    if (regBtn) { regBtn.textContent = "Sign Up"; regBtn.disabled = false; }
+    if (regBtn) { regBtn.textContent = "Create Account"; regBtn.disabled = false; }
 
     if (user) {
         // User is signed in. Update UI and go to dashboard
@@ -618,13 +970,11 @@ auth.onAuthStateChanged((user) => {
         const profileUserNameEl = document.getElementById('profile-user-name');
         if (profileUserNameEl) profileUserNameEl.textContent = displayName;
         
-        // Prevent navigating to dashboard if we are already inside the app
-        if (historyStack[historyStack.length - 1] === 'login') {
+        if (history.state && history.state.screen === 'login') {
             navigateTo('dashboard');
         }
     } else {
-        // User is signed out. Force back to login screen
         navigateToWithOutHistory('login');
-        historyStack = ['login']; // Reset history
+        history.replaceState({ screen: 'login' }, '', window.location.pathname);
     }
 });

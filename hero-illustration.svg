@@ -1,0 +1,50 @@
+<svg viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="heroIllustrationTitle">
+  <title id="heroIllustrationTitle">Illustration of women using the Tarini platform</title>
+  <defs>
+    <linearGradient id="bgGradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f6f2ff"/>
+      <stop offset="100%" stop-color="#fff1f8"/>
+    </linearGradient>
+    <linearGradient id="cardGradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4d41df" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#5c51a0" stop-opacity="0.95"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="800" rx="90" fill="url(#bgGradient)"/>
+  <circle cx="160" cy="160" r="80" fill="#e7dfff" opacity="0.9"/>
+  <circle cx="620" cy="120" r="56" fill="#f7e9ff" opacity="0.85"/>
+  <rect x="80" y="520" width="200" height="220" rx="38" fill="#fff" opacity="0.95"/>
+  <rect x="120" y="380" width="260" height="120" rx="30" fill="#fff" opacity="0.95"/>
+  <rect x="460" y="520" width="200" height="220" rx="38" fill="#fff" opacity="0.95"/>
+  <rect x="420" y="340" width="280" height="120" rx="30" fill="#fff" opacity="0.95"/>
+  <path d="M170 330c50-40 120-40 170 0v90H170v-90Z" fill="#4d41df" opacity="0.08"/>
+  <path d="M470 310c50-40 120-40 170 0v90H470v-90Z" fill="#875041" opacity="0.08"/>
+  <circle cx="170" cy="300" r="60" fill="#4d41df" opacity="0.18"/>
+  <circle cx="530" cy="280" r="52" fill="#875041" opacity="0.16"/>
+  <circle cx="555" cy="655" r="42" fill="#5c51a0" opacity="0.14"/>
+  <circle cx="160" cy="655" r="48" fill="#ffe6e8" opacity="0.9"/>
+  <path d="M150 430c0-28 22-50 50-50s50 22 50 50v94H150v-94Z" fill="#fff" stroke="#d4c8fb" stroke-width="10"/>
+  <circle cx="200" cy="330" r="28" fill="#4d41df" opacity="0.28"/>
+  <path d="M570 392c0-26 20-46 46-46s46 20 46 46v102h-92V392Z" fill="#fff" stroke="#f7daea" stroke-width="10"/>
+  <circle cx="616" cy="284" r="24" fill="#875041" opacity="0.22"/>
+  <path d="M195 566c0-18 14-32 32-32h74c18 0 32 14 32 32v76h-138v-76Z" fill="#5c51a0" opacity="0.1"/>
+  <path d="M480 540c0-16 14-30 30-30h78c16 0 30 14 30 30v68h-138v-68Z" fill="#4d41df" opacity="0.1"/>
+  <rect x="120" y="588" width="112" height="14" rx="7" fill="#4d41df" opacity="0.18"/>
+  <rect x="175" y="628" width="66" height="12" rx="6" fill="#4d41df" opacity="0.18"/>
+  <rect x="470" y="600" width="110" height="16" rx="8" fill="#875041" opacity="0.18"/>
+  <rect x="470" y="636" width="76" height="12" rx="6" fill="#875041" opacity="0.18"/>
+  <g opacity="0.9">
+    <path d="M145 584c10-12 28-18 44-14 18 5 28 22 25 40-2 16-16 28-32 28s-30-12-33-28c-2-8 1-16 6-24Z" fill="#fff"/>
+    <circle cx="190" cy="547" r="12" fill="#fff"/>
+    <path d="M505 560c10-12 28-18 44-14 18 5 28 22 25 40-2 16-16 28-32 28s-30-12-33-28c-2-8 1-16 6-24Z" fill="#fff"/>
+    <circle cx="548" cy="520" r="12" fill="#fff"/>
+  </g>
+  <path d="M120 530c0-38 34-70 76-70h5c42 0 76 32 76 70v160H120V530Z" fill="#fff" stroke="#d4c8fb" stroke-width="12"/>
+  <path d="M460 500c0-32 28-58 63-58h5c35 0 63 26 63 58v164H460V500Z" fill="#fff" stroke="#f7daea" stroke-width="12"/>
+  <path d="M234 678c0 21-17 38-38 38s-38-17-38-38 17-38 38-38 38 17 38 38Z" fill="#4d41df" opacity="0.12"/>
+  <path d="M528 682c0 18-15 33-33 33s-33-15-33-33 15-33 33-33 33 15 33 33Z" fill="#875041" opacity="0.12"/>
+  <circle cx="255" cy="418" r="11" fill="#4d41df" opacity="0.4"/>
+  <circle cx="312" cy="376" r="9" fill="#875041" opacity="0.4"/>
+  <circle cx="555" cy="420" r="10" fill="#5c51a0" opacity="0.4"/>
+  <circle cx="610" cy="455" r="8" fill="#4d41df" opacity="0.4"/>
+</svg>
