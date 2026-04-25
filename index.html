@@ -284,6 +284,111 @@
             transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
         }
 
+        /* Confetti dots */
+        .confetti-dot {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            top: -8px;
+            animation: confettiFall 0.9s ease-out forwards;
+        }
+        @keyframes confettiFall {
+            0%   { top: -8px; opacity: 1; transform: rotate(0deg) scale(1); }
+            100% { top: 48px; opacity: 0; transform: rotate(360deg) scale(0.5); }
+        }
+
+        /* AI suggestion box slide-in */
+        #ai-suggestion-box:not(.hidden) {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        /* ── AUTH SCREEN ENHANCEMENTS ── */
+        .auth-input {
+            width: 100%;
+            height: 56px;
+            background: rgba(246,242,255,0.8);
+            border: 1.5px solid transparent;
+            border-radius: 14px;
+            padding: 0 18px;
+            font-size: 15px;
+            font-family: 'Poppins', sans-serif;
+            color: #1b1b24;
+            outline: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+            backdrop-filter: blur(8px);
+        }
+        .auth-input::placeholder { color: #9e9bb8; }
+        .auth-input:focus {
+            border-color: #4d41df;
+            background: #ffffff;
+            box-shadow: 0 0 0 4px rgba(77,65,223,0.10), 0 2px 8px -2px rgba(77,65,223,0.12);
+        }
+        .auth-btn-primary {
+            width: 100%;
+            height: 56px;
+            border: none;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #4d41df 0%, #675df9 60%, #5c51a0 100%);
+            color: #fff;
+            font-size: 16px;
+            font-weight: 700;
+            font-family: 'Poppins', sans-serif;
+            cursor: pointer;
+            box-shadow: 0 6px 20px -4px rgba(77,65,223,0.40);
+            transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+            letter-spacing: 0.01em;
+        }
+        .auth-btn-primary:hover { box-shadow: 0 8px 24px -4px rgba(77,65,223,0.50); transform: translateY(-1px); }
+        .auth-btn-primary:active { transform: scale(0.97); box-shadow: 0 3px 10px -2px rgba(77,65,223,0.30); }
+        .auth-btn-primary:disabled { opacity: 0.65; cursor: not-allowed; transform: none; }
+        .auth-btn-google {
+            width: 100%;
+            height: 52px;
+            border: 1.5px solid #e4e1ee;
+            border-radius: 14px;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: 'Poppins', sans-serif;
+            color: #1b1b24;
+            cursor: pointer;
+            box-shadow: 0 2px 8px -2px rgba(0,0,0,0.06);
+            transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+        }
+        .auth-btn-google:hover { background: #f6f2ff; box-shadow: 0 4px 12px -2px rgba(0,0,0,0.10); }
+        .auth-btn-google:active { transform: scale(0.97); }
+        /* Language dropdown */
+        .lang-dropdown {
+            appearance: none;
+            -webkit-appearance: none;
+            background: rgba(246,242,255,0.9) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234d41df' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 12px center;
+            border: 1.5px solid rgba(77,65,223,0.18);
+            border-radius: 10px;
+            padding: 6px 32px 6px 10px;
+            font-size: 12px;
+            font-weight: 600;
+            font-family: 'Poppins', sans-serif;
+            color: #4d41df;
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .lang-dropdown:focus { border-color: #4d41df; box-shadow: 0 0 0 3px rgba(77,65,223,0.10); }
+        .auth-card {
+            background: rgba(255,255,255,0.96);
+            backdrop-filter: blur(24px);
+            border-radius: 32px;
+            border: 1px solid rgba(196,192,255,0.25);
+            box-shadow: 0 16px 48px -12px rgba(77,65,223,0.16), 0 4px 16px -4px rgba(0,0,0,0.06);
+            padding: 36px 32px;
+        }
+        @media (max-width: 480px) { .auth-card { padding: 28px 20px; border-radius: 28px; } }
+
     </style>
     <script id="tailwind-config">
         tailwind.config = {
@@ -377,6 +482,27 @@
                                 <div class="flex justify-center lg:justify-start mb-6 w-full">
                                     <img src="tarini%20logo%20png.png" alt="Tarini Logo" class="w-[180px] sm:w-[220px] md:w-[260px] h-auto object-contain mx-auto lg:mx-0">
                                 </div>
+                                <!-- Language Dropdown -->
+                                <div class="flex justify-end mb-3">
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="material-symbols-outlined" style="font-size:16px;color:#4d41df">language</span>
+                                        <select id="auth-lang-select" class="lang-dropdown" onchange="setAuthLang(this.value)">
+                                            <option value="en">English</option>
+                                            <option value="hi">हिन्दी (Hindi)</option>
+                                            <option value="bn">বাংলা (Bengali)</option>
+                                            <option value="te">తెలుగు (Telugu)</option>
+                                            <option value="mr">मराठी (Marathi)</option>
+                                            <option value="ta">தமிழ் (Tamil)</option>
+                                            <option value="ur">اردو (Urdu)</option>
+                                            <option value="gu">ગુજરાતી (Gujarati)</option>
+                                            <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                                            <option value="ml">മലയാളം (Malayalam)</option>
+                                            <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+                                            <option value="or">ଓଡ଼ିଆ (Odia)</option>
+                                            <option value="as">অসমীয়া (Assamese)</option>
+                                        </select>
+                                    </div>
+                                </div>
                                 <h2 class="font-['Plus_Jakarta_Sans'] text-[32px] font-extrabold tracking-[-0.02em] text-on-surface mb-2 leading-[1.15]" id="auth-title">Sign In</h2>
                                 <p class="text-[15px] font-normal text-on-surface-variant leading-relaxed tracking-[0.01em]" id="auth-subtitle">Welcome back to Tarini</p>
                             </div>
@@ -387,29 +513,28 @@
                             <!-- Login Form -->
                             <form id="login-form" class="space-y-md" onsubmit="event.preventDefault(); handleLogin();">
                                 <div class="space-y-xs">
-                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">EMAIL
-                                        ADDRESS</label>
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1" data-i18n="emailAddress">EMAIL ADDRESS</label>
                                     <input type="email" id="login-email"
                                         class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all"
-                                        placeholder="name@example.com" />
+                                        data-i18n-placeholder="emailPlaceholder" placeholder="name@example.com" />
                                 </div>
                                 <div class="space-y-xs">
-                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">PASSWORD</label>
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1" data-i18n="password">PASSWORD</label>
                                     <input type="password" id="login-password" autocomplete="current-password"
                                         class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all"
-                                        placeholder="Password" />
+                                        data-i18n-placeholder="passwordPlaceholder" placeholder="Password" />
                                     <div class="flex justify-end pt-xs">
-                                        <a class="text-sm font-semibold text-primary hover:underline cursor-pointer" onclick="handleForgotPassword()">Forgot Password?</a>
+                                        <a class="text-sm font-semibold text-primary hover:underline cursor-pointer" onclick="handleForgotPassword()" data-i18n="forgotPassword">Forgot Password?</a>
                                     </div>
                                 </div>
                                 <div class="pt-sm">
                                     <button id="login-btn" type="submit"
-                                        class="w-full h-14 bg-gradient-to-r from-primary to-tertiary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">Sign In</button>
+                                        class="w-full h-14 bg-gradient-to-r from-primary to-tertiary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all" data-i18n="signIn">Sign In</button>
                                 </div>
                                 <!-- Divider -->
                                 <div class="flex items-center gap-3 py-xs">
                                     <div class="flex-1 h-px bg-outline-variant"></div>
-                                    <span class="text-xs text-on-surface-variant font-medium">or</span>
+                                    <span class="text-xs text-on-surface-variant font-medium" data-i18n="or">or</span>
                                     <div class="flex-1 h-px bg-outline-variant"></div>
                                 </div>
                                 <!-- Google Sign In -->
@@ -421,14 +546,14 @@
                                         <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
                                         <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
                                     </svg>
-                                    Sign in with Google
+                                    <span data-i18n="signInGoogle">Sign in with Google</span>
                                 </button>
                             </form>
 
                             <!-- Register: Role Selector -->
                             <div id="register-role-selector" style="display:none;">
-                                <h2 class="font-['Plus_Jakarta_Sans'] text-[22px] font-bold tracking-[-0.01em] text-on-surface mb-1 leading-snug">Choose Your Role</h2>
-                                <p class="text-[13px] font-normal text-on-surface-variant leading-relaxed mb-5">Select the role that best describes you</p>
+                                <h2 class="font-['Plus_Jakarta_Sans'] text-[22px] font-bold tracking-[-0.01em] text-on-surface mb-1 leading-snug" data-i18n="chooseRole">Choose Your Role</h2>
+                                <p class="text-[13px] font-normal text-on-surface-variant leading-relaxed mb-5" data-i18n="chooseRoleSub">Select the role that best describes you</p>
                                 <div class="flex flex-col gap-gutter">
                                     <!-- Woman -->
                                     <div onclick="showRegisterForm('woman')" class="flex items-center gap-md p-md bg-surface-container-low rounded-2xl border-2 border-transparent hover:border-primary active:scale-[0.98] cursor-pointer transition-all">
@@ -469,50 +594,50 @@
                             <!-- Register: Woman Form -->
                             <form id="register-form-woman" class="space-y-md" style="display:none;" onsubmit="event.preventDefault(); handleRegister('woman');">
                                 <button type="button" onclick="showRegisterRole()" class="flex items-center gap-2 text-primary text-sm font-semibold mb-xs active:scale-95 transition-all">
-                                    <span class="material-symbols-outlined text-lg">arrow_back</span> Back
+                                    <span class="material-symbols-outlined text-lg">arrow_back</span> <span data-i18n="back">Back</span>
                                 </button>
-                                <p class="font-label-caps text-label-caps text-primary uppercase tracking-widest">Woman Registration</p>
+                                <p class="font-label-caps text-label-caps text-primary uppercase tracking-widest" data-i18n="womanReg">Woman Registration</p>
                                 <div class="space-y-xs">
-                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">FULL NAME</label>
-                                    <input type="text" id="w-name" required class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="Your full name" />
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1" data-i18n="fullName">FULL NAME</label>
+                                    <input type="text" id="w-name" required class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" data-i18n-placeholder="fullNamePlaceholder" placeholder="Your full name" />
                                 </div>
                                 <div class="space-y-xs">
-                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">EMAIL ADDRESS</label>
-                                    <input type="email" id="w-email" required class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="name@example.com" />
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1" data-i18n="emailAddress">EMAIL ADDRESS</label>
+                                    <input type="email" id="w-email" required class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" data-i18n-placeholder="emailPlaceholder" placeholder="name@example.com" />
                                 </div>
                                 <div class="space-y-xs">
-                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">PASSWORD</label>
-                                    <input type="password" id="w-password" required autocomplete="new-password" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="Password" />
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1" data-i18n="password">PASSWORD</label>
+                                    <input type="password" id="w-password" required autocomplete="new-password" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" data-i18n-placeholder="passwordPlaceholder" placeholder="Password" />
                                 </div>
                                 <div class="space-y-xs">
-                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">SKILLS</label>
-                                    <input type="text" id="w-skills" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="e.g. Sewing, Handicrafts, Teaching" />
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1" data-i18n="skills">SKILLS</label>
+                                    <input type="text" id="w-skills" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" data-i18n-placeholder="skillsPlaceholder" placeholder="e.g. Sewing, Handicrafts, Teaching" />
                                 </div>
                                 <div class="space-y-xs">
-                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">JOB PREFERENCE</label>
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1" data-i18n="jobPref">JOB PREFERENCE</label>
                                     <select id="w-job-pref" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all">
-                                        <option value="">Select preference</option>
+                                        <option value="" data-i18n="selectPref">Select preference</option>
                                         <option>Full-time</option>
                                         <option>Part-time</option>
                                         <option>Freelance</option>
                                         <option>Remote</option>
                                     </select>
                                 </div>
-                                <button id="register-btn" type="submit" class="w-full h-14 bg-gradient-to-r from-primary to-tertiary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">Create Account</button>
+                                <button id="register-btn" type="submit" class="w-full h-14 bg-gradient-to-r from-primary to-tertiary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all" data-i18n="createAccount">Create Account</button>
                             </form>
 
                             <!-- Register: Company Form -->
                             <form id="register-form-company" class="space-y-md" style="display:none;" onsubmit="event.preventDefault(); handleRegister('company');">
                                 <button type="button" onclick="showRegisterRole()" class="flex items-center gap-2 text-primary text-sm font-semibold mb-xs active:scale-95 transition-all">
-                                    <span class="material-symbols-outlined text-lg">arrow_back</span> Back
+                                    <span class="material-symbols-outlined text-lg">arrow_back</span> <span data-i18n="back">Back</span>
                                 </button>
-                                <p class="font-label-caps text-label-caps text-tertiary uppercase tracking-widest">Company Registration</p>
+                                <p class="font-label-caps text-label-caps text-tertiary uppercase tracking-widest" data-i18n="companyReg">Company Registration</p>
                                 <div class="space-y-xs">
-                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">COMPANY NAME</label>
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1" data-i18n="companyName">COMPANY NAME</label>
                                     <input type="text" id="c-name" required class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="Acme Pvt. Ltd." />
                                 </div>
                                 <div class="space-y-xs">
-                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">INDUSTRY</label>
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1" data-i18n="industry">INDUSTRY</label>
                                     <select id="c-industry" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all">
                                         <option value="">Select industry</option>
                                         <option>Technology</option>
@@ -524,50 +649,50 @@
                                     </select>
                                 </div>
                                 <div class="space-y-xs">
-                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">CONTACT EMAIL</label>
-                                    <input type="email" id="c-email" required class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="hr@company.com" />
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1" data-i18n="emailAddress">CONTACT EMAIL</label>
+                                    <input type="email" id="c-email" required class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" data-i18n-placeholder="emailPlaceholder" placeholder="hr@company.com" />
                                 </div>
                                 <div class="space-y-xs">
-                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">PASSWORD</label>
-                                    <input type="password" id="c-password" required autocomplete="new-password" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="Password" />
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1" data-i18n="password">PASSWORD</label>
+                                    <input type="password" id="c-password" required autocomplete="new-password" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" data-i18n-placeholder="passwordPlaceholder" placeholder="Password" />
                                 </div>
                                 <div class="space-y-xs">
-                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">ADDRESS</label>
-                                    <input type="text" id="c-address" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="City, State" />
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1" data-i18n="address">ADDRESS</label>
+                                    <input type="text" id="c-address" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" data-i18n-placeholder="addressPlaceholder" placeholder="City, State" />
                                 </div>
-                                <button id="register-btn-company" type="submit" class="w-full h-14 bg-gradient-to-r from-primary to-tertiary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">Register Company</button>
+                                <button id="register-btn-company" type="submit" class="w-full h-14 bg-gradient-to-r from-primary to-tertiary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all" data-i18n="registerCompany">Register Company</button>
                             </form>
 
                             <!-- Register: Admin Form -->
                             <form id="register-form-admin" class="space-y-md" style="display:none;" onsubmit="event.preventDefault(); handleRegister('admin');">
                                 <button type="button" onclick="showRegisterRole()" class="flex items-center gap-2 text-primary text-sm font-semibold mb-xs active:scale-95 transition-all">
-                                    <span class="material-symbols-outlined text-lg">arrow_back</span> Back
+                                    <span class="material-symbols-outlined text-lg">arrow_back</span> <span data-i18n="back">Back</span>
                                 </button>
-                                <p class="font-label-caps text-label-caps text-secondary uppercase tracking-widest">Admin Registration</p>
+                                <p class="font-label-caps text-label-caps text-secondary uppercase tracking-widest" data-i18n="adminReg">Admin Registration</p>
                                 <div class="space-y-xs">
-                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">FULL NAME</label>
-                                    <input type="text" id="a-name" required class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="Admin name" />
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1" data-i18n="fullName">FULL NAME</label>
+                                    <input type="text" id="a-name" required class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" data-i18n-placeholder="fullNamePlaceholder" placeholder="Admin name" />
                                 </div>
                                 <div class="space-y-xs">
-                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">EMAIL ADDRESS</label>
-                                    <input type="email" id="a-email" required class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="admin@tarini.com" />
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1" data-i18n="emailAddress">EMAIL ADDRESS</label>
+                                    <input type="email" id="a-email" required class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" data-i18n-placeholder="emailPlaceholder" placeholder="admin@tarini.com" />
                                 </div>
                                 <div class="space-y-xs">
-                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">PASSWORD</label>
-                                    <input type="password" id="a-password" required autocomplete="new-password" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="Password" />
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1" data-i18n="password">PASSWORD</label>
+                                    <input type="password" id="a-password" required autocomplete="new-password" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" data-i18n-placeholder="passwordPlaceholder" placeholder="Password" />
                                 </div>
-                                <button id="register-btn-admin" type="submit" class="w-full h-14 bg-gradient-to-r from-primary to-tertiary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">Register as Admin</button>
+                                <button id="register-btn-admin" type="submit" class="w-full h-14 bg-gradient-to-r from-primary to-tertiary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all" data-i18n="registerAdmin">Register as Admin</button>
                             </form>
 
                             <p class="text-center mt-lg text-[14px] font-medium text-on-surface-variant" id="toggle-to-register">
-                                New to Tarini? <a class="text-primary font-bold hover:underline cursor-pointer"
-                                    onclick="toggleAuthMode('register')">Sign Up</a>
+                                <span data-i18n="newToTarini">New to Tarini?</span> <a class="text-primary font-bold hover:underline cursor-pointer"
+                                    onclick="toggleAuthMode('register')" data-i18n="signUp">Sign Up</a>
                             </p>
                             <p class="text-center mt-lg text-[14px] font-medium text-on-surface-variant" id="toggle-to-login"
                                 style="display: none;">
-                                Already have an account? <a
+                                <span data-i18n="alreadyHaveAccount">Already have an account?</span> <a
                                     class="text-primary font-bold hover:underline cursor-pointer"
-                                    onclick="toggleAuthMode('login')">Sign In</a>
+                                    onclick="toggleAuthMode('login')" data-i18n="signIn">Sign In</a>
                             </p>
                         </div>
                     </div>
@@ -841,32 +966,90 @@
 
         <!-- SCREEN: POST PRODUCT -->
         <div id="screen-post-product" class="screen">
-            <main class="max-w-2xl mx-auto px-container-padding py-md pb-16">
-                <div class="flex items-center gap-md mb-lg">
+            <main class="max-w-2xl mx-auto px-container-padding py-md pb-24">
+
+                <!-- Header -->
+                <div class="flex items-center gap-md mb-5">
                     <button onclick="navigateTo('shop')" class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center active:scale-90 transition-all">
                         <span class="material-symbols-outlined">arrow_back</span>
                     </button>
                     <h2 class="font-h2 text-h2 text-on-surface" id="post-product-title">Add Product</h2>
                 </div>
+
+                <!-- IMAGE UPLOAD -->
+                <div class="mb-5">
+                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1 mb-2 block">PRODUCT IMAGE</label>
+                    <!-- Upload zone (shown when no image) -->
+                    <div id="img-upload-zone" class="relative flex flex-col items-center justify-center w-full h-52 bg-surface-container-low border-2 border-dashed border-outline-variant rounded-2xl cursor-pointer hover:border-primary transition-colors overflow-hidden" onclick="document.getElementById('product-image').click()">
+                        <span class="material-symbols-outlined text-outline text-5xl" id="product-image-icon">add_photo_alternate</span>
+                        <p class="text-on-surface-variant text-sm mt-2" id="product-image-text">Tap to upload image</p>
+                        <img id="product-image-preview" class="hidden absolute inset-0 w-full h-full object-cover" alt=""/>
+                        <!-- Image progress bar -->
+                        <div id="img-progress-wrap" class="hidden absolute bottom-0 left-0 w-full px-4 pb-3">
+                            <div class="w-full bg-white/40 rounded-full h-1.5 overflow-hidden">
+                                <div id="img-progress-bar" class="h-full rounded-full transition-all duration-100" style="width:0%;background:linear-gradient(90deg,#4d41df,#675df9)"></div>
+                            </div>
+                            <p class="text-white text-[11px] font-semibold mt-1 text-center" id="img-progress-label">Uploading...</p>
+                        </div>
+                    </div>
+                    <!-- Image action buttons (shown after upload) -->
+                    <div id="img-actions" class="hidden flex gap-2 mt-2">
+                        <button type="button" onclick="document.getElementById('product-image').click()" class="flex-1 h-9 rounded-xl border border-outline-variant text-on-surface-variant text-[12px] font-semibold flex items-center justify-center gap-1 active:scale-95 transition-all">
+                            <span class="material-symbols-outlined" style="font-size:15px">swap_horiz</span> Change
+                        </button>
+                        <button type="button" onclick="removeProductImage()" class="flex-1 h-9 rounded-xl border border-error/30 text-error text-[12px] font-semibold flex items-center justify-center gap-1 active:scale-95 transition-all">
+                            <span class="material-symbols-outlined" style="font-size:15px">delete</span> Remove
+                        </button>
+                    </div>
+                    <input type="file" id="product-image" accept="image/*" class="hidden" onchange="previewProductImage(event)"/>
+                </div>
+
                 <form id="post-product-form" class="space-y-md" onsubmit="event.preventDefault(); submitProductForm();">
                     <input type="hidden" id="edit-product-id"/>
-                    <div class="space-y-xs">
-                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">PRODUCT IMAGE</label>
-                        <label for="product-image" class="relative flex flex-col items-center justify-center w-full h-52 bg-surface-container-low border-2 border-dashed border-outline-variant rounded-2xl cursor-pointer hover:border-primary transition-colors overflow-hidden">
-                            <span class="material-symbols-outlined text-outline text-5xl" id="product-image-icon">add_photo_alternate</span>
-                            <p class="text-on-surface-variant text-sm mt-2" id="product-image-text">Click to upload image</p>
-                            <img id="product-image-preview" class="hidden absolute inset-0 w-full h-full object-cover" alt=""/>
-                        </label>
-                        <input type="file" id="product-image" accept="image/*" class="hidden" onchange="previewProductImage(event)"/>
-                    </div>
+
+                    <!-- Product Name -->
                     <div class="space-y-xs">
                         <label class="font-label-caps text-label-caps text-on-surface-variant px-1">PRODUCT NAME</label>
                         <input type="text" id="product-name" required class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="e.g. Handmade Earrings"/>
                     </div>
+
+                    <!-- Description + AI button -->
                     <div class="space-y-xs">
-                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">DESCRIPTION</label>
+                        <div class="flex items-center justify-between px-1">
+                            <label class="font-label-caps text-label-caps text-on-surface-variant">DESCRIPTION</label>
+                            <button type="button" id="ai-improve-btn" onclick="aiImproveProduct()" class="flex items-center gap-1 text-[11px] font-bold px-3 py-1 rounded-full transition-all active:scale-95" style="background:linear-gradient(135deg,rgba(77,65,223,0.12),rgba(92,81,160,0.12));color:#4d41df">
+                                <span class="material-symbols-outlined" style="font-size:13px;font-variation-settings:'FILL' 1">auto_awesome</span>
+                                <span id="ai-btn-label">Improve with AI</span>
+                            </button>
+                        </div>
                         <textarea id="product-description" rows="3" class="w-full bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md py-3 transition-all resize-none" placeholder="Describe your product..."></textarea>
                     </div>
+
+                    <!-- AI Suggestion Box -->
+                    <div id="ai-suggestion-box" class="hidden rounded-2xl border-2 p-4 space-y-3" style="border-color:rgba(77,65,223,0.25);background:rgba(77,65,223,0.04)">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-primary" style="font-size:18px;font-variation-settings:'FILL' 1">auto_awesome</span>
+                            <p class="text-[13px] font-bold text-primary">AI Suggestion</p>
+                        </div>
+                        <div>
+                            <p class="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wide mb-1">Improved Title</p>
+                            <p id="ai-suggested-title" class="text-[14px] font-semibold text-on-surface"></p>
+                        </div>
+                        <div>
+                            <p class="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wide mb-1">Better Description</p>
+                            <p id="ai-suggested-desc" class="text-[13px] text-on-surface-variant leading-relaxed"></p>
+                        </div>
+                        <div class="flex gap-2 pt-1">
+                            <button type="button" onclick="acceptAiSuggestion()" class="flex-1 h-10 rounded-xl text-white text-[13px] font-bold active:scale-95 transition-all" style="background:linear-gradient(135deg,#4d41df,#5c51a0)">
+                                ✓ Accept
+                            </button>
+                            <button type="button" onclick="dismissAiSuggestion()" class="flex-1 h-10 rounded-xl border border-outline-variant text-on-surface-variant text-[13px] font-semibold active:scale-95 transition-all">
+                                Edit manually
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Price & Category -->
                     <div class="grid grid-cols-2 gap-gutter">
                         <div class="space-y-xs">
                             <label class="font-label-caps text-label-caps text-on-surface-variant px-1">PRICE (&#8377;)</label>
@@ -885,13 +1068,42 @@
                             </select>
                         </div>
                     </div>
+
+                    <!-- Stock -->
                     <div class="space-y-xs">
                         <label class="font-label-caps text-label-caps text-on-surface-variant px-1">STOCK QUANTITY</label>
                         <input type="number" id="product-stock" required min="1" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all" placeholder="1"/>
                     </div>
-                    <button type="submit" id="post-product-btn" class="w-full h-14 bg-gradient-to-r from-primary to-tertiary text-on-primary font-bold rounded-xl shadow-lg shadow-primary/20 active:scale-95 transition-all">Post Product</button>
+
+                    <!-- Submit -->
+                    <button type="submit" id="post-product-btn" class="w-full h-14 bg-gradient-to-r from-primary to-tertiary text-on-primary font-bold rounded-xl shadow-lg shadow-primary/20 active:scale-95 transition-all flex items-center justify-center gap-2">
+                        <span id="post-btn-label">Post Product</span>
+                    </button>
                 </form>
             </main>
+
+            <!-- SUCCESS MODAL -->
+            <div id="product-success-modal" class="hidden fixed inset-0 z-[200] flex items-center justify-center px-5" style="background:rgba(15,14,23,0.55);backdrop-filter:blur(6px)">
+                <div class="bg-white rounded-[28px] p-8 w-full max-w-sm text-center shadow-2xl" style="animation:fadeIn 0.3s ease-out">
+                    <!-- Confetti dots -->
+                    <div id="confetti-wrap" class="relative h-12 mb-2 overflow-hidden">
+                        <div class="confetti-dot" style="left:10%;background:#4d41df;animation-delay:0s"></div>
+                        <div class="confetti-dot" style="left:25%;background:#feb5a2;animation-delay:0.1s"></div>
+                        <div class="confetti-dot" style="left:45%;background:#675df9;animation-delay:0.05s"></div>
+                        <div class="confetti-dot" style="left:65%;background:#875041;animation-delay:0.15s"></div>
+                        <div class="confetti-dot" style="left:80%;background:#c8bfff;animation-delay:0.08s"></div>
+                        <div class="confetti-dot" style="left:90%;background:#4d41df;animation-delay:0.2s"></div>
+                    </div>
+                    <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style="background:linear-gradient(135deg,#4d41df,#675df9)">
+                        <span class="material-symbols-outlined text-white text-4xl" style="font-variation-settings:'FILL' 1">check_circle</span>
+                    </div>
+                    <h3 class="font-['Plus_Jakarta_Sans'] text-[22px] font-extrabold text-on-surface mb-2">Product Added!</h3>
+                    <p class="text-[14px] text-on-surface-variant mb-6">Your product is now live in your shop.</p>
+                    <button onclick="closeProductSuccess()" class="w-full h-12 rounded-xl text-white font-bold text-[15px] active:scale-95 transition-all" style="background:linear-gradient(135deg,#4d41df,#5c51a0)">
+                        Go to My Shop
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- SCREEN: PRODUCT DETAIL -->
@@ -1161,9 +1373,17 @@
                             <select id="pref-language" onchange="savePref('language', this.value)" class="text-xs text-primary font-semibold bg-transparent border-none outline-none cursor-pointer">
                                 <option value="English">English</option>
                                 <option value="Hindi">Hindi</option>
-                                <option value="Tamil">Tamil</option>
+                                <option value="Bengali">Bengali</option>
                                 <option value="Telugu">Telugu</option>
                                 <option value="Marathi">Marathi</option>
+                                <option value="Tamil">Tamil</option>
+                                <option value="Urdu">Urdu</option>
+                                <option value="Gujarati">Gujarati</option>
+                                <option value="Kannada">Kannada</option>
+                                <option value="Malayalam">Malayalam</option>
+                                <option value="Punjabi">Punjabi</option>
+                                <option value="Odia">Odia</option>
+                                <option value="Assamese">Assamese</option>
                             </select>
                         </div>
                     </div>

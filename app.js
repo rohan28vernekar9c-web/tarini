@@ -647,8 +647,17 @@ function openPostProduct(productId) {
     form.reset();
     document.getElementById('edit-product-id').value = '';
     document.getElementById('post-product-title').textContent = 'Add Product';
-    document.getElementById('post-product-btn').textContent = 'Post Product';
+    const btnLabel = document.getElementById('post-btn-label');
+    if (btnLabel) btnLabel.textContent = 'Post Product';
     resetImagePreview('product-image-preview', 'product-image-icon', 'product-image-text');
+    // Reset new UI elements
+    const imgActions = document.getElementById('img-actions');
+    if (imgActions) imgActions.classList.add('hidden');
+    const aiBox = document.getElementById('ai-suggestion-box');
+    if (aiBox) aiBox.classList.add('hidden');
+    const progressWrap = document.getElementById('img-progress-wrap');
+    if (progressWrap) progressWrap.classList.add('hidden');
+    document.getElementById('product-image-text').textContent = 'Tap to upload image';
 
     if (productId) {
         const p = getShopProducts().find(x => x.id === productId);
@@ -687,22 +696,59 @@ function submitProductForm() {
         ? preview.getAttribute('data-src')
         : '';
 
-    let products = getShopProducts();
-    if (editId) {
-        products = products.map(p => p.id === parseInt(editId)
-            ? { ...p, name, description, price, category, stock, image: image || p.image }
-            : p);
-    } else {
-        products.push({ id: Date.now(), name, description, price, category, stock, image });
+    // Show loading state on button
+    const btn = document.getElementById('post-product-btn');
+    const btnLabel = document.getElementById('post-btn-label');
+    if (btn && btnLabel) {
+        btnLabel.textContent = 'Adding...';
+        btn.disabled = true;
+        btn.style.opacity = '0.8';
     }
-    saveShopProducts(products);
-    navigateTo('shop');
+
+    setTimeout(() => {
+        let products = getShopProducts();
+        if (editId) {
+            products = products.map(p => p.id === parseInt(editId)
+                ? { ...p, name, description, price, category, stock, image: image || p.image }
+                : p);
+        } else {
+            products.push({ id: Date.now(), name, description, price, category, stock, image });
+        }
+        saveShopProducts(products);
+        if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+        if (btnLabel) btnLabel.textContent = editId ? 'Save Changes' : 'Post Product';
+        // Show success modal
+        const modal = document.getElementById('product-success-modal');
+        if (modal) modal.classList.remove('hidden');
+    }, 1200);
 }
 window.submitProductForm = submitProductForm;
+
+function closeProductSuccess() {
+    const modal = document.getElementById('product-success-modal');
+    if (modal) modal.classList.add('hidden');
+    navigateTo('shop');
+}
+window.closeProductSuccess = closeProductSuccess;
 
 function previewProductImage(event) {
     const file = event.target.files[0];
     if (!file) return;
+    // Show progress bar
+    const progressWrap = document.getElementById('img-progress-wrap');
+    const progressBar = document.getElementById('img-progress-bar');
+    const progressLabel = document.getElementById('img-progress-label');
+    if (progressWrap) {
+        progressWrap.classList.remove('hidden');
+        progressBar.style.width = '0%';
+        let pct = 0;
+        const interval = setInterval(() => {
+            pct += Math.random() * 30;
+            if (pct >= 100) { pct = 100; clearInterval(interval); }
+            progressBar.style.width = pct + '%';
+            if (progressLabel) progressLabel.textContent = pct < 100 ? 'Uploading...' : 'Done!';
+        }, 80);
+    }
     const reader = new FileReader();
     reader.onload = e => {
         const preview = document.getElementById('product-image-preview');
@@ -711,10 +757,84 @@ function previewProductImage(event) {
         preview.classList.remove('hidden');
         document.getElementById('product-image-icon').classList.add('hidden');
         document.getElementById('product-image-text').classList.add('hidden');
+        setTimeout(() => {
+            if (progressWrap) progressWrap.classList.add('hidden');
+            const actions = document.getElementById('img-actions');
+            if (actions) actions.classList.remove('hidden');
+        }, 900);
     };
     reader.readAsDataURL(file);
 }
 window.previewProductImage = previewProductImage;
+
+function removeProductImage() {
+    resetImagePreview('product-image-preview', 'product-image-icon', 'product-image-text');
+    document.getElementById('product-image').value = '';
+    const actions = document.getElementById('img-actions');
+    if (actions) actions.classList.add('hidden');
+}
+window.removeProductImage = removeProductImage;
+
+// --- AI IMPROVE (simulated) ---
+const _aiSuggestions = [
+    { title: 'Elegant Handcrafted Earrings – Artisan Collection', desc: 'Beautifully crafted by skilled artisans using premium materials. Each piece is unique, lightweight, and perfect for everyday wear or special occasions. A thoughtful gift for loved ones.' },
+    { title: 'Premium Handwoven Silk Saree – Traditional Elegance', desc: 'Experience the timeless beauty of handwoven silk. This exquisite saree features intricate patterns crafted by master weavers, blending tradition with modern aesthetics.' },
+    { title: 'Organic Herbal Skincare Set – Natural Glow Collection', desc: 'Nourish your skin with our 100% organic herbal blend. Free from harmful chemicals, this set is crafted with love using traditional recipes passed down through generations.' },
+    { title: 'Handmade Terracotta Jewellery – Earthy Charm Series', desc: 'Celebrate the art of terracotta with these stunning handmade pieces. Lightweight, eco-friendly, and uniquely designed to complement both traditional and contemporary outfits.' },
+];
+
+function aiImproveProduct() {
+    const btn = document.getElementById('ai-improve-btn');
+    const label = document.getElementById('ai-btn-label');
+    const box = document.getElementById('ai-suggestion-box');
+    if (!btn || !label || !box) return;
+    // Show loading state
+    label.textContent = 'Thinking...';
+    btn.disabled = true;
+    btn.style.opacity = '0.7';
+    const spinner = document.createElement('span');
+    spinner.className = 'material-symbols-outlined';
+    spinner.style.cssText = 'font-size:13px;animation:spin 0.8s linear infinite';
+    spinner.textContent = 'progress_activity';
+    btn.prepend(spinner);
+    // Add spin keyframe if not present
+    if (!document.getElementById('spin-style')) {
+        const s = document.createElement('style');
+        s.id = 'spin-style';
+        s.textContent = '@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}';
+        document.head.appendChild(s);
+    }
+    setTimeout(() => {
+        spinner.remove();
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        label.textContent = 'Improve with AI';
+        // Pick suggestion based on current name or random
+        const name = (document.getElementById('product-name').value || '').toLowerCase();
+        let pick = _aiSuggestions[Math.floor(Math.random() * _aiSuggestions.length)];
+        if (name.includes('saree') || name.includes('silk')) pick = _aiSuggestions[1];
+        else if (name.includes('skin') || name.includes('herbal')) pick = _aiSuggestions[2];
+        else if (name.includes('terra') || name.includes('clay')) pick = _aiSuggestions[3];
+        document.getElementById('ai-suggested-title').textContent = pick.title;
+        document.getElementById('ai-suggested-desc').textContent = pick.desc;
+        box.classList.remove('hidden');
+    }, 2200);
+}
+window.aiImproveProduct = aiImproveProduct;
+
+function acceptAiSuggestion() {
+    const title = document.getElementById('ai-suggested-title').textContent;
+    const desc = document.getElementById('ai-suggested-desc').textContent;
+    document.getElementById('product-name').value = title;
+    document.getElementById('product-description').value = desc;
+    document.getElementById('ai-suggestion-box').classList.add('hidden');
+}
+window.acceptAiSuggestion = acceptAiSuggestion;
+
+function dismissAiSuggestion() {
+    document.getElementById('ai-suggestion-box').classList.add('hidden');
+}
+window.dismissAiSuggestion = dismissAiSuggestion;
 
 // ---- Product detail ----
 function openProductDetail(productId) {
