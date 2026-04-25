@@ -15,7 +15,7 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 // List of screens that should hide the bottom navigation
-const screensWithoutNav = ['login', 'notifications', 'ai-assistant', 'applications', 'rewards', 'post-product', 'product-detail', 'edit-profile', 'job-detail', 'job-apply', 'skill-categories', 'market-categories', 'my-shop', 'cart'];
+const screensWithoutNav = ['login', 'notifications', 'ai-assistant', 'post-product', 'product-detail', 'edit-profile', 'job-detail', 'job-apply', 'skill-categories', 'market-categories'];
 const _navStack = [];
 
 function navigateTo(screenId) {
@@ -1997,7 +1997,7 @@ function goBackFromApplications() {
     // Pop the last screen from the stack; fall back to dashboard
     const prev = _navStack.length > 0 ? _navStack.pop() : 'dashboard';
     // Never go back to login or another no-nav screen that doesn't make sense
-    const safe = ['dashboard', 'jobs', 'job-detail', 'profile'].includes(prev) ? prev : 'dashboard';
+    const safe = ['dashboard', 'jobs', 'job-detail', 'profile', 'shop', 'my-shop', 'cart'].includes(prev) ? prev : 'dashboard';
     navigateTo(safe);
 }
 window.goBackFromApplications = goBackFromApplications;
