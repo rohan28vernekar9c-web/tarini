@@ -133,155 +133,198 @@
         }
 
         /* ============================================
-           DARK MODE — full theme override
+           DARK MODE - full theme override
            ============================================ */
-        .dark body,
-        .dark-theme body {
-            background-image: radial-gradient(circle at 20% 10%, rgba(100,90,255,0.06), transparent 18%),
-                              radial-gradient(circle at 85% 90%, rgba(135,80,65,0.04), transparent 20%);
-        }
 
-        /* Page & screen backgrounds */
-        .dark .screen,
-        .dark-theme .screen {
-            background-color: #0f0e17;
-        }
-        .dark #app-container,
-        .dark-theme #app-container {
-            background-color: #0f0e17;
-        }
+        /* Base backgrounds */
+        .dark-theme body,
+        .dark-theme .screen,
+        .dark-theme #app-container { background-color: #0f0e17 !important; }
 
-        /* Global header */
-        .dark #global-header,
         .dark-theme #global-header {
-            background: rgba(15,14,23,0.92) !important;
+            background: rgba(15,14,23,0.97) !important;
             border-bottom-color: rgba(100,90,255,0.15) !important;
-            box-shadow: 0 1px 12px rgba(0,0,0,0.4) !important;
+            box-shadow: 0 1px 12px rgba(0,0,0,0.5) !important;
         }
-
-        /* Bottom nav */
-        .dark #bottom-nav,
-        .dark-theme #bottom-nav {
-            background: rgba(15,14,23,0.95) !important;
+        .dark-theme #bottom-nav,
+        .dark-theme #company-bottom-nav {
+            background: rgba(15,14,23,0.97) !important;
             border-top-color: rgba(100,90,255,0.12) !important;
         }
 
-        /* Dashboard greeting banner */
-        .dark #screen-dashboard section:first-child,
-        .dark-theme #screen-dashboard section:first-child {
-            background: linear-gradient(135deg, rgba(77,65,223,0.12) 0%, rgba(92,81,160,0.08) 50%, rgba(135,80,65,0.06) 100%) !important;
-        }
-
-        /* White cards ? dark surface */
-        .dark .bg-white,
+        /* Surface cards */
         .dark-theme .bg-white,
-        .dark .bg-surface-container-lowest,
-        .dark-theme .bg-surface-container-lowest {
-            background-color: #1c1b2e !important;
-        }
-        .dark .bg-surface-container-low,
-        .dark-theme .bg-surface-container-low {
-            background-color: #252438 !important;
-        }
-        .dark .bg-surface-container,
-        .dark-theme .bg-surface-container {
-            background-color: #1e1d30 !important;
-        }
-        .dark .bg-surface-container-high,
-        .dark-theme .bg-surface-container-high {
-            background-color: #2a2840 !important;
-        }
+        .dark-theme .bg-surface-container-lowest { background-color: #1c1b2e !important; }
+        .dark-theme .bg-surface-container-low    { background-color: #252438 !important; }
+        .dark-theme .bg-surface-container        { background-color: #1e1d30 !important; }
+        .dark-theme .bg-surface-container-high   { background-color: #2a2840 !important; }
+
+        /* Inline-styled white cards */
+        .dark-theme [style*="background:#fff"],
+        .dark-theme [style*="background: #fff"],
+        .dark-theme [style*="background:#ffffff"],
+        .dark-theme [style*="background: #ffffff"] { background: #1c1b2e !important; }
+        .dark-theme [style*="background:rgba(255,255,255,0.5)"],
+        .dark-theme [style*="background:rgba(255,255,255,0.9)"],
+        .dark-theme [style*="background:rgba(255,255,255,0.95)"] { background: rgba(28,27,46,0.97) !important; }
 
         /* Borders */
-        .dark .border-surface-container-high,
-        .dark-theme .border-surface-container-high {
-            border-color: #2a2840 !important;
-        }
-        .dark .border-outline-variant,
-        .dark-theme .border-outline-variant {
-            border-color: #3a3850 !important;
-        }
-        .dark .border-indigo-100\/30,
-        .dark-theme .border-indigo-100\/30 {
-            border-color: rgba(100,90,255,0.15) !important;
-        }
+        .dark-theme .border-surface-container-high { border-color: #2a2840 !important; }
+        .dark-theme .border-outline-variant         { border-color: #3a3850 !important; }
+        .dark-theme [style*="border:1px solid #eae6f3"],
+        .dark-theme [style*="border: 1px solid #eae6f3"] { border-color: #2a2840 !important; }
+        .dark-theme .divide-surface-container-high > * + * { border-top-color: #2a2840 !important; }
 
-        /* Text colors */
-        .dark .text-on-surface,
-        .dark-theme .text-on-surface {
-            color: #e8e6f4 !important;
-        }
-        .dark .text-on-surface-variant,
-        .dark-theme .text-on-surface-variant {
-            color: #9e9bb8 !important;
-        }
-        .dark .text-outline,
-        .dark-theme .text-outline {
-            color: #7a7890 !important;
-        }
+        /* Text */
+        .dark-theme .text-on-surface         { color: #e8e6f4 !important; }
+        .dark-theme .text-on-surface-variant { color: #9e9bb8 !important; }
+        .dark-theme .text-outline            { color: #7a7890 !important; }
+        .dark-theme .text-outline-variant    { color: #4a4860 !important; }
+        .dark-theme [style*="color:#1b1b24"]  { color: #e8e6f4 !important; }
+        .dark-theme [style*="color: #1b1b24"] { color: #e8e6f4 !important; }
+        .dark-theme [style*="color:#464555"]  { color: #c8c6dc !important; }
+        .dark-theme [style*="color:#777587"]  { color: #9e9bb8 !important; }
+        .dark-theme [style*="color:#9e9bb8"]  { color: #7a7890 !important; }
 
         /* Inputs */
-        .dark input,
         .dark-theme input,
-        .dark textarea,
         .dark-theme textarea,
-        .dark select,
         .dark-theme select {
             background-color: #252438 !important;
             color: #e8e6f4 !important;
             border-color: #3a3850 !important;
         }
-        .dark input::placeholder,
         .dark-theme input::placeholder,
-        .dark textarea::placeholder,
-        .dark-theme textarea::placeholder {
-            color: #6b6880 !important;
+        .dark-theme textarea::placeholder { color: #6b6880 !important; }
+        .dark-theme .auth-input {
+            background: rgba(37,36,56,0.9) !important;
+            border-color: rgba(100,90,255,0.25) !important;
+            color: #e8e6f4 !important;
         }
 
-        /* Dashboard bento cards */
-        .dark .dash-job-card,
+        /* Icons - lift hardcoded dark colours */
+        .dark-theme .material-symbols-outlined[style*="color:#1b1b24"] { color: #e8e6f4 !important; }
+        .dark-theme .material-symbols-outlined[style*="color:#777587"] { color: #9e9bb8 !important; }
+        .dark-theme .material-symbols-outlined[style*="color:#9e9bb8"] { color: #7a7890 !important; }
+        .dark-theme .nav-item    { color: #7a7890; }
+        .dark-theme .co-nav-item { color: #7a7890; }
+
+        /* Logo - never invert */
+        .dark-theme .app-logo,
+        .dark-theme img[src*="tarini"],
+        .dark-theme img[src*="logo"],
+        .dark-theme #co-logo-img { filter: none !important; }
+
+        /* Dashboard cards */
         .dark-theme .dash-job-card {
             background: #1c1b2e !important;
             border-color: #2a2840 !important;
-            box-shadow: 0 2px 12px -4px rgba(0,0,0,0.4) !important;
+            box-shadow: 0 2px 12px -4px rgba(0,0,0,0.5) !important;
         }
-        .dark .dash-job-card p[style*="color:#1b1b24"],
-        .dark-theme .dash-job-card p[style*="color:#1b1b24"] {
+        .dark-theme #screen-dashboard section:first-child {
+            background: linear-gradient(135deg,rgba(77,65,223,0.14),rgba(92,81,160,0.10),rgba(135,80,65,0.07)) !important;
+        }
+
+        /* Auth / profile cards */
+        .dark-theme .glow-shadow { box-shadow: 0 10px 40px -10px rgba(0,0,0,0.6) !important; }
+        .dark-theme .bg-surface-container-low.rounded-2xl { background-color: #252438 !important; }
+        .dark-theme section.bg-white { background-color: #1c1b2e !important; }
+        .dark-theme .divide-surface-container-high > * + * { border-top-color: #2a2840 !important; }
+
+        /* Scrollbar */
+        .dark-theme ::-webkit-scrollbar-track { background: #1c1b2e; }
+        .dark-theme ::-webkit-scrollbar-thumb { background: #3a3850; border-radius: 4px; }
+
+        /* Smooth transitions */
+        body, .screen, #global-header, #bottom-nav, #company-bottom-nav,
+        .bg-white, .bg-surface-container-lowest, .bg-surface-container-low,
+        .bg-surface-container, input, textarea, select, .dash-job-card {
+            transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+        }
+
+        /* Dark mode hover overrides — prevent flash to white on hover */
+        .dark-theme [style*="background:#fff"]:hover,
+        .dark-theme [style*="background: #fff"]:hover,
+        .dark-theme [style*="background:#ffffff"]:hover,
+        .dark-theme [style*="background: #ffffff"]:hover { background: #252438 !important; }
+
+        /* Elements whose mouseleave resets background to '' — keep dark */
+        .dark-theme .bg-white:hover,
+        .dark-theme .bg-surface-container-low:hover { background-color: #2a2840 !important; }
+
+        /* Tailwind hover:bg-surface-container-low */
+        .dark-theme .hover\:bg-surface-container-low:hover { background-color: #2a2840 !important; }
+
+        /* Google sign-in button hover */
+        .dark-theme .hover\:bg-surface-container-low:hover { background-color: #252438 !important; }
+
+        /* hover:bg-error/5 (logout button) */
+        .dark-theme .hover\:bg-error\/5:hover { background-color: rgba(186,26,26,0.12) !important; }
+
+        /* Category / all-categories grid hover */
+        .dark-theme [onmouseleave*="background=''"] { background: transparent; }
+        .dark-theme [onmouseenter*="rgba(77,65,223,0.05)"]:hover { background: rgba(77,65,223,0.12) !important; }
+
+        /* ---- Icon visibility in dark mode (all screens) ---- */
+        /* Boost icon container backgrounds */
+        .dark-theme .bg-primary\/10  { background-color: rgba(100,90,255,0.20) !important; }
+        .dark-theme .bg-secondary\/10 { background-color: rgba(135,80,65,0.22) !important; }
+        .dark-theme .bg-tertiary\/10  { background-color: rgba(92,81,160,0.22) !important; }
+        .dark-theme .bg-error\/10     { background-color: rgba(186,26,26,0.22) !important; }
+
+        /* Brighten icon colours so they pop on dark surfaces */
+        .dark-theme .text-primary   { color: #8b83ff !important; }
+        .dark-theme .text-secondary { color: #e8a090 !important; }
+        .dark-theme .text-tertiary  { color: #a89ee8 !important; }
+        .dark-theme .text-error     { color: #ff8a8a !important; }
+        .dark-theme .text-outline   { color: #9e9bb8 !important; }
+        .dark-theme .text-outline-variant { color: #6b6880 !important; }
+
+        /* ---- Job Detail & Job Apply dark mode ---- */
+
+        /* Back button icon visibility */
+        .dark-theme #screen-job-detail .material-symbols-outlined,
+        .dark-theme #screen-job-apply .material-symbols-outlined { color: inherit; }
+        .dark-theme #screen-job-detail button.bg-surface-container .material-symbols-outlined,
+        .dark-theme #screen-job-apply button.bg-surface-container .material-symbols-outlined {
             color: #e8e6f4 !important;
         }
-        .dark .dash-job-card p[style*="color:#777587"],
-        .dark-theme .dash-job-card p[style*="color:#777587"] {
-            color: #9e9bb8 !important;
-        }
 
-        /* Profile & section cards */
-        .dark section.bg-white,
-        .dark-theme section.bg-white {
+        /* Quick info boxes (Salary / Location / Industry) */
+        .dark-theme #screen-job-detail .grid.grid-cols-3 .bg-white {
             background-color: #1c1b2e !important;
         }
-        .dark .divide-surface-container-high > * + *,
-        .dark-theme .divide-surface-container-high > * + * {
-            border-top-color: #2a2840 !important;
+
+        /* Job description / requirements / skills cards */
+        .dark-theme #screen-job-detail .bg-white {
+            background-color: #1c1b2e !important;
         }
 
-        /* Login / auth card */
-        .dark .glow-shadow,
-        .dark-theme .glow-shadow {
-            box-shadow: 0 10px 40px -10px rgba(0,0,0,0.5) !important;
+        /* Sticky apply button bar - replace white gradient with dark */
+        .dark-theme #screen-job-detail .fixed.bottom-0[style*="rgba(252,248,255"] {
+            background: linear-gradient(to top, #0f0e17 70%, transparent) !important;
         }
 
-        /* Role selector cards */
-        .dark .bg-surface-container-low.rounded-2xl,
-        .dark-theme .bg-surface-container-low.rounded-2xl {
-            background-color: #252438 !important;
+        /* Success toast card */
+        .dark-theme #jd-success-toast .bg-white {
+            background-color: #1c1b2e !important;
         }
 
-        /* Smooth theme transition */
-        body, .screen, #global-header, #bottom-nav,
-        .bg-white, .bg-surface-container-lowest,
-        .bg-surface-container-low, .bg-surface-container,
-        input, textarea, select, .dash-job-card {
-            transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+        /* Job apply form section cards */
+        .dark-theme #screen-job-apply .bg-white {
+            background-color: #1c1b2e !important;
+        }
+
+        /* Job apply submit button bar */
+        .dark-theme #screen-job-apply .fixed.bottom-0 {
+            background: linear-gradient(to top, #0f0e17 70%, transparent) !important;
+        }
+
+        .dark-theme .job-apply-bar-bg { background: linear-gradient(to top, #0f0e17 70%, transparent) !important; }
+
+        /* Cart checkout bar dark mode */
+        .dark-theme #cart-checkout-bar {
+            background: linear-gradient(to top, #0f0e17 70%, transparent) !important;
         }
 
         /* Confetti dots */
@@ -462,6 +505,7 @@
 
 <body
     class="bg-background text-on-background font-body-md min-h-screen selection:bg-primary-container selection:text-on-primary-container">
+    <div id="auth-loading-overlay" style="position:fixed;inset:0;z-index:99999;background:#f6f2ff;display:flex;align-items:center;justify-content:center"><div style="width:48px;height:48px;border-radius:50%;border:4px solid rgba(77,65,223,0.15);border-top-color:#4d41df;animation:spin 0.8s linear infinite"></div></div><script>setTimeout(function(){var o=document.getElementById("auth-loading-overlay");if(o)o.style.display="none";},4000);</script>
 
     <div id="app-container" class="app-wrapper relative">
 
@@ -485,7 +529,7 @@
         </header>
 
         <!-- SCREEN: LOGIN -->
-        <div id="screen-login" class="screen active">
+        <div id="screen-login" class="screen">
             <main class="relative min-h-[100vh] flex items-center justify-center p-container-padding overflow-hidden">
                 <!-- Decorative Background Elements -->
                 <div class="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-primary/5 rounded-full blur-[100px]">
@@ -567,8 +611,8 @@
                                             class="auth-input pl-11 appearance-none cursor-pointer"
                                             style="background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234d41df' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 16px center;-webkit-appearance:none;-moz-appearance:none">
                                             <option value="" data-i18n="selectRole">Select your role</option>
-                                            <option value="woman" data-i18n="womanOption">?? Woman</option>
-                                            <option value="company" data-i18n="companyOption">?? Company</option>
+                                            <option value="woman" data-i18n="womanOption">&#128105; Woman</option>
+                                            <option value="company" data-i18n="companyOption">&#127970; Company</option>
                                         </select>
                                     </div>
                                 </div>
@@ -1401,7 +1445,7 @@
             </main>
 
             <!-- Checkout bar -->
-            <div id="cart-checkout-bar" class="hidden fixed bottom-0 left-0 w-full z-[60] px-container-padding pb-6 pt-3" style="background:linear-gradient(to top,rgba(252,248,255,1) 70%,transparent)">
+            <div id="cart-checkout-bar" class="hidden fixed bottom-0 left-0 w-full z-[60] px-container-padding pb-6 pt-3" class="job-apply-bar-bg" style="background:linear-gradient(to top,rgba(252,248,255,1) 70%,transparent)">
                 <div class="flex items-center justify-between mb-3 px-1">
                     <p class="text-[13px] text-on-surface-variant font-medium">Total</p>
                     <p class="text-[20px] font-extrabold text-primary" id="cart-total">&#8377;0</p>
@@ -2085,7 +2129,7 @@
             </main>
 
             <!-- Sticky Apply Button -->
-            <div class="fixed bottom-0 left-0 w-full z-40 px-container-padding pb-6 pt-3" style="background:linear-gradient(to top,rgba(252,248,255,1) 70%,transparent)">
+            <div class="fixed bottom-0 left-0 w-full z-40 px-container-padding pb-6 pt-3" class="job-apply-bar-bg" style="background:linear-gradient(to top,rgba(252,248,255,1) 70%,transparent)">
                 <button id="jd-apply-btn" onclick="submitJobApplication()"
                     class="w-full h-14 rounded-[18px] text-white font-bold text-[16px] flex items-center justify-center gap-2 shadow-xl active:scale-[0.98] transition-all"
                     style="background:linear-gradient(135deg,#4d41df,#5c51a0);box-shadow:0 8px 24px -6px rgba(77,65,223,0.45)">

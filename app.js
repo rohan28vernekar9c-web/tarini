@@ -682,18 +682,24 @@ function renderShopProducts(viewAll) {
         viewAllBtn.textContent = showAllProducts ? 'Show Less' : 'View All';
     }
 
-    container.innerHTML = display.map(p => `
+    container.innerHTML = display.map(p => {
+        const safeName = (p.name && typeof p.name === 'string') ? p.name : 'Unnamed Product';
+        const safePrice = (!isNaN(parseFloat(p.price)) && isFinite(p.price)) ? Number(p.price).toFixed(2) : '0.00';
+        const safeCategory = (p.category && typeof p.category === 'string') ? p.category : '';
+        const safeImage = (p.image && typeof p.image === 'string') ? p.image : '';
+        return `
         <div onclick="openProductDetail(${p.id})" class="bg-white rounded-[20px] border border-surface-container-high shadow-sm overflow-hidden flex flex-col cursor-pointer active:scale-95 transition-all">
             <div class="w-full h-36 bg-surface-container-low flex items-center justify-center overflow-hidden">
-                ${p.image ? `<img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover"/>` : `<span class="material-symbols-outlined text-outline-variant text-5xl">image</span>`}
+                ${safeImage ? `<img src="${safeImage}" alt="${safeName}" class="w-full h-full object-cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><span class="material-symbols-outlined text-outline-variant text-5xl" style="display:none">image</span>` : `<span class="material-symbols-outlined text-outline-variant text-5xl">image</span>`}
             </div>
             <div class="p-3 flex flex-col gap-1 flex-1">
-                <p class="font-semibold text-on-surface text-sm leading-tight line-clamp-2">${p.name}</p>
-                ${p.category ? `<span class="text-[11px] text-primary font-semibold bg-primary/10 px-2 py-0.5 rounded-full w-fit">${p.category}</span>` : ''}
-                <p class="text-primary font-bold text-sm mt-auto">&#8377;${Number(p.price).toFixed(2)}</p>
+                <p class="font-semibold text-on-surface text-sm leading-tight line-clamp-2">${safeName}</p>
+                ${safeCategory ? `<span class="text-[11px] text-primary font-semibold bg-primary/10 px-2 py-0.5 rounded-full w-fit">${safeCategory}</span>` : ''}
+                <p class="text-primary font-bold text-sm mt-auto">&#8377;${safePrice}</p>
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
 }
 window.renderShopProducts = renderShopProducts;
 
@@ -976,6 +982,22 @@ function toggleTheme() {
     const isDark = document.documentElement.classList.toggle('dark-theme');
     document.documentElement.classList.toggle('dark');
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    // Re-render dynamic lists so inline colours update immediately
+    const jobsScreen = document.getElementById('screen-jobs');
+    if (jobsScreen && jobsScreen.classList.contains('active')) initJobsPage();
+    const shopScreen = document.getElementById('screen-shop');
+    if (shopScreen && shopScreen.classList.contains('active')) initMarketplace();
+    const myShopScreen = document.getElementById('screen-my-shop');
+    if (myShopScreen && myShopScreen.classList.contains('active')) initMyShop();
+    const cartScreen = document.getElementById('screen-cart');
+    if (cartScreen && cartScreen.classList.contains('active')) renderCart();
+    const skillsScreen = document.getElementById('screen-skills');
+    if (skillsScreen && skillsScreen.classList.contains('active')) applySkillFilters();
+    const catScreen = document.getElementById('screen-skill-categories');
+    if (catScreen && catScreen.classList.contains('active')) {
+        const catTitle = document.getElementById('skill-cat-page-title');
+        if (catTitle && catTitle.textContent !== 'All Categories') openSkillCategory(catTitle.textContent);
+    }
 }
 window.toggleTheme = toggleTheme;
 
@@ -1278,15 +1300,14 @@ window.handleLogout = handleLogout;
 
 // Global Auth State Observer
 auth.onAuthStateChanged(async (user) => {
+    const _overlay = document.getElementById('auth-loading-overlay');
+    if (_overlay) _overlay.style.display = 'none';
+
     const loginBtn = document.getElementById('login-btn');
     const regBtn = document.getElementById('register-btn');
-    
-    const lang = localStorage.getItem('authLangPref') || 'en';
-    const dict = (window.authTranslations && window.authTranslations[lang]) ? window.authTranslations[lang] : (window.authTranslations ? window.authTranslations['en'] : null);
-    
     if (loginBtn) { loginBtn.disabled = false; }
     if (regBtn) { regBtn.disabled = false; }
-    setAuthLang(localStorage.getItem('authLangPref') || 'en');
+    try { setAuthLang(localStorage.getItem('authLangPref') || 'en'); } catch(e) {}
 
     if (user) {
         // Ensure user-scoped profile is loaded before any UI update
@@ -1317,13 +1338,8 @@ auth.onAuthStateChanged(async (user) => {
         } else if (history.state && history.state.screen === 'login') {
             routeByRole();
         } else {
-            // App reload — re-apply correct nav visibility without changing screen
-            if (d.role === 'company') {
-                const bn = document.getElementById('bottom-nav');
-                const cn = document.getElementById('company-bottom-nav');
-                if (bn) bn.classList.add('hidden');
-                if (cn) cn.classList.remove('hidden');
-            }
+            // App reload: redirect to correct dashboard, never show login
+            routeByRole();
         }
     } else {
         navigateToWithOutHistory('login');
@@ -1376,16 +1392,16 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================
 
 const _allJobs = [
-    { id:1, title:'Tailoring Instructor', company:'Craft India', location:'Mumbai', locType:'On-site', type:'Part-time', exp:'Mid-level', industry:'Education', salaryNum:12000, salary:'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹12,000/mo', grad:'linear-gradient(135deg,#4d41df,#675df9)' },
-    { id:2, title:'Data Entry Operator', company:'TechSeva', location:'Remote', locType:'Remote', type:'Full-time', exp:'Fresher', industry:'Technology', salaryNum:15000, salary:'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹15,000/mo', grad:'linear-gradient(135deg,#5c51a0,#c8bfff)' },
-    { id:3, title:'Beauty Consultant', company:'GlowUp Studio', location:'Delhi', locType:'On-site', type:'Freelance', exp:'Fresher', industry:'Retail', salaryNum:8000, salary:'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹8,000/mo', grad:'linear-gradient(135deg,#875041,#feb5a2)' },
-    { id:4, title:'Junior Web Developer', company:'CodeNest', location:'Hybrid', locType:'Hybrid', type:'Full-time', exp:'Fresher', industry:'Technology', salaryNum:22000, salary:'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹22,000/mo', grad:'linear-gradient(135deg,#2d6a4f,#74c69d)' },
-    { id:5, title:'Healthcare Assistant', company:'MediCare Plus', location:'Bangalore', locType:'On-site', type:'Full-time', exp:'Mid-level', industry:'Healthcare', salaryNum:18000, salary:'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹18,000/mo', grad:'linear-gradient(135deg,#c77dff,#7b2d8b)' },
-    { id:6, title:'Content Writer', company:'WordCraft', location:'Remote', locType:'Remote', type:'Freelance', exp:'Fresher', industry:'Technology', salaryNum:9000, salary:'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹9,000/mo', grad:'linear-gradient(135deg,#4d41df,#875041)' },
-    { id:7, title:'Retail Store Manager', company:'FashionHub', location:'Chennai', locType:'On-site', type:'Full-time', exp:'Senior', industry:'Retail', salaryNum:35000, salary:'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹35,000/mo', grad:'linear-gradient(135deg,#875041,#5c51a0)' },
-    { id:8, title:'UI/UX Design Intern', company:'PixelWorks', location:'Hybrid', locType:'Hybrid', type:'Internship', exp:'Fresher', industry:'Technology', salaryNum:7000, salary:'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹7,000/mo', grad:'linear-gradient(135deg,#675df9,#c8bfff)' },
-    { id:9, title:'Primary School Teacher', company:'BrightMinds School', location:'Pune', locType:'On-site', type:'Full-time', exp:'Mid-level', industry:'Education', salaryNum:20000, salary:'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹20,000/mo', grad:'linear-gradient(135deg,#2d6a4f,#4d41df)' },
-    { id:10, title:'Senior Data Analyst', company:'InsightCo', location:'Remote', locType:'Remote', type:'Full-time', exp:'Senior', industry:'Technology', salaryNum:55000, salary:'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹55,000/mo', grad:'linear-gradient(135deg,#4d41df,#2d6a4f)' },
+    { id:1, title:'Tailoring Instructor', company:'Craft India', location:'Mumbai', locType:'On-site', type:'Part-time', exp:'Mid-level', industry:'Education', salaryNum:12000, salary:'\u20b912,000/mo', grad:'linear-gradient(135deg,#4d41df,#675df9)' },
+    { id:2, title:'Data Entry Operator', company:'TechSeva', location:'Remote', locType:'Remote', type:'Full-time', exp:'Fresher', industry:'Technology', salaryNum:15000, salary:'\u20b915,000/mo', grad:'linear-gradient(135deg,#5c51a0,#c8bfff)' },
+    { id:3, title:'Beauty Consultant', company:'GlowUp Studio', location:'Delhi', locType:'On-site', type:'Freelance', exp:'Fresher', industry:'Retail', salaryNum:8000, salary:'\u20b98,000/mo', grad:'linear-gradient(135deg,#875041,#feb5a2)' },
+    { id:4, title:'Junior Web Developer', company:'CodeNest', location:'Hybrid', locType:'Hybrid', type:'Full-time', exp:'Fresher', industry:'Technology', salaryNum:22000, salary:'\u20b922,000/mo', grad:'linear-gradient(135deg,#2d6a4f,#74c69d)' },
+    { id:5, title:'Healthcare Assistant', company:'MediCare Plus', location:'Bangalore', locType:'On-site', type:'Full-time', exp:'Mid-level', industry:'Healthcare', salaryNum:18000, salary:'\u20b918,000/mo', grad:'linear-gradient(135deg,#c77dff,#7b2d8b)' },
+    { id:6, title:'Content Writer', company:'WordCraft', location:'Remote', locType:'Remote', type:'Freelance', exp:'Fresher', industry:'Technology', salaryNum:9000, salary:'\u20b99,000/mo', grad:'linear-gradient(135deg,#4d41df,#875041)' },
+    { id:7, title:'Retail Store Manager', company:'FashionHub', location:'Chennai', locType:'On-site', type:'Full-time', exp:'Senior', industry:'Retail', salaryNum:35000, salary:'\u20b935,000/mo', grad:'linear-gradient(135deg,#875041,#5c51a0)' },
+    { id:8, title:'UI/UX Design Intern', company:'PixelWorks', location:'Hybrid', locType:'Hybrid', type:'Internship', exp:'Fresher', industry:'Technology', salaryNum:7000, salary:'\u20b97,000/mo', grad:'linear-gradient(135deg,#675df9,#c8bfff)' },
+    { id:9, title:'Primary School Teacher', company:'BrightMinds School', location:'Pune', locType:'On-site', type:'Full-time', exp:'Mid-level', industry:'Education', salaryNum:20000, salary:'\u20b920,000/mo', grad:'linear-gradient(135deg,#2d6a4f,#4d41df)' },
+    { id:10, title:'Senior Data Analyst', company:'InsightCo', location:'Remote', locType:'Remote', type:'Full-time', exp:'Senior', industry:'Technology', salaryNum:55000, salary:'\u20b955,000/mo', grad:'linear-gradient(135deg,#4d41df,#2d6a4f)' },
 ];
 
 const _topCompanies = [
@@ -1482,6 +1498,10 @@ function _renderJobCards(jobs) {
         : t === 'Internship' ? 'background:rgba(92,81,160,0.10);color:#5c51a0'
         : 'background:rgba(45,106,79,0.10);color:#2d6a4f';
 
+    const _dark = document.documentElement.classList.contains('dark-theme');
+    const titleCol = _dark ? '#e8e6f4' : '#1b1b24';
+    const subCol   = _dark ? '#9e9bb8' : '#777587';
+
     container.innerHTML = jobs.map(job => {
         const initials = job.company.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
         return `
@@ -1490,16 +1510,16 @@ function _renderJobCards(jobs) {
                 <div class="dash-job-avatar" style="background:${job.grad}">${initials}</div>
                 <div style="flex:1;min-width:0">
                     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-                        <p style="font-size:14px;font-weight:700;color:#1b1b24;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${job.title}</p>
+                        <p style="font-size:14px;font-weight:700;color:${titleCol};line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${job.title}</p>
                         <button onclick="event.stopPropagation()" style="flex-shrink:0;width:30px;height:30px;border-radius:50%;background:rgba(77,65,223,0.08);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer">
                             <span class="material-symbols-outlined" style="font-size:16px;color:#4d41df">bookmark</span>
                         </button>
                     </div>
-                    <p style="font-size:12px;color:#777587;margin-top:2px">${job.company} &bull; ${job.location}</p>
+                    <p style="font-size:12px;color:${subCol};margin-top:2px">${job.company} &bull; ${job.location}</p>
                     <div style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap">
                         <span class="dash-job-badge" style="${typeColor(job.type)}">${job.type}</span>
                         <span class="dash-job-badge" style="background:rgba(56,161,105,0.10);color:#276749">${job.salary}</span>
-                        <span class="dash-job-badge" style="background:rgba(119,117,135,0.08);color:#777587">${job.exp}</span>
+                        <span class="dash-job-badge" style="background:rgba(119,117,135,0.08);color:${subCol}">${job.exp}</span>
                     </div>
                 </div>
             </div>
@@ -1511,16 +1531,23 @@ function _renderJobCards(jobs) {
 function renderTopCompanies() {
     const container = document.getElementById('top-companies-container');
     if (!container) return;
+    const _dark = document.documentElement.classList.contains('dark-theme');
+    const cardBg  = _dark ? '#1c1b2e' : '#fff';
+    const border  = _dark ? '#2a2840' : '#eae6f3';
+    const titleC  = _dark ? '#e8e6f4' : '#1b1b24';
+    const subC    = _dark ? '#9e9bb8' : '#777587';
+    const shadowN = _dark ? '0 2px 10px -4px rgba(0,0,0,0.5)' : '0 2px 10px -4px rgba(77,65,223,0.10)';
+    const shadowH = _dark ? '0 6px 18px -4px rgba(0,0,0,0.7)' : '0 6px 18px -4px rgba(77,65,223,0.18)';
     container.innerHTML = _topCompanies.map(c => `
-        <div onclick="filterByCompany('${c.name}')" style="flex-shrink:0;width:130px;background:#fff;border-radius:18px;padding:14px 12px;border:1px solid #eae6f3;box-shadow:0 2px 10px -4px rgba(77,65,223,0.10);cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;text-align:center"
-            onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 18px -4px rgba(77,65,223,0.18)'"
-            onmouseleave="this.style.transform='';this.style.boxShadow='0 2px 10px -4px rgba(77,65,223,0.10)'"
+        <div onclick="filterByCompany('${c.name}')" style="flex-shrink:0;width:130px;background:${cardBg};border-radius:18px;padding:14px 12px;border:1px solid ${border};box-shadow:${shadowN};cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;text-align:center"
+            onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='${shadowH}'"
+            onmouseleave="this.style.transform='';this.style.boxShadow='${shadowN}'"
             ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform=''">
             <div style="width:44px;height:44px;border-radius:12px;background:${c.bg};display:flex;align-items:center;justify-content:center;margin:0 auto 8px">
                 <span class="material-symbols-outlined" style="font-size:22px;color:${c.color};font-variation-settings:'FILL' 1">${c.icon}</span>
             </div>
-            <p style="font-size:12px;font-weight:700;color:#1b1b24;line-height:1.3">${c.name}</p>
-            <p style="font-size:10px;color:#777587;margin-top:2px">${c.industry}</p>
+            <p style="font-size:12px;font-weight:700;color:${titleC};line-height:1.3">${c.name}</p>
+            <p style="font-size:10px;color:${subC};margin-top:2px">${c.industry}</p>
             <p style="font-size:10px;font-weight:600;color:${c.color};margin-top:4px;line-height:1.3">${c.tagline}</p>
         </div>`).join('');
 }
@@ -1540,7 +1567,8 @@ function runAIMatch() {
     const section = document.getElementById('ai-match-section');
     const container = document.getElementById('ai-match-container');
     if (section) section.classList.remove('hidden');
-    if (container) container.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:16px;background:rgba(77,65,223,0.05);border-radius:14px"><span class="material-symbols-outlined text-primary" style="font-size:20px;animation:spin 1s linear infinite">progress_activity</span><p style="font-size:13px;color:#777587">Analysing your profile for best matches...</p></div>`;
+    const _aiDark = document.documentElement.classList.contains('dark-theme');
+    if (container) container.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:16px;background:${_aiDark ? 'rgba(77,65,223,0.10)' : 'rgba(77,65,223,0.05)'};border-radius:14px"><span class="material-symbols-outlined text-primary" style="font-size:20px;animation:spin 1s linear infinite">progress_activity</span><p style="font-size:13px;color:${_aiDark ? '#9e9bb8' : '#777587'}">Analysing your profile for best matches...</p></div>`;
 
     const d = getProfileData();
     const skills = (d.skills || '').toLowerCase();
@@ -1557,6 +1585,9 @@ function runAIMatch() {
 
         const scores = [98, 94, 89, 85];
         if (!container) return;
+        const _d = document.documentElement.classList.contains('dark-theme');
+        const _tc = _d ? '#e8e6f4' : '#1b1b24';
+        const _sc = _d ? '#9e9bb8' : '#777587';
         container.innerHTML = matched.map((job, i) => {
             const initials = job.company.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
             const score = scores[i] || 80;
@@ -1566,10 +1597,10 @@ function runAIMatch() {
                     <div class="dash-job-avatar" style="background:${job.grad}">${initials}</div>
                     <div style="flex:1;min-width:0">
                         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-                            <p style="font-size:14px;font-weight:700;color:#1b1b24;line-height:1.3">${job.title}</p>
+                            <p style="font-size:14px;font-weight:700;color:${_tc};line-height:1.3">${job.title}</p>
                             <span style="flex-shrink:0;font-size:11px;font-weight:700;color:#4d41df;background:rgba(77,65,223,0.12);padding:2px 8px;border-radius:999px">${score}% match</span>
                         </div>
-                        <p style="font-size:12px;color:#777587;margin-top:2px">${job.company} &bull; ${job.location}</p>
+                        <p style="font-size:12px;color:${_sc};margin-top:2px">${job.company} &bull; ${job.location}</p>
                         <div style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap">
                             <span class="dash-job-badge" style="background:rgba(77,65,223,0.10);color:#4d41df">${job.type}</span>
                             <span class="dash-job-badge" style="background:rgba(56,161,105,0.10);color:#276749">${job.salary}</span>
@@ -2227,7 +2258,7 @@ function openAllCategories() {
             <div onclick="openSkillCategory('${c.name}')"
                 style="display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;padding:12px 4px;border-radius:16px;transition:background 0.15s"
                 onmouseenter="this.style.background='rgba(77,65,223,0.05)'"
-                onmouseleave="this.style.background=''">
+                onmouseleave="this.style.background=document.documentElement.classList.contains('dark-theme')?'transparent':''">
                 <div style="width:64px;height:64px;border-radius:50%;background:${c.bg};display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px -4px rgba(77,65,223,0.15)">
                     <span class="material-symbols-outlined" style="font-size:28px;color:${c.color};font-variation-settings:'FILL' 1">${c.icon}</span>
                 </div>
@@ -2264,16 +2295,30 @@ function _renderCourseCardsInto(container, courses) {
             `<span class="material-symbols-outlined" style="font-size:13px;color:${i < full ? '#f59e0b' : '#d1d5db'};font-variation-settings:'FILL' 1">star</span>`
         ).join('');
     };
+    const _dark = document.documentElement.classList.contains('dark-theme');
+    const cardBg    = _dark ? '#1c1b2e' : '#fff';
+    const cardBorder= _dark ? '#2a2840' : '#eae6f3';
+    const titleCol  = _dark ? '#e8e6f4' : '#1b1b24';
+    const subCol    = _dark ? '#9e9bb8' : '#777587';
+    const descCol   = _dark ? '#c8c6dc' : '#464555';
+    const shadowNorm= _dark ? '0 2px 12px -4px rgba(0,0,0,0.5)' : '0 2px 12px -4px rgba(77,65,223,0.08)';
+    const shadowHov = _dark ? '0 6px 20px -4px rgba(0,0,0,0.7)' : '0 6px 20px -4px rgba(77,65,223,0.14)';
+    const playBg    = _dark ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.95)';
+    const playCol   = _dark ? '#c4c0ff' : '#4d41df';
+    const starEmpty = _dark ? '#4a4860' : '#d1d5db';
+
     container.innerHTML = courses.map(c => {
         const catMeta = _skillCategories.find(x => x.name === c.category) || { bg:'rgba(77,65,223,0.12)', color:'#4d41df', icon:'school' };
         const enrolled = JSON.parse(localStorage.getItem(_enrolledKey()) || '[]').includes(c.id);
-        // Try hqdefault first, fall back to mqdefault via onerror
         const thumbHq = 'https://img.youtube.com/vi/' + c.ytId + '/hqdefault.jpg';
         const thumbMq = 'https://img.youtube.com/vi/' + c.ytId + '/mqdefault.jpg';
+        const starsHtml = Array.from({length:5}, (_,i) =>
+            `<span class="material-symbols-outlined" style="font-size:13px;color:${i < Math.floor(c.rating) ? '#f59e0b' : starEmpty};font-variation-settings:'FILL' 1">star</span>`
+        ).join('');
         return `
-        <div style="background:#fff;border-radius:20px;overflow:hidden;border:1px solid #eae6f3;box-shadow:0 2px 12px -4px rgba(77,65,223,0.08);transition:transform 0.15s,box-shadow 0.15s"
-            onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px -4px rgba(77,65,223,0.14)'"
-            onmouseleave="this.style.transform='';this.style.boxShadow='0 2px 12px -4px rgba(77,65,223,0.08)'"
+        <div style="background:${cardBg};border-radius:20px;overflow:hidden;border:1px solid ${cardBorder};box-shadow:${shadowNorm};transition:transform 0.15s,box-shadow 0.15s"
+            onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='${shadowHov}'"
+            onmouseleave="this.style.transform='';this.style.boxShadow='${shadowNorm}'"
             ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform=''">
             <div onclick="openCourseVideo(${c.id})" style="position:relative;width:100%;height:160px;cursor:pointer;overflow:hidden;background:${catMeta.bg}">
                 <img src="${thumbHq}" alt="${c.title}"
@@ -2282,11 +2327,11 @@ function _renderCourseCardsInto(container, courses) {
                 <div style="display:none;width:100%;height:100%;background:${catMeta.bg};align-items:center;justify-content:center;position:absolute;inset:0">
                     <span class="material-symbols-outlined" style="font-size:40px;color:${catMeta.color};font-variation-settings:'FILL' 1">${catMeta.icon}</span>
                 </div>
-                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.22);transition:background 0.2s"
-                    onmouseenter="this.style.background='rgba(0,0,0,0.38)'" onmouseleave="this.style.background='rgba(0,0,0,0.22)'">
-                    <div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.95);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,0.28);transition:transform 0.15s"
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.28);transition:background 0.2s"
+                    onmouseenter="this.style.background='rgba(0,0,0,0.45)'" onmouseleave="this.style.background='rgba(0,0,0,0.28)'">
+                    <div style="width:52px;height:52px;border-radius:50%;background:${playBg};display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,0.4);transition:transform 0.15s"
                         onmouseenter="this.style.transform='scale(1.1)'" onmouseleave="this.style.transform=''">
-                        <span class="material-symbols-outlined" style="font-size:26px;color:#4d41df;font-variation-settings:'FILL' 1;margin-left:3px">play_arrow</span>
+                        <span class="material-symbols-outlined" style="font-size:26px;color:${playCol};font-variation-settings:'FILL' 1;margin-left:3px">play_arrow</span>
                     </div>
                 </div>
                 <span style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.72);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px">${c.durLabel}</span>
@@ -2298,20 +2343,20 @@ function _renderCourseCardsInto(container, courses) {
                         <span class="material-symbols-outlined" style="font-size:18px;color:${catMeta.color};font-variation-settings:'FILL' 1">${catMeta.icon}</span>
                     </div>
                     <div style="flex:1;min-width:0">
-                        <p style="font-size:14px;font-weight:700;color:#1b1b24;line-height:1.3">${c.title}</p>
-                        <p style="font-size:12px;color:#777587;margin-top:2px">${c.instructor} &bull; ${c.category}</p>
+                        <p style="font-size:14px;font-weight:700;color:${titleCol};line-height:1.3">${c.title}</p>
+                        <p style="font-size:12px;color:${subCol};margin-top:2px">${c.instructor} &bull; ${c.category}</p>
                     </div>
                 </div>
-                <p style="font-size:12px;color:#464555;margin-top:8px;line-height:1.5">${c.desc}</p>
+                <p style="font-size:12px;color:${descCol};margin-top:8px;line-height:1.5">${c.desc}</p>
                 <div style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap">
                     <span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;${levelColor(c.level)}">${c.level}</span>
                     <span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;${typeColor(c.type)}">${c.type}</span>
                 </div>
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
                     <div style="display:flex;align-items:center;gap:4px">
-                        ${stars(c.rating)}
-                        <span style="font-size:12px;font-weight:700;color:#1b1b24;margin-left:2px">${c.rating}</span>
-                        <span style="font-size:11px;color:#9e9bb8">(${c.enrolled.toLocaleString('en-IN')})</span>
+                        ${starsHtml}
+                        <span style="font-size:12px;font-weight:700;color:${titleCol};margin-left:2px">${c.rating}</span>
+                        <span style="font-size:11px;color:${subCol}">(${c.enrolled.toLocaleString('en-IN')})</span>
                     </div>
                     <button onclick="openCourseVideo(${c.id})" style="height:34px;padding:0 14px;border-radius:10px;border:none;background:linear-gradient(135deg,#4d41df,#5c51a0);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;display:flex;align-items:center;gap:5px;transition:opacity 0.15s" onmouseenter="this.style.opacity='0.88'" onmouseleave="this.style.opacity='1'">
                         <span class="material-symbols-outlined" style="font-size:14px;font-variation-settings:'FILL' 1">play_circle</span>Watch
@@ -2429,27 +2474,36 @@ function applyMarketFilters() {
 window.applyMarketFilters = applyMarketFilters;
 
 function _productCard(p, horizontal) {
+    const _dark   = document.documentElement.classList.contains('dark-theme');
+    const cardBg  = _dark ? '#1c1b2e' : '#fff';
+    const border  = _dark ? '#2a2840' : '#eae6f3';
+    const titleC  = _dark ? '#e8e6f4' : '#1b1b24';
+    const subC    = _dark ? '#9e9bb8' : '#777587';
+    const shadowN = _dark ? '0 2px 10px -4px rgba(0,0,0,0.5)' : '0 2px 10px -4px rgba(77,65,223,0.10)';
+    const shadowH = _dark ? '0 6px 18px -4px rgba(0,0,0,0.7)' : '0 6px 18px -4px rgba(77,65,223,0.18)';
+    const starEmpty = _dark ? '#4a4860' : '#d1d5db';
     const catMeta = _marketCategories.find(c => c.name === p.category) || { color:'#4d41df', bg:'rgba(77,65,223,0.10)', icon:'category' };
+    const iconColor = _dark ? (catMeta.color === '#4d41df' ? '#8b83ff' : catMeta.color) : catMeta.color;
     const stars = r => r > 0 ? Array.from({length:5}, (_,i) =>
-        `<span class="material-symbols-outlined" style="font-size:11px;color:${i < Math.floor(r) ? '#f59e0b' : '#d1d5db'};font-variation-settings:'FILL' 1">star</span>`
+        `<span class="material-symbols-outlined" style="font-size:11px;color:${i < Math.floor(r) ? '#f59e0b' : starEmpty};font-variation-settings:'FILL' 1">star</span>`
     ).join('') : '';
     const imgContent = p.image
-        ? `<img src="${p.image}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><span class="material-symbols-outlined" style="display:none;font-size:32px;color:${catMeta.color};font-variation-settings:'FILL' 1">${catMeta.icon}</span>`
-        : `<span class="material-symbols-outlined" style="font-size:32px;color:${catMeta.color};font-variation-settings:'FILL' 1">${catMeta.icon}</span>`;
+        ? `<img src="${p.image}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><span class="material-symbols-outlined" style="display:none;font-size:32px;color:${iconColor};font-variation-settings:'FILL' 1">${catMeta.icon}</span>`
+        : `<span class="material-symbols-outlined" style="font-size:32px;color:${iconColor};font-variation-settings:'FILL' 1">${catMeta.icon}</span>`;
 
     if (horizontal) {
         return `
-        <div style="flex-shrink:0;width:160px;background:#fff;border-radius:18px;border:1px solid #eae6f3;box-shadow:0 2px 10px -4px rgba(77,65,223,0.10);overflow:hidden;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s"
-            onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 18px -4px rgba(77,65,223,0.18)'"
-            onmouseleave="this.style.transform='';this.style.boxShadow='0 2px 10px -4px rgba(77,65,223,0.10)'"
+        <div style="flex-shrink:0;width:160px;background:${cardBg};border-radius:18px;border:1px solid ${border};box-shadow:${shadowN};overflow:hidden;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s"
+            onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='${shadowH}'"
+            onmouseleave="this.style.transform='';this.style.boxShadow='${shadowN}'"
             ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform=''">
             <div style="width:100%;height:110px;background:${catMeta.bg};display:flex;align-items:center;justify-content:center;overflow:hidden">${imgContent}</div>
             <div style="padding:10px">
-                <p style="font-size:12px;font-weight:700;color:#1b1b24;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</p>
-                <p style="font-size:10px;color:#777587;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.seller}</p>
+                <p style="font-size:12px;font-weight:700;color:${titleC};line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</p>
+                <p style="font-size:10px;color:${subC};margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.seller}</p>
                 <div style="display:flex;align-items:center;gap:2px;margin-top:3px">${stars(p.rating)}</div>
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
-                    <p style="font-size:13px;font-weight:800;color:#4d41df">&#8377;${p.price.toLocaleString('en-IN')}</p>
+                    <p style="font-size:13px;font-weight:800;color:#8b83ff">&#8377;${p.price.toLocaleString('en-IN')}</p>
                     <button onclick="event.stopPropagation();buyProduct('${p.id}')" style="height:26px;padding:0 10px;border-radius:8px;border:none;background:linear-gradient(135deg,#4d41df,#5c51a0);color:#fff;font-size:10px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif">Buy</button>
                 </div>
             </div>
@@ -2457,20 +2511,20 @@ function _productCard(p, horizontal) {
     }
 
     return `
-    <div style="background:#fff;border-radius:18px;border:1px solid #eae6f3;box-shadow:0 2px 10px -4px rgba(77,65,223,0.08);overflow:hidden;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s"
-        onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 18px -4px rgba(77,65,223,0.16)'"
-        onmouseleave="this.style.transform='';this.style.boxShadow='0 2px 10px -4px rgba(77,65,223,0.08)'"
+    <div style="background:${cardBg};border-radius:18px;border:1px solid ${border};box-shadow:${shadowN};overflow:hidden;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s"
+        onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='${shadowH}'"
+        onmouseleave="this.style.transform='';this.style.boxShadow='${shadowN}'"
         ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform=''">
         <div style="width:100%;height:120px;background:${catMeta.bg};display:flex;align-items:center;justify-content:center;overflow:hidden">${imgContent}</div>
         <div style="padding:10px">
-            <p style="font-size:12px;font-weight:700;color:#1b1b24;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${p.name}</p>
-            <p style="font-size:10px;color:#777587;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.seller}</p>
+            <p style="font-size:12px;font-weight:700;color:${titleC};line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${p.name}</p>
+            <p style="font-size:10px;color:${subC};margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.seller}</p>
             <div style="display:flex;align-items:center;gap:2px;margin-top:3px">${stars(p.rating)}</div>
             <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;gap:4px">
-                <p style="font-size:13px;font-weight:800;color:#4d41df">&#8377;${p.price.toLocaleString('en-IN')}</p>
+                <p style="font-size:13px;font-weight:800;color:#8b83ff">&#8377;${p.price.toLocaleString('en-IN')}</p>
                 <button onclick="event.stopPropagation();buyProduct('${p.id}')" style="height:28px;padding:0 10px;border-radius:8px;border:none;background:linear-gradient(135deg,#4d41df,#5c51a0);color:#fff;font-size:10px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;white-space:nowrap">Buy</button>
             </div>
-            ${p.stock <= 0 ? '<p style="font-size:10px;color:#ba1a1a;font-weight:600;margin-top:3px">Out of stock</p>' : ''}
+            ${p.stock <= 0 ? `<p style="font-size:10px;color:${_dark ? '#ff8a8a' : '#ba1a1a'};font-weight:600;margin-top:3px">Out of stock</p>` : ''}
         </div>
     </div>`;
 }
@@ -2513,17 +2567,22 @@ window.buyProduct = buyProduct;
 function _renderMarketCategories() {
     const container = document.getElementById('market-categories-container');
     if (!container) return;
-    container.innerHTML = _marketCategories.slice(0, 6).map(c => `
+    const _dark = document.documentElement.classList.contains('dark-theme');
+    const labelC = _dark ? '#e8e6f4' : '#1b1b24';
+    container.innerHTML = _marketCategories.slice(0, 6).map(c => {
+        const iconC = _dark ? (c.color === '#4d41df' ? '#8b83ff' : c.color === '#875041' ? '#e8a090' : c.color === '#5c51a0' ? '#a89ee8' : c.color === '#276749' ? '#74c69d' : c.color === '#675df9' ? '#a89ee8' : c.color) : c.color;
+        return `
         <div onclick="filterByMarketCategory('${c.name}')"
             style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;width:68px">
             <div style="width:60px;height:60px;border-radius:50%;background:${c.bg};display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px -4px rgba(77,65,223,0.15);transition:transform 0.15s,box-shadow 0.15s"
                 onmouseenter="this.style.transform='scale(1.08)';this.style.boxShadow='0 8px 20px -4px rgba(77,65,223,0.22)'"
                 onmouseleave="this.style.transform='';this.style.boxShadow='0 4px 12px -4px rgba(77,65,223,0.15)'"
                 ontouchstart="this.style.transform='scale(0.94)'" ontouchend="this.style.transform=''">
-                <span class="material-symbols-outlined" style="font-size:26px;color:${c.color};font-variation-settings:'FILL' 1">${c.icon}</span>
+                <span class="material-symbols-outlined" style="font-size:26px;color:${iconC};font-variation-settings:'FILL' 1">${c.icon}</span>
             </div>
-            <p style="font-size:11px;font-weight:600;color:#1b1b24;text-align:center;line-height:1.3;word-break:break-word">${c.name}</p>
-        </div>`).join('');
+            <p style="font-size:11px;font-weight:600;color:${labelC};text-align:center;line-height:1.3;word-break:break-word">${c.name}</p>
+        </div>`;
+    }).join('');
 }
 
 function filterByMarketCategory(name) {
@@ -2543,17 +2602,20 @@ window.filterByMarketCategory = filterByMarketCategory;
 function openAllMarketCategories() {
     const grid = document.getElementById('market-all-categories-grid');
     if (grid) {
+        const _dark = document.documentElement.classList.contains('dark-theme');
+        const labelC = _dark ? '#e8e6f4' : '#1b1b24';
         grid.innerHTML = _marketCategories.map(c => {
             const count = _marketProducts.filter(p => p.category === c.name).length;
+            const iconC = _dark ? (c.color === '#4d41df' ? '#8b83ff' : c.color === '#875041' ? '#e8a090' : c.color === '#5c51a0' ? '#a89ee8' : c.color === '#276749' ? '#74c69d' : c.color === '#675df9' ? '#a89ee8' : c.color) : c.color;
             return `
             <div onclick="navigateTo('shop');setTimeout(()=>filterByMarketCategory('${c.name}'),200)"
                 style="display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;padding:12px 4px;border-radius:16px;transition:background 0.15s"
-                onmouseenter="this.style.background='rgba(77,65,223,0.05)'"
-                onmouseleave="this.style.background=''">
+                onmouseenter="this.style.background='rgba(77,65,223,0.08)'"
+                onmouseleave="this.style.background=document.documentElement.classList.contains('dark-theme')?'transparent':''">
                 <div style="width:64px;height:64px;border-radius:50%;background:${c.bg};display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px -4px rgba(77,65,223,0.15)">
-                    <span class="material-symbols-outlined" style="font-size:28px;color:${c.color};font-variation-settings:'FILL' 1">${c.icon}</span>
+                    <span class="material-symbols-outlined" style="font-size:28px;color:${iconC};font-variation-settings:'FILL' 1">${c.icon}</span>
                 </div>
-                <p style="font-size:12px;font-weight:600;color:#1b1b24;text-align:center;line-height:1.3">${c.name}</p>
+                <p style="font-size:12px;font-weight:600;color:${labelC};text-align:center;line-height:1.3">${c.name}</p>
                 <p style="font-size:10px;color:#9e9bb8">${count} products</p>
             </div>`;
         }).join('');
@@ -2600,7 +2662,7 @@ function addToCart(productId) {
     else { cart.push({ id: p.id, name: p.name, price: p.price, image: p.image, seller: p.seller || '', qty: 1, stock: p.stock || 99 }); }
     _saveCart(cart);
     _updateCartBadge();
-    showToast(`"${p.name}" added to cart ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“`);
+    showToast(`"${p.name}" added to cart \u2713`);
 }
 window.addToCart = addToCart;
 
@@ -2651,24 +2713,33 @@ function renderCart() {
     if (barEl)   barEl.classList.remove('hidden');
 
     const grandTotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
-    if (totalEl) totalEl.textContent = 'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹' + grandTotal.toLocaleString('en-IN');
+    if (totalEl) totalEl.textContent = '\u20b9' + grandTotal.toLocaleString('en-IN');
+
+    const _dark  = document.documentElement.classList.contains('dark-theme');
+    const cardBg = _dark ? '#1c1b2e' : '#fff';
+    const border = _dark ? '#2a2840' : '#eae6f3';
+    const titleC = _dark ? '#e8e6f4' : '#1b1b24';
+    const subC   = _dark ? '#9e9bb8' : '#777587';
+    const qtyC   = _dark ? '#e8e6f4' : '#1b1b24';
+    const btnBg  = _dark ? 'rgba(100,90,255,0.15)' : '#f6f2ff';
+    const btnBdr = _dark ? '#3a3850' : '#eae6f3';
 
     listEl.innerHTML = cart.map(item => `
-        <div style="background:#fff;border-radius:18px;padding:14px;border:1px solid #eae6f3;box-shadow:0 2px 10px -4px rgba(77,65,223,0.08);display:flex;align-items:center;gap:12px">
-            <div style="width:72px;height:72px;border-radius:14px;overflow:hidden;flex-shrink:0;background:rgba(77,65,223,0.08);display:flex;align-items:center;justify-content:center">
+        <div style="background:${cardBg};border-radius:18px;padding:14px;border:1px solid ${border};box-shadow:0 2px 10px -4px rgba(0,0,0,${_dark?'0.4':'0.08'});display:flex;align-items:center;gap:12px">
+            <div style="width:72px;height:72px;border-radius:14px;overflow:hidden;flex-shrink:0;background:rgba(77,65,223,0.10);display:flex;align-items:center;justify-content:center">
                 ${item.image
-                    ? `<img src="${item.image}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><span class="material-symbols-outlined" style="display:none;font-size:28px;color:#4d41df;font-variation-settings:'FILL' 1">image</span>`
-                    : `<span class="material-symbols-outlined" style="font-size:28px;color:#4d41df;font-variation-settings:'FILL' 1">image</span>`}
+                    ? `<img src="${item.image}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><span class="material-symbols-outlined" style="display:none;font-size:28px;color:#8b83ff;font-variation-settings:'FILL' 1">image</span>`
+                    : `<span class="material-symbols-outlined" style="font-size:28px;color:#8b83ff;font-variation-settings:'FILL' 1">image</span>`}
             </div>
             <div style="flex:1;min-width:0">
-                <p style="font-size:13px;font-weight:700;color:#1b1b24;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${item.name}</p>
-                <p style="font-size:11px;color:#777587;margin-top:1px">${item.seller}</p>
-                <p style="font-size:14px;font-weight:800;color:#4d41df;margin-top:4px">ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹${(item.price * item.qty).toLocaleString('en-IN')}</p>
+                <p style="font-size:13px;font-weight:700;color:${titleC};line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${item.name}</p>
+                <p style="font-size:11px;color:${subC};margin-top:1px">${item.seller}</p>
+                <p style="font-size:14px;font-weight:800;color:#8b83ff;margin-top:4px">\u20b9${(item.price * item.qty).toLocaleString('en-IN')}</p>
                 <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
-                    <button onclick="updateCartQty('${item.id}',-1)" style="width:28px;height:28px;border-radius:8px;border:1px solid #eae6f3;background:#f6f2ff;color:#4d41df;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center">ÃƒÂ¢Ã‹â€ Ã¢â‚¬â„¢</button>
-                    <span style="font-size:14px;font-weight:700;color:#1b1b24;min-width:20px;text-align:center">${item.qty}</span>
-                    <button onclick="updateCartQty('${item.id}',1)" style="width:28px;height:28px;border-radius:8px;border:1px solid #eae6f3;background:#f6f2ff;color:#4d41df;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
-                    <button onclick="removeFromCart('${item.id}')" style="margin-left:auto;width:28px;height:28px;border-radius:8px;border:none;background:rgba(186,26,26,0.08);color:#ba1a1a;cursor:pointer;display:flex;align-items:center;justify-content:center">
+                    <button onclick="updateCartQty('${item.id}',-1)" style="width:28px;height:28px;border-radius:8px;border:1px solid ${btnBdr};background:${btnBg};color:#8b83ff;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center">\u2212</button>
+                    <span style="font-size:14px;font-weight:700;color:${qtyC};min-width:20px;text-align:center">${item.qty}</span>
+                    <button onclick="updateCartQty('${item.id}',1)" style="width:28px;height:28px;border-radius:8px;border:1px solid ${btnBdr};background:${btnBg};color:#8b83ff;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
+                    <button onclick="removeFromCart('${item.id}')" style="margin-left:auto;width:28px;height:28px;border-radius:8px;border:none;background:rgba(186,26,26,0.12);color:${_dark?'#ff8a8a':'#ba1a1a'};cursor:pointer;display:flex;align-items:center;justify-content:center">
                         <span class="material-symbols-outlined" style="font-size:16px">delete</span>
                     </button>
                 </div>
@@ -2683,7 +2754,7 @@ function proceedToCheckout() {
     const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
     cart.forEach(item => addNotification('order', `Order: ${item.name}`, `Your order for ${item.name} (ÃƒÆ’Ã¢â‚¬â€${item.qty}) has been placed.`));
     clearCart();
-    showToast(`Order placed! Total: ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹${total.toLocaleString('en-IN')} ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“`);
+    showToast(`Order placed! Total: \u20b9${total.toLocaleString('en-IN')} \u2713`);
     navigateTo('shop');
 }
 window.proceedToCheckout = proceedToCheckout;
@@ -2713,31 +2784,38 @@ function initMyShop() {
     if (emptyEl) { emptyEl.classList.add('hidden'); emptyEl.style.display = 'none'; }
 
     listEl.innerHTML = products.slice().reverse().map(p => {
+        const _dark = document.documentElement.classList.contains('dark-theme');
+        const cardBg  = _dark ? '#1c1b2e' : '#fff';
+        const border  = _dark ? '#2a2840' : '#eae6f3';
+        const titleC  = _dark ? '#e8e6f4' : '#1b1b24';
+        const subC    = _dark ? '#9e9bb8' : '#777587';
+        const priceC  = _dark ? '#8b83ff' : '#4d41df';
+        const iconC   = _dark ? '#8b83ff' : '#4d41df';
         const inStock = Number(p.stock) > 0;
         const statusStyle = inStock
             ? 'background:rgba(45,106,79,0.10);color:#276749'
             : 'background:rgba(186,26,26,0.08);color:#ba1a1a';
         const statusLabel = inStock ? 'Available' : 'Sold Out';
         return `
-        <div style="background:#fff;border-radius:18px;padding:14px;border:1px solid #eae6f3;box-shadow:0 2px 10px -4px rgba(77,65,223,0.08);display:flex;align-items:center;gap:12px">
-            <div style="width:72px;height:72px;border-radius:14px;overflow:hidden;flex-shrink:0;background:rgba(77,65,223,0.08);display:flex;align-items:center;justify-content:center">
+        <div style="background:${cardBg};border-radius:18px;padding:14px;border:1px solid ${border};box-shadow:0 2px 10px -4px rgba(0,0,0,${_dark?'0.4':'0.08'});display:flex;align-items:center;gap:12px">
+            <div style="width:72px;height:72px;border-radius:14px;overflow:hidden;flex-shrink:0;background:rgba(77,65,223,0.10);display:flex;align-items:center;justify-content:center">
                 ${p.image
-                    ? `<img src="${p.image}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><span class="material-symbols-outlined" style="display:none;font-size:28px;color:#4d41df;font-variation-settings:'FILL' 1">image</span>`
-                    : `<span class="material-symbols-outlined" style="font-size:28px;color:#4d41df;font-variation-settings:'FILL' 1">image</span>`}
+                    ? `<img src="${p.image}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><span class="material-symbols-outlined" style="display:none;font-size:28px;color:${iconC};font-variation-settings:'FILL' 1">image</span>`
+                    : `<span class="material-symbols-outlined" style="font-size:28px;color:${iconC};font-variation-settings:'FILL' 1">image</span>`}
             </div>
             <div style="flex:1;min-width:0">
                 <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
-                    <p style="font-size:13px;font-weight:700;color:#1b1b24;line-height:1.3;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</p>
+                    <p style="font-size:13px;font-weight:700;color:${titleC};line-height:1.3;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</p>
                     <span style="flex-shrink:0;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;${statusStyle}">${statusLabel}</span>
                 </div>
-                <p style="font-size:14px;font-weight:800;color:#4d41df;margin-top:3px">ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹${Number(p.price).toLocaleString('en-IN')}</p>
-                <p style="font-size:11px;color:#777587;margin-top:1px">Stock: ${p.stock} &bull; ${p.category || 'Uncategorised'}</p>
+                <p style="font-size:14px;font-weight:800;color:${priceC};margin-top:3px">\u20b9${Number(p.price).toLocaleString('en-IN')}</p>
+                <p style="font-size:11px;color:${subC};margin-top:1px">Stock: ${p.stock} &bull; ${p.category || 'Uncategorised'}</p>
                 <div style="display:flex;gap:8px;margin-top:8px">
-                    <button onclick="openPostProduct(${p.id})" style="height:28px;padding:0 12px;border-radius:8px;border:1px solid rgba(77,65,223,0.25);background:rgba(77,65,223,0.06);color:#4d41df;font-size:11px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;display:flex;align-items:center;gap:4px">
-                        <span class="material-symbols-outlined" style="font-size:13px">edit</span>Edit
+                    <button onclick="openPostProduct(${p.id})" style="height:28px;padding:0 12px;border-radius:8px;border:1px solid rgba(77,65,223,0.25);background:rgba(77,65,223,0.08);color:${iconC};font-size:11px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;display:flex;align-items:center;gap:4px">
+                        <span class="material-symbols-outlined" style="font-size:13px;color:${iconC}">edit</span>Edit
                     </button>
-                    <button onclick="deleteMyShopProduct(${p.id})" style="height:28px;padding:0 12px;border-radius:8px;border:1px solid rgba(186,26,26,0.20);background:rgba(186,26,26,0.06);color:#ba1a1a;font-size:11px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;display:flex;align-items:center;gap:4px">
-                        <span class="material-symbols-outlined" style="font-size:13px">delete</span>Delete
+                    <button onclick="deleteMyShopProduct(${p.id})" style="height:28px;padding:0 12px;border-radius:8px;border:1px solid rgba(186,26,26,0.25);background:rgba(186,26,26,0.08);color:${_dark?'#ff8a8a':'#ba1a1a'};font-size:11px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;display:flex;align-items:center;gap:4px">
+                        <span class="material-symbols-outlined" style="font-size:13px;color:${_dark?'#ff8a8a':'#ba1a1a'}">delete</span>Delete
                     </button>
                 </div>
             </div>
@@ -2754,7 +2832,7 @@ function deleteMyShopProduct(productId) {
 }
 window.deleteMyShopProduct = deleteMyShopProduct;
 
-// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Initialise cart badge on page load ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+// == Initialise cart badge on page load ==
 document.addEventListener('DOMContentLoaded', () => { _updateCartBadge(); });
 
 // ============================================================
