@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -172,7 +172,7 @@
             background: linear-gradient(135deg, rgba(77,65,223,0.12) 0%, rgba(92,81,160,0.08) 50%, rgba(135,80,65,0.06) 100%) !important;
         }
 
-        /* White cards → dark surface */
+        /* White cards ? dark surface */
         .dark .bg-white,
         .dark-theme .bg-white,
         .dark .bg-surface-container-lowest,
@@ -515,7 +515,7 @@
                                 <div class="flex justify-end mb-3">
                                     <div class="flex items-center gap-1.5">
                                         <span class="material-symbols-outlined" style="font-size:16px;color:#4d41df">language</span>
-                                        <select id="auth-lang-select" class="lang-dropdown" onchange="setAuthLang(this.value)">
+                                        <select id="auth-lang-select" class="lang-dropdown" onchange="setGlobalLang(this.value)">
                                             <option value="en">English</option>
                                             <option value="hi">हिन्दी (Hindi)</option>
                                             <option value="bn">বাংলা (Bengali)</option>
@@ -558,7 +558,7 @@
                                 </div>
                                 <!-- LOGIN AS ROLE DROPDOWN -->
                                 <div class="space-y-xs">
-                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1">LOGIN AS</label>
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1" data-i18n="loginAs">LOGIN AS</label>
                                     <div class="relative">
                                         <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
                                             <span class="material-symbols-outlined" style="font-size:18px;color:#4d41df;font-variation-settings:'FILL' 1">manage_accounts</span>
@@ -566,9 +566,9 @@
                                         <select id="login-role"
                                             class="auth-input pl-11 appearance-none cursor-pointer"
                                             style="background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234d41df' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 16px center;-webkit-appearance:none;-moz-appearance:none">
-                                            <option value="">Select your role</option>
-                                            <option value="woman">👩 Woman</option>
-                                            <option value="company">🏢 Company</option>
+                                            <option value="" data-i18n="selectRole">Select your role</option>
+                                            <option value="woman" data-i18n="womanOption">?? Woman</option>
+                                            <option value="company" data-i18n="companyOption">?? Company</option>
                                         </select>
                                     </div>
                                 </div>
@@ -606,8 +606,8 @@
                                             <span class="material-symbols-outlined text-primary" style="font-variation-settings:'FILL' 1">woman</span>
                                         </div>
                                         <div class="flex-1 min-w-0">
-                                            <p class="font-bold text-on-surface text-[15px]">Woman Users</p>
-                                            <p class="text-on-surface-variant text-[12px] leading-snug mt-0.5">For individuals looking for jobs, selling products, and learning new skills</p>
+                                            <p class="font-bold text-on-surface text-[15px]" data-i18n="womanUsers">Woman Users</p>
+                                            <p class="text-on-surface-variant text-[12px] leading-snug mt-0.5" data-i18n="womanUsersDesc">For individuals looking for jobs, selling products, and learning new skills</p>
                                         </div>
                                         <span class="material-symbols-outlined text-outline flex-shrink-0">chevron_right</span>
                                     </div>
@@ -617,8 +617,8 @@
                                             <span class="material-symbols-outlined text-tertiary" style="font-variation-settings:'FILL' 1">business</span>
                                         </div>
                                         <div class="flex-1 min-w-0">
-                                            <p class="font-bold text-on-surface text-[15px]">Company</p>
-                                            <p class="text-on-surface-variant text-[12px] leading-snug mt-0.5">For companies who want to post jobs and hire skilled talent</p>
+                                            <p class="font-bold text-on-surface text-[15px]" data-i18n="company">Company</p>
+                                            <p class="text-on-surface-variant text-[12px] leading-snug mt-0.5" data-i18n="companyDesc">For companies who want to post jobs and hire skilled talent</p>
                                         </div>
                                         <span class="material-symbols-outlined text-outline flex-shrink-0">chevron_right</span>
                                     </div>
@@ -628,8 +628,8 @@
                                             <span class="material-symbols-outlined text-secondary" style="font-variation-settings:'FILL' 1">admin_panel_settings</span>
                                         </div>
                                         <div class="flex-1 min-w-0">
-                                            <p class="font-bold text-on-surface text-[15px]">Admin</p>
-                                            <p class="text-on-surface-variant text-[12px] leading-snug mt-0.5">For platform management and user control access</p>
+                                            <p class="font-bold text-on-surface text-[15px]" data-i18n="admin">Admin</p>
+                                            <p class="text-on-surface-variant text-[12px] leading-snug mt-0.5" data-i18n="adminDesc">For platform management and user control access</p>
                                         </div>
                                         <span class="material-symbols-outlined text-outline flex-shrink-0">chevron_right</span>
                                     </div>
@@ -662,10 +662,10 @@
                                     <label class="font-label-caps text-label-caps text-on-surface-variant px-1" data-i18n="jobPref">JOB PREFERENCE</label>
                                     <select id="w-job-pref" class="auth-input">
                                         <option value="" data-i18n="selectPref">Select preference</option>
-                                        <option>Full-time</option>
-                                        <option>Part-time</option>
-                                        <option>Freelance</option>
-                                        <option>Remote</option>
+                                        <option data-i18n="fullTime">Full-time</option>
+                                        <option data-i18n="partTime">Part-time</option>
+                                        <option data-i18n="freelance">Freelance</option>
+                                        <option data-i18n="remote">Remote</option>
                                     </select>
                                 </div>
                                 <button id="register-btn" type="submit" class="auth-btn-primary" data-i18n="createAccount">Create Account</button>
@@ -679,22 +679,22 @@
                                 <p class="font-label-caps text-label-caps text-tertiary uppercase tracking-widest" data-i18n="companyReg">Company Registration</p>
                                 <div class="space-y-xs">
                                     <label class="font-label-caps text-label-caps text-on-surface-variant px-1" data-i18n="companyName">COMPANY NAME</label>
-                                    <input type="text" id="c-name" required class="auth-input" placeholder="Acme Pvt. Ltd." />
+                                    <input type="text" id="c-name" required class="auth-input" data-i18n-placeholder="companyNamePlaceholder" placeholder="Acme Pvt. Ltd." />
                                 </div>
                                 <div class="space-y-xs">
                                     <label class="font-label-caps text-label-caps text-on-surface-variant px-1" data-i18n="industry">INDUSTRY</label>
                                     <select id="c-industry" class="auth-input">
-                                        <option value="">Select industry</option>
-                                        <option>Technology</option>
-                                        <option>Manufacturing</option>
-                                        <option>Retail</option>
-                                        <option>Healthcare</option>
-                                        <option>Education</option>
-                                        <option>Other</option>
+                                        <option value="" data-i18n="selectIndustry">Select industry</option>
+                                        <option data-i18n="tech">Technology</option>
+                                        <option data-i18n="manufacturing">Manufacturing</option>
+                                        <option data-i18n="retail">Retail</option>
+                                        <option data-i18n="healthcare">Healthcare</option>
+                                        <option data-i18n="education">Education</option>
+                                        <option data-i18n="other">Other</option>
                                     </select>
                                 </div>
                                 <div class="space-y-xs">
-                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1" data-i18n="emailAddress">CONTACT EMAIL</label>
+                                    <label class="font-label-caps text-label-caps text-on-surface-variant px-1" data-i18n="contactEmail">CONTACT EMAIL</label>
                                     <input type="email" id="c-email" required class="auth-input" data-i18n-placeholder="emailPlaceholder" placeholder="hr@company.com" />
                                 </div>
                                 <div class="space-y-xs">
@@ -716,11 +716,11 @@
                                 <p class="font-label-caps text-label-caps text-secondary uppercase tracking-widest" data-i18n="adminReg">Admin Registration</p>
                                 <div class="space-y-xs">
                                     <label class="font-label-caps text-label-caps text-on-surface-variant px-1" data-i18n="fullName">FULL NAME</label>
-                                    <input type="text" id="a-name" required class="auth-input" data-i18n-placeholder="fullNamePlaceholder" placeholder="Admin name" />
+                                    <input type="text" id="a-name" required class="auth-input" data-i18n-placeholder="adminNamePlaceholder" placeholder="Admin name" />
                                 </div>
                                 <div class="space-y-xs">
                                     <label class="font-label-caps text-label-caps text-on-surface-variant px-1" data-i18n="emailAddress">EMAIL ADDRESS</label>
-                                    <input type="email" id="a-email" required class="auth-input" data-i18n-placeholder="emailPlaceholder" placeholder="admin@tarini.com" />
+                                    <input type="email" id="a-email" required class="auth-input" data-i18n-placeholder="adminEmailPlaceholder" placeholder="admin@tarini.com" />
                                 </div>
                                 <div class="space-y-xs">
                                     <label class="font-label-caps text-label-caps text-on-surface-variant px-1" data-i18n="password">PASSWORD</label>
@@ -749,7 +749,7 @@
         <div id="screen-dashboard" class="screen">
             <main class="max-w-2xl mx-auto pb-32">
 
-                <!-- ── GREETING SECTION ── -->
+                <!-- -- GREETING SECTION -- -->
                 <section class="relative overflow-hidden px-5 pt-6 pb-7 mb-1"
                     style="background: linear-gradient(135deg, rgba(77,65,223,0.07) 0%, rgba(92,81,160,0.05) 50%, rgba(135,80,65,0.04) 100%)">
                     <!-- Decorative blobs -->
@@ -758,15 +758,15 @@
                     <div class="absolute bottom-0 left-0 w-28 h-28 rounded-full pointer-events-none"
                         style="background:radial-gradient(circle,rgba(135,80,65,0.08) 0%,transparent 70%);transform:translate(-20%,20%)"></div>
                     <div class="relative z-10">
-                        <p class="text-[11px] font-semibold tracking-[0.12em] uppercase mb-1" style="color:#875041">Welcome back ✦</p>
+                        <p class="text-[11px] font-semibold tracking-[0.12em] uppercase mb-1" style="color:#875041">Welcome back ?</p>
                         <h2 class="font-['Plus_Jakarta_Sans'] text-[26px] font-extrabold tracking-tight text-on-surface leading-tight" id="dashboard-user-name">User</h2>
-                        <p class="text-[13px] font-normal text-on-surface-variant mt-1 leading-relaxed">Your professional journey is glowing today. ✨</p>
+                        <p class="text-[13px] font-normal text-on-surface-variant mt-1 leading-relaxed">Your professional journey is glowing today. ?</p>
                     </div>
                 </section>
 
                 <div class="px-5 space-y-6 pt-5">
 
-                <!-- ── BENTO STATS CARDS ── -->
+                <!-- -- BENTO STATS CARDS -- -->
                 <section class="grid grid-cols-2 gap-3">
                     <!-- Earnings card -->
                     <div class="relative overflow-hidden rounded-[20px] p-4 flex flex-col justify-between min-h-[130px]"
@@ -818,7 +818,7 @@
                     </div>
                 </section>
 
-                <!-- ── QUICK ACTIONS ── -->
+                <!-- -- QUICK ACTIONS -- -->
                 <section>
                     <div class="flex items-center justify-between mb-3">
                         <h3 class="font-['Plus_Jakarta_Sans'] text-[16px] font-bold text-on-surface tracking-tight">Quick Actions</h3>
@@ -862,7 +862,7 @@
                     </div>
                 </section>
 
-                <!-- ── RECOMMENDED JOBS ── -->
+                <!-- -- RECOMMENDED JOBS -- -->
                 <section>
                     <div class="flex items-center justify-between mb-3">
                         <h3 class="font-['Plus_Jakarta_Sans'] text-[16px] font-bold text-on-surface tracking-tight">Recommended Jobs</h3>
@@ -1492,7 +1492,7 @@
                         </div>
                         <div class="flex gap-2 pt-1">
                             <button type="button" onclick="acceptAiSuggestion()" class="flex-1 h-10 rounded-xl text-white text-[13px] font-bold active:scale-95 transition-all" style="background:linear-gradient(135deg,#4d41df,#5c51a0)">
-                                ✓ Accept
+                                ? Accept
                             </button>
                             <button type="button" onclick="dismissAiSuggestion()" class="flex-1 h-10 rounded-xl border border-outline-variant text-on-surface-variant text-[13px] font-semibold active:scale-95 transition-all">
                                 Edit manually
@@ -1515,7 +1515,7 @@
                                 <option>Jewellery</option>
                                 <option>Food</option>
                                 <option>Art</option>
-                                <option>Other</option>
+                                <option data-i18n="other">Other</option>
                             </select>
                         </div>
                     </div>
@@ -1635,7 +1635,7 @@
                         <div class="absolute -right-10 -top-10 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
                         <div class="absolute -left-6 -bottom-6 w-32 h-32 bg-white/5 rounded-full blur-2xl"></div>
                         <div class="relative z-10">
-                            <p class="text-[11px] font-bold tracking-[0.12em] uppercase text-white/60 mb-1">Your Rewards ✦</p>
+                            <p class="text-[11px] font-bold tracking-[0.12em] uppercase text-white/60 mb-1">Your Rewards ?</p>
                             <h2 class="font-['Plus_Jakarta_Sans'] text-[24px] font-extrabold text-white leading-tight mb-3">Tarini Coins &amp; Badges</h2>
                             <div class="flex items-center gap-3">
                                 <!-- Coins -->
@@ -1760,7 +1760,7 @@
                         <div class="px-md py-sm flex justify-between items-center">
                             <div>
                                 <p class="text-xs text-outline font-semibold uppercase mb-1">Full Name</p>
-                                <p class="text-on-surface text-sm" id="profile-display-fullname">Ã¢â‚¬â€</p>
+                                <p class="text-on-surface text-sm" id="profile-display-fullname">Ã¢â‚¬â€�</p>
                             </div>
                         </div>
                         <div class="px-md py-sm pb-md flex justify-between items-center">
@@ -2229,7 +2229,7 @@
                                 <option>Graduate (B.Tech / B.E)</option>
                                 <option>Post Graduate</option>
                                 <option>Doctorate / PhD</option>
-                                <option>Other</option>
+                                <option data-i18n="other">Other</option>
                             </select>
                         </div>
 
@@ -2475,14 +2475,14 @@
                             <label class="font-label-caps text-label-caps text-on-surface-variant px-1">JOB TYPE *</label>
                             <select id="pj-type" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-4 transition-all">
                                 <option value="">Select</option>
-                                <option>Full-time</option><option>Part-time</option><option>Internship</option><option>Freelance</option>
+                                <option data-i18n="fullTime">Full-time</option><option data-i18n="partTime">Part-time</option><option>Internship</option><option data-i18n="freelance">Freelance</option>
                             </select>
                         </div>
                         <div class="space-y-1">
                             <label class="font-label-caps text-label-caps text-on-surface-variant px-1">WORK MODE *</label>
                             <select id="pj-workmode" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-4 transition-all">
                                 <option value="">Select</option>
-                                <option>Remote</option><option>On-site</option><option>Hybrid</option>
+                                <option data-i18n="remote">Remote</option><option>On-site</option><option>Hybrid</option>
                             </select>
                         </div>
                     </div>
@@ -2682,19 +2682,19 @@
                 <form class="space-y-4" onsubmit="event.preventDefault(); saveCompanyProfile();">
                     <div class="space-y-1">
                         <label class="font-label-caps text-label-caps text-on-surface-variant px-1">COMPANY NAME</label>
-                        <input type="text" id="ecp-name" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-5 transition-all" placeholder="Acme Pvt. Ltd."/>
+                        <input type="text" id="ecp-name" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-5 transition-all" data-i18n-placeholder="companyNamePlaceholder" placeholder="Acme Pvt. Ltd."/>
                     </div>
                     <div class="space-y-1">
                         <label class="font-label-caps text-label-caps text-on-surface-variant px-1">INDUSTRY</label>
                         <select id="ecp-industry" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-5 transition-all">
-                            <option value="">Select industry</option>
-                            <option>Technology</option>
-                            <option>Manufacturing</option>
-                            <option>Retail</option>
-                            <option>Healthcare</option>
-                            <option>Education</option>
+                            <option value="" data-i18n="selectIndustry">Select industry</option>
+                            <option data-i18n="tech">Technology</option>
+                            <option data-i18n="manufacturing">Manufacturing</option>
+                            <option data-i18n="retail">Retail</option>
+                            <option data-i18n="healthcare">Healthcare</option>
+                            <option data-i18n="education">Education</option>
                             <option>Finance</option>
-                            <option>Other</option>
+                            <option data-i18n="other">Other</option>
                         </select>
                     </div>
                     <div class="space-y-1">
@@ -2820,7 +2820,28 @@
     </div>
 
     <script src="app.js"></script>
+
+    <!-- Google Translate Global Widget (Hidden) -->
+    <div id="google_translate_element" style="display:none;"></div>
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({pageLanguage: 'en', autoDisplay: false}, 'google_translate_element');
+        }
+    </script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+    <style>
+        /* Hide Google Translate UI */
+        .goog-te-banner-frame.skiptranslate { display: none !important; }
+        body { top: 0px !important; position: static !important; }
+        .goog-tooltip { display: none !important; }
+        .goog-tooltip:hover { display: none !important; }
+        .goog-text-highlight { background-color: transparent !important; border: none !important; box-shadow: none !important; }
+    </style>
+
 </body>
 
 </html>
+
+
+
 
