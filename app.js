@@ -976,12 +976,24 @@ document.addEventListener('DOMContentLoaded', () => {
         document.documentElement.classList.add('dark-theme');
         document.documentElement.classList.add('dark');
     }
+    _applyLogo(savedTheme === 'dark');
 });
 
+const LOGO_LIGHT = 'tarini%20logo%20png.png';
+const LOGO_DARK  = 'logo.png';
+
+function _applyLogo(isDark) {
+    const src = isDark ? LOGO_DARK : LOGO_LIGHT;
+    ['header-logo', 'auth-logo'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.src = src;
+    });
+}
 function toggleTheme() {
     const isDark = document.documentElement.classList.toggle('dark-theme');
     document.documentElement.classList.toggle('dark');
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    _applyLogo(isDark);
     // Re-render dynamic lists so inline colours update immediately
     const jobsScreen = document.getElementById('screen-jobs');
     if (jobsScreen && jobsScreen.classList.contains('active')) initJobsPage();

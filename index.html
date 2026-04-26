@@ -209,11 +209,14 @@
         .dark-theme .nav-item    { color: #7a7890; }
         .dark-theme .co-nav-item { color: #7a7890; }
 
-        /* Logo - never invert */
-        .dark-theme .app-logo,
-        .dark-theme img[src*="tarini"],
-        .dark-theme img[src*="logo"],
-        .dark-theme #co-logo-img { filter: none !important; }
+        /* Logo - no filter needed, src is swapped by JS */
+        .dark-theme #co-logo-img { filter: brightness(1.1) !important; }
+        /* Login screen logo padding on dark card */
+        .dark-theme #screen-login img[src*="logo"] {
+            background: rgba(255,255,255,0.06);
+            border-radius: 12px;
+            padding: 6px 10px;
+        }
 
         /* Dashboard cards */
         .dark-theme .dash-job-card {
@@ -461,6 +464,30 @@
             padding: 36px 32px;
         }
         @media (max-width: 480px) { .auth-card { padding: 28px 20px; border-radius: 28px; } }
+        .dark-theme .auth-card {
+            background: rgba(28,27,46,0.97) !important;
+            border-color: rgba(100,90,255,0.20) !important;
+            box-shadow: 0 16px 48px -12px rgba(0,0,0,0.6), 0 4px 16px -4px rgba(0,0,0,0.4) !important;
+        }
+        .dark-theme #screen-login { background-color: #0f0e17 !important; }
+        .dark-theme #screen-login h2 { color: #e8e6f4 !important; }
+        .dark-theme #screen-login p { color: #9e9bb8 !important; }
+        .dark-theme #screen-login .text-on-surface { color: #e8e6f4 !important; }
+        .dark-theme #screen-login .text-on-surface-variant { color: #9e9bb8 !important; }
+        .dark-theme #screen-login .bg-surface-container-low { background-color: #252438 !important; }
+        .dark-theme .lang-dropdown {
+            background-color: rgba(37,36,56,0.9) !important;
+            border-color: rgba(100,90,255,0.25) !important;
+            color: #8b83ff !important;
+        }
+        .dark-theme .auth-btn-google {
+            background: rgba(37,36,56,0.9) !important;
+            border-color: rgba(100,90,255,0.25) !important;
+            color: #e8e6f4 !important;
+        }
+        .dark-theme .auth-btn-google:hover {
+            background: rgba(50,48,72,0.97) !important;
+        }
 
     </style>
     <script id="tailwind-config">
@@ -513,7 +540,7 @@
         <header id="global-header"
             class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl sticky top-0 z-50 border-b border-primary/8 shadow-[0_1px_12px_rgba(77,65,223,0.08)] flex justify-between items-center px-5 py-3 max-w-full font-['Plus_Jakarta_Sans'] antialiased hidden">
             <div class="flex items-center gap-2">
-                <img src="tarini%20logo%20png.png" alt="Tarini Logo" class="w-[100px] sm:w-[110px] h-auto object-contain">
+                <img id="header-logo" src="tarini%20logo%20png.png" alt="Tarini Logo" class="w-[100px] sm:w-[110px] h-auto object-contain">
             </div>
             <div class="flex items-center gap-2">
                 <button class="w-9 h-9 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant hover:bg-primary/10 hover:text-primary transition-all active:scale-90"
@@ -553,7 +580,7 @@
                         <div class="auth-card">
                             <div class="mb-lg text-center lg:text-left">
                                 <div class="flex justify-center lg:justify-start mb-6 w-full">
-                                    <img src="tarini%20logo%20png.png" alt="Tarini Logo" class="w-[180px] sm:w-[220px] md:w-[260px] h-auto object-contain mx-auto lg:mx-0">
+                                    <img id="auth-logo" src="tarini%20logo%20png.png" alt="Tarini Logo" class="w-[180px] sm:w-[220px] md:w-[260px] h-auto object-contain mx-auto lg:mx-0">
                                 </div>
                                 <!-- Language Dropdown -->
                                 <div class="flex justify-end mb-3">
