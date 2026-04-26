@@ -1441,9 +1441,10 @@ function toggleFilter(group, value) {
     // Update chip visual
     document.querySelectorAll(`.filter-chip[data-filter="${group}"][data-value="${value}"]`).forEach(btn => {
         const active = set.has(value);
-        btn.style.background = active ? 'rgba(77,65,223,0.15)' : '';
-        btn.style.color = active ? '#4d41df' : '';
+        btn.style.background = active ? '#4d41df' : '';
+        btn.style.color = active ? '#ffffff' : '';
         btn.style.fontWeight = active ? '700' : '';
+        btn.style.boxShadow = active ? '0 0 0 2px #4d41df' : '';
     });
     applyJobFilters();
 }
@@ -1455,6 +1456,7 @@ function clearJobFilters() {
         btn.style.background = '';
         btn.style.color = '';
         btn.style.fontWeight = '';
+        btn.style.boxShadow = '';
     });
     const input = document.getElementById('job-search-input');
     if (input) input.value = '';
@@ -2115,9 +2117,10 @@ function toggleSkillFilter(group, value) {
     if (set.has(value)) set.delete(value); else set.add(value);
     document.querySelectorAll(`.skill-chip[data-sf="${group}"][data-sv="${value}"]`).forEach(btn => {
         const on = set.has(value);
-        btn.style.background = on ? 'rgba(77,65,223,0.15)' : '';
-        btn.style.color      = on ? '#4d41df' : '';
+        btn.style.background = on ? '#4d41df' : '';
+        btn.style.color      = on ? '#ffffff' : '';
         btn.style.fontWeight = on ? '700' : '';
+        btn.style.boxShadow  = on ? '0 0 0 2px #4d41df' : '';
     });
     applySkillFilters();
 }
@@ -2125,7 +2128,7 @@ window.toggleSkillFilter = toggleSkillFilter;
 
 function clearSkillFilters() {
     Object.values(_skillFilters).forEach(s => s.clear());
-    document.querySelectorAll('.skill-chip').forEach(b => { b.style.background = ''; b.style.color = ''; b.style.fontWeight = ''; });
+    document.querySelectorAll('.skill-chip').forEach(b => { b.style.background = ''; b.style.color = ''; b.style.fontWeight = ''; b.style.boxShadow = ''; });
     const inp = document.getElementById('skill-search-input');
     if (inp) inp.value = '';
     applySkillFilters();
@@ -2429,9 +2432,10 @@ function toggleMarketFilter(group, value) {
     if (set.has(value)) set.delete(value); else set.add(value);
     document.querySelectorAll(`.market-chip[data-mf="${group}"][data-mv="${value}"]`).forEach(btn => {
         const on = set.has(value);
-        btn.style.background = on ? 'rgba(77,65,223,0.15)' : '';
-        btn.style.color      = on ? '#4d41df' : '';
+        btn.style.background = on ? '#4d41df' : '';
+        btn.style.color      = on ? '#ffffff' : '';
         btn.style.fontWeight = on ? '700' : '';
+        btn.style.boxShadow  = on ? '0 0 0 2px #4d41df' : '';
     });
     applyMarketFilters();
 }
@@ -2439,7 +2443,7 @@ window.toggleMarketFilter = toggleMarketFilter;
 
 function clearMarketFilters() {
     Object.values(_marketFilters).forEach(s => s.clear());
-    document.querySelectorAll('.market-chip').forEach(b => { b.style.background = ''; b.style.color = ''; b.style.fontWeight = ''; });
+    document.querySelectorAll('.market-chip').forEach(b => { b.style.background = ''; b.style.color = ''; b.style.fontWeight = ''; b.style.boxShadow = ''; });
     const inp = document.getElementById('market-search-input');
     if (inp) inp.value = '';
     applyMarketFilters();
