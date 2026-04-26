@@ -42,6 +42,7 @@ function navigateTo(screenId) {
         if (screenId === 'shop') initMarketplace();
         if (screenId === 'my-shop') initMyShop();
         if (screenId === 'cart') renderCart();
+        if (screenId === 'rewards') initRewardsScreen();
     } else {
         console.error(`Screen 'screen-${screenId}' not found.`);
     }
@@ -69,24 +70,36 @@ function navigateToWithOutHistory(screenId) {
         if (screenId === 'shop') initMarketplace();
         if (screenId === 'my-shop') initMyShop();
         if (screenId === 'cart') renderCart();
+        if (screenId === 'rewards') initRewardsScreen();
     }
 }
 
 function updateBottomNav(screenId) {
-    const bottomNav = document.getElementById('bottom-nav');
+    const role = _currentRole();
+    const bottomNav   = document.getElementById('bottom-nav');
+    const companyNav  = document.getElementById('company-bottom-nav');
     const globalHeader = document.getElementById('global-header');
-    
-    // Check if bottom nav and header should be visible
+
+    if (role === 'company') {
+        // Company users: always hide women nav & header; company nav visibility
+        // is managed by companyNavTo — just ensure women nav stays hidden
+        if (bottomNav)    bottomNav.classList.add('hidden');
+        if (globalHeader) globalHeader.classList.add('hidden');
+        return;
+    }
+
+    // Women / default role
+    if (companyNav) companyNav.classList.add('hidden');
+
     if (screensWithoutNav.includes(screenId)) {
-        if (bottomNav) bottomNav.classList.add('hidden');
+        if (bottomNav)    bottomNav.classList.add('hidden');
         if (globalHeader) globalHeader.classList.add('hidden');
     } else {
-        if (bottomNav) bottomNav.classList.remove('hidden');
+        if (bottomNav)    bottomNav.classList.remove('hidden');
         if (globalHeader) globalHeader.classList.remove('hidden');
     }
 
-    // Update active state on nav items using Tailwind classes
-    // For sub-screens (my-shop, cart, applications, rewards), keep parent tab highlighted
+    // Update active state on nav items
     const navTargetMap = {
         'my-shop': 'shop', 'cart': 'shop', 'market-categories': 'shop',
         'applications': 'jobs', 'job-detail': 'jobs', 'job-apply': 'jobs',
@@ -96,20 +109,14 @@ function updateBottomNav(screenId) {
     };
     const activeTarget = navTargetMap[screenId] || screenId;
 
-    const navItems = document.querySelectorAll('.nav-item');
-    navItems.forEach(item => {
-        // Reset to inactive state
+    document.querySelectorAll('.nav-item').forEach(item => {
         item.classList.remove('text-indigo-600', 'dark:text-indigo-400', 'scale-110');
         item.classList.add('text-slate-400', 'dark:text-slate-500');
-        
         const icon = item.querySelector('.nav-icon');
         if (icon) icon.style.fontVariationSettings = "'FILL' 0";
-
         if (item.getAttribute('data-target') === activeTarget) {
-            // Set to active state
             item.classList.remove('text-slate-400', 'dark:text-slate-500');
             item.classList.add('text-indigo-600', 'dark:text-indigo-400', 'scale-110');
-            
             if (icon) icon.style.fontVariationSettings = "'FILL' 1";
         }
     });
@@ -155,7 +162,7 @@ function updateProfileProgressUI() {
     if (!bar || !label) return;
     bar.style.width = pct + '%';
     if (pct >= 100) {
-        label.textContent = 'Profile Completed ✓';
+        label.textContent = 'Profile Completed ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“';
         label.style.color = '#276749';
         if (cta) cta.style.display = 'none';
         if (profileCard && notifCard && !notifCard.classList.contains('notif-shown')) {
@@ -207,14 +214,14 @@ function updateHeaderAvatar() {
 
 // --- NOTIFICATIONS ---
 
-const _NOTIF_KEY = 'tarini_notifications';
+const _NOTIF_KEY = () => { const u = auth.currentUser; return u ? `tarini_notifications_${u.uid}` : 'tarini_notifications_guest'; };
 
 function getNotifications() {
-    return JSON.parse(localStorage.getItem(_NOTIF_KEY) || '[]');
+    return JSON.parse(localStorage.getItem(_NOTIF_KEY()) || '[]');
 }
 
 function saveNotifications(list) {
-    localStorage.setItem(_NOTIF_KEY, JSON.stringify(list));
+    localStorage.setItem(_NOTIF_KEY(), JSON.stringify(list));
 }
 
 function addNotification(type, title, description) {
@@ -368,6 +375,10 @@ function loadQuickActionStats() {
         .catch(() => _setQaBadge('qa-orders-badge', 'Marketplace'));
 }
 
+// --- APPLICATIONS HELPERS ---
+function _appsKey() { const u = auth.currentUser; return u ? `tarini_applications_${u.uid}` : 'tarini_applications_guest'; }
+function _enrolledKey() { const u = auth.currentUser; return u ? `tarini_enrolled_${u.uid}` : 'tarini_enrolled_guest'; }
+
 // Avatar gradient palettes for company logos
 const _avatarGradients = [
     'linear-gradient(135deg,#4d41df,#675df9)',
@@ -416,12 +427,17 @@ function renderDashboardJobs() {
 
 // --- PROFILE LOGIC ---
 
+function _profileKey() {
+    const user = auth.currentUser;
+    return user ? `profileData_${user.uid}` : 'profileData_guest';
+}
+
 function getProfileData() {
-    return JSON.parse(localStorage.getItem('profileData') || '{}');
+    return JSON.parse(localStorage.getItem(_profileKey()) || '{}');
 }
 
 function saveProfileData(data) {
-    localStorage.setItem('profileData', JSON.stringify(data));
+    localStorage.setItem(_profileKey(), JSON.stringify(data));
 }
 
 function loadProfileScreen() {
@@ -491,8 +507,15 @@ function saveProfile() {
     d.skills = document.getElementById('ep-skills').value.trim();
     if (!d.joined) d.joined = 'Joined ' + new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
     saveProfileData(d);
+    // Persist to Firestore
+    const user = auth.currentUser;
+    if (user) db.collection('users').doc(user.uid).set(d, { merge: true }).catch(console.warn);
     navigateTo('profile');
     updateProfileProgressUI();
+    // Award coins for profile completion
+    const pct = computeProfileProgress();
+    if (pct >= 100) { earnCoins(50, 'Profile 100% complete'); checkAndAwardBadges(); }
+    else if (pct >= 50) { earnCoins(10, 'Profile updated'); }
 }
 window.saveProfile = saveProfile;
 
@@ -574,7 +597,7 @@ async function shareProfile() {
     // Build a deep-link URL pointing to this user's profile
     const profileUrl = `https://tarini-9ff23.web.app/?profile=${uid}`;
     const shareTitle = `${name} on Tarini`;
-    const shareText = `Check out ${name}'s profile on Tarini — a platform empowering women entrepreneurs.`;
+    const shareText = `Check out ${name}'s profile on Tarini ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â a platform empowering women entrepreneurs.`;
 
     if (navigator.share) {
         try {
@@ -623,11 +646,15 @@ let currentProductId = null;
 let showAllProducts = false;
 
 function getShopProducts() {
-    return JSON.parse(localStorage.getItem('shopProducts') || '[]');
+    const u = auth.currentUser;
+    const key = u ? `shopProducts_${u.uid}` : 'shopProducts_guest';
+    return JSON.parse(localStorage.getItem(key) || '[]');
 }
 
 function saveShopProducts(products) {
-    localStorage.setItem('shopProducts', JSON.stringify(products));
+    const u = auth.currentUser;
+    const key = u ? `shopProducts_${u.uid}` : 'shopProducts_guest';
+    localStorage.setItem(key, JSON.stringify(products));
 }
 
 function renderShopProducts(viewAll) {
@@ -744,6 +771,8 @@ function submitProductForm() {
                 : p);
         } else {
             products.push({ id: Date.now(), name, description, price, category, stock, image });
+            earnCoins(25, 'Listed a new product');
+            checkAndAwardBadges();
         }
         saveShopProducts(products);
         if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
@@ -808,10 +837,10 @@ window.removeProductImage = removeProductImage;
 
 // --- AI IMPROVE (simulated) ---
 const _aiSuggestions = [
-    { title: 'Elegant Handcrafted Earrings – Artisan Collection', desc: 'Beautifully crafted by skilled artisans using premium materials. Each piece is unique, lightweight, and perfect for everyday wear or special occasions. A thoughtful gift for loved ones.' },
-    { title: 'Premium Handwoven Silk Saree – Traditional Elegance', desc: 'Experience the timeless beauty of handwoven silk. This exquisite saree features intricate patterns crafted by master weavers, blending tradition with modern aesthetics.' },
-    { title: 'Organic Herbal Skincare Set – Natural Glow Collection', desc: 'Nourish your skin with our 100% organic herbal blend. Free from harmful chemicals, this set is crafted with love using traditional recipes passed down through generations.' },
-    { title: 'Handmade Terracotta Jewellery – Earthy Charm Series', desc: 'Celebrate the art of terracotta with these stunning handmade pieces. Lightweight, eco-friendly, and uniquely designed to complement both traditional and contemporary outfits.' },
+    { title: 'Elegant Handcrafted Earrings ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ Artisan Collection', desc: 'Beautifully crafted by skilled artisans using premium materials. Each piece is unique, lightweight, and perfect for everyday wear or special occasions. A thoughtful gift for loved ones.' },
+    { title: 'Premium Handwoven Silk Saree ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ Traditional Elegance', desc: 'Experience the timeless beauty of handwoven silk. This exquisite saree features intricate patterns crafted by master weavers, blending tradition with modern aesthetics.' },
+    { title: 'Organic Herbal Skincare Set ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ Natural Glow Collection', desc: 'Nourish your skin with our 100% organic herbal blend. Free from harmful chemicals, this set is crafted with love using traditional recipes passed down through generations.' },
+    { title: 'Handmade Terracotta Jewellery ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ Earthy Charm Series', desc: 'Celebrate the art of terracotta with these stunning handmade pieces. Lightweight, eco-friendly, and uniquely designed to complement both traditional and contemporary outfits.' },
 ];
 
 function aiImproveProduct() {
@@ -985,6 +1014,9 @@ function toggleAuthMode(mode) {
         if (subtitle) subtitle.setAttribute('data-i18n', 'welcomeBack');
         toggleToRegister.style.display = 'block';
         toggleToLogin.style.display = 'none';
+        // Reset role dropdown on return to login
+        const roleEl = document.getElementById('login-role');
+        if (roleEl) roleEl.value = '';
     }
     const lang = localStorage.getItem('authLangPref') || 'en';
     setAuthLang(lang);
@@ -1009,7 +1041,8 @@ window.handleForgotPassword = handleForgotPassword;
 async function handleGoogleSignIn() {
     const provider = new firebase.auth.GoogleAuthProvider();
     try {
-        await auth.signInWithPopup(provider);
+        const cred = await auth.signInWithPopup(provider);
+        await _loadUserProfileFromFirestore(cred.user);
         // onAuthStateChanged will handle navigation
     } catch (error) {
         if (error.code !== 'auth/popup-closed-by-user') showError(error.message);
@@ -1017,36 +1050,116 @@ async function handleGoogleSignIn() {
 }
 window.handleGoogleSignIn = handleGoogleSignIn;
 
+// --- ROLE-BASED ROUTING ---
+
+// Returns the current user's role from their scoped profile
+function _currentRole() {
+    return getProfileData().role || 'woman';
+}
+window._currentRole = _currentRole;
+
+// Enforce nav visibility based on role — call this any time screens change
+function _applyRoleNav(role) {
+    const bottomNav   = document.getElementById('bottom-nav');
+    const companyNav  = document.getElementById('company-bottom-nav');
+    const globalHeader = document.getElementById('global-header');
+    if (role === 'company') {
+        if (bottomNav)    bottomNav.classList.add('hidden');
+        if (globalHeader) globalHeader.classList.add('hidden');   // company has its own header area
+        if (companyNav)   companyNav.classList.remove('hidden');
+    } else {
+        if (companyNav)   companyNav.classList.add('hidden');
+        if (bottomNav)    bottomNav.classList.remove('hidden');
+        if (globalHeader) globalHeader.classList.remove('hidden');
+    }
+}
+
+function routeByRole() {
+    const role = _currentRole();
+    _applyRoleNav(role);
+    if (role === 'company') {
+        companyNavTo('company-dashboard');
+    } else {
+        navigateTo('dashboard');
+    }
+}
+window.routeByRole = routeByRole;
+
 async function handleLogin() {
     const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
+    const selectedRole = document.getElementById('login-role').value;
     const btn = document.getElementById('login-btn');
 
     if (!email || !password) {
         showError("Please enter email and password.");
         return;
     }
+    if (!selectedRole) {
+        showError("Please select your role to continue.");
+        return;
+    }
+
+    const lang = localStorage.getItem('authLangPref') || 'en';
+    const dict = (window.authTranslations && window.authTranslations[lang]) ? window.authTranslations[lang] : (window.authTranslations ? window.authTranslations['en'] : null);
 
     try {
         btn.textContent = "Signing In...";
         btn.disabled = true;
-        await auth.signInWithEmailAndPassword(email, password);
-        navigateTo('dashboard');
-        
-        // Restore button state
-        const lang = localStorage.getItem('authLangPref') || 'en';
-        const dict = (window.authTranslations && window.authTranslations[lang]) ? window.authTranslations[lang] : (window.authTranslations ? window.authTranslations['en'] : null);
-        btn.textContent = dict && dict['signIn'] ? dict['signIn'] : "Sign In";
-        btn.disabled = false;
+        const cred = await auth.signInWithEmailAndPassword(email, password);
+
+        // Fetch user profile from Firestore to validate role
+        await _loadUserProfileFromFirestore(cred.user);
+        const d = getProfileData();
+        const storedRole = d.role;
+
+        // Role mismatch check: only block if a role IS stored and doesn't match
+        if (storedRole && storedRole !== selectedRole) {
+            await auth.signOut();
+            showError("Selected role does not match your account.");
+            return;
+        }
+
+        // If no role stored yet, trust the selected role and persist it
+        if (!storedRole) {
+            const _key = `profileData_${cred.user.uid}`;
+            const _ex = JSON.parse(localStorage.getItem(_key) || '{}');
+            _ex.role = selectedRole;
+            localStorage.setItem(_key, JSON.stringify(_ex));
+            db.collection('users').doc(cred.user.uid).set({ role: selectedRole }, { merge: true }).catch(console.warn);
+        }
+
+        routeByRole();
     } catch (error) {
-        showError(error.message);
-        const lang = localStorage.getItem('authLangPref') || 'en';
-        const dict = (window.authTranslations && window.authTranslations[lang]) ? window.authTranslations[lang] : (window.authTranslations ? window.authTranslations['en'] : null);
+        if (error.code) showError(error.message);
+    } finally {
         btn.textContent = dict && dict['signIn'] ? dict['signIn'] : "Sign In";
         btn.disabled = false;
     }
 }
 window.handleLogin = handleLogin;
+
+// Fetch user profile from Firestore and store in user-scoped localStorage
+async function _loadUserProfileFromFirestore(user) {
+    if (!user) return;
+    try {
+        const doc = await db.collection('users').doc(user.uid).get();
+        const key = `profileData_${user.uid}`;
+        if (doc.exists) {
+            const data = doc.data();
+            // Merge with any existing local data, Firestore wins for role/name
+            const existing = JSON.parse(localStorage.getItem(key) || '{}');
+            localStorage.setItem(key, JSON.stringify({ ...existing, ...data }));
+        } else {
+            // First login via Google or no Firestore doc yet — seed from auth
+            const existing = JSON.parse(localStorage.getItem(key) || '{}');
+            if (!existing.name) existing.name = user.displayName || '';
+            localStorage.setItem(key, JSON.stringify(existing));
+        }
+    } catch (e) {
+        console.warn('Could not load user profile from Firestore:', e);
+    }
+}
 
 function showRegisterForm(role) {
     document.getElementById('register-role-selector').style.display = 'none';
@@ -1081,33 +1194,45 @@ async function handleRegister(role) {
         btn = document.getElementById('register-btn-admin');
     }
     if (!email || !password || !name) { showError('Please fill in all required fields.'); return; }
+
+    const lang = localStorage.getItem('authLangPref') || 'en';
+    const dict = (window.authTranslations && window.authTranslations[lang]) ? window.authTranslations[lang] : (window.authTranslations ? window.authTranslations['en'] : null);
+    const btnLabel = role === 'woman' ? (dict && dict['createAccount'] ? dict['createAccount'] : 'Create Account')
+        : role === 'company' ? (dict && dict['registerCompany'] ? dict['registerCompany'] : 'Register Company')
+        : (dict && dict['registerAdmin'] ? dict['registerAdmin'] : 'Register as Admin');
+
     try {
         btn.textContent = 'Creating...';
         btn.disabled = true;
         const cred = await auth.createUserWithEmailAndPassword(email, password);
         await cred.user.updateProfile({ displayName: name });
-        const d = getProfileData();
-        d.role = role;
+
+        // Build profile object
+        const profileData = {
+            name,
+            email,
+            role,
+            joined: 'Joined ' + new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }),
+        };
         if (role === 'woman') {
-            d.skills = document.getElementById('w-skills').value;
-            d.jobPref = document.getElementById('w-job-pref').value;
+            profileData.skills = document.getElementById('w-skills').value;
+            profileData.jobPref = document.getElementById('w-job-pref').value;
         } else if (role === 'company') {
-            d.industry = document.getElementById('c-industry').value;
-            d.address = document.getElementById('c-address').value;
+            profileData.industry = document.getElementById('c-industry').value;
+            profileData.address = document.getElementById('c-address').value;
         }
-        saveProfileData(d);
-        navigateTo('dashboard');
-        
-        // Restore button state
-        const lang = localStorage.getItem('authLangPref') || 'en';
-        const dict = (window.authTranslations && window.authTranslations[lang]) ? window.authTranslations[lang] : (window.authTranslations ? window.authTranslations['en'] : null);
-        btn.textContent = role === 'woman' ? (dict && dict['createAccount'] ? dict['createAccount'] : 'Create Account') : role === 'company' ? (dict && dict['registerCompany'] ? dict['registerCompany'] : 'Register Company') : (dict && dict['registerAdmin'] ? dict['registerAdmin'] : 'Register as Admin');
-        btn.disabled = false;
+
+        // Save to Firestore (source of truth)
+        await db.collection('users').doc(cred.user.uid).set(profileData);
+
+        // Cache locally under user-scoped key
+        localStorage.setItem(`profileData_${cred.user.uid}`, JSON.stringify(profileData));
+
+        routeByRole();
     } catch (error) {
         showError(error.message);
-        const lang = localStorage.getItem('authLangPref') || 'en';
-        const dict = (window.authTranslations && window.authTranslations[lang]) ? window.authTranslations[lang] : (window.authTranslations ? window.authTranslations['en'] : null);
-        btn.textContent = role === 'woman' ? (dict && dict['createAccount'] ? dict['createAccount'] : 'Create Account') : role === 'company' ? (dict && dict['registerCompany'] ? dict['registerCompany'] : 'Register Company') : (dict && dict['registerAdmin'] ? dict['registerAdmin'] : 'Register as Admin');
+    } finally {
+        btn.textContent = btnLabel;
         btn.disabled = false;
     }
 }
@@ -1124,7 +1249,7 @@ async function handleLogout() {
 window.handleLogout = handleLogout;
 
 // Global Auth State Observer
-auth.onAuthStateChanged((user) => {
+auth.onAuthStateChanged(async (user) => {
     const loginBtn = document.getElementById('login-btn');
     const regBtn = document.getElementById('register-btn');
     
@@ -1135,19 +1260,41 @@ auth.onAuthStateChanged((user) => {
     if (regBtn) { regBtn.textContent = dict && dict['createAccount'] ? dict['createAccount'] : "Create Account"; regBtn.disabled = false; }
 
     if (user) {
-        // User is signed in. Update UI and go to dashboard
-        const displayName = user.displayName || 'User';
+        // Ensure user-scoped profile is loaded before any UI update
+        const cachedKey = `profileData_${user.uid}`;
+        const hasCached = !!localStorage.getItem(cachedKey);
+        if (!hasCached) {
+            await _loadUserProfileFromFirestore(user);
+        }
+
+        const d = getProfileData(); // now reads user-scoped key
+        const displayName = d.name || user.displayName || 'User';
+
         const dashboardUserNameEl = document.getElementById('dashboard-user-name');
         if (dashboardUserNameEl) dashboardUserNameEl.textContent = displayName;
-        
         const profileUserNameEl = document.getElementById('profile-user-name');
         if (profileUserNameEl) profileUserNameEl.textContent = displayName;
+
+        // Award welcome coins on first ever login
+        const r = _getRewards();
+        if (!r.earnedBadges.includes('first_login')) {
+            earnCoins(30, 'Welcome to Tarini!');
+            checkAndAwardBadges();
+        }
         
         const loginScreen = document.getElementById('screen-login');
         if (loginScreen && loginScreen.classList.contains('active')) {
-            navigateTo('dashboard');
+            routeByRole();
         } else if (history.state && history.state.screen === 'login') {
-            navigateTo('dashboard');
+            routeByRole();
+        } else {
+            // App reload — re-apply correct nav visibility without changing screen
+            if (d.role === 'company') {
+                const bn = document.getElementById('bottom-nav');
+                const cn = document.getElementById('company-bottom-nav');
+                if (bn) bn.classList.add('hidden');
+                if (cn) cn.classList.remove('hidden');
+            }
         }
     } else {
         navigateToWithOutHistory('login');
@@ -1170,199 +1317,199 @@ const authTranslations = {
         adminReg: "Admin Registration", registerAdmin: "Register as Admin",
         newToTarini: "New to Tarini?", signUp: "Sign Up",
         alreadyHaveAccount: "Already have an account?", back: "Back",
-        welcomeBack: "Welcome back to Tarini", tariniWelcomesYou: "✦ Tarini Welcomes You"
+        welcomeBack: "Welcome back to Tarini", tariniWelcomesYou: "ÃƒÂ¢Ã…â€œÃ‚Â¦ Tarini Welcomes You"
     },
     hi: {
-        emailAddress: "ईमेल पता", emailPlaceholder: "name@example.com",
-        password: "पासवर्ड", passwordPlaceholder: "पासवर्ड",
-        forgotPassword: "पासवर्ड भूल गए?", signIn: "साइन इन",
-        or: "या", signInGoogle: "Google के साथ साइन इन करें",
-        chooseRole: "अपनी भूमिका चुनें", chooseRoleSub: "वह भूमिका चुनें जो आपका सबसे अच्छा वर्णन करती है",
-        womanReg: "महिला पंजीकरण", fullName: "पूरा नाम", fullNamePlaceholder: "आपका पूरा नाम",
-        skills: "कौशल", skillsPlaceholder: "उदा. सिलाई, हस्तशिल्प, शिक्षण",
-        jobPref: "नौकरी की प्राथमिकता", selectPref: "प्राथमिकता चुनें", createAccount: "खाता बनाएं",
-        companyReg: "कंपनी पंजीकरण", companyName: "कंपनी का नाम", industry: "उद्योग",
-        address: "पता", addressPlaceholder: "शहर, राज्य", registerCompany: "कंपनी पंजीकृत करें",
-        adminReg: "व्यवस्थापक पंजीकरण", registerAdmin: "व्यवस्थापक के रूप में पंजीकरण करें",
-        newToTarini: "Tarini में नए हैं?", signUp: "साइन अप करें",
-        alreadyHaveAccount: "क्या आपके पास पहले से खाता है?", back: "पीछे",
-        welcomeBack: "Tarini में आपका स्वागत है", tariniWelcomesYou: "✦ Tarini आपका स्वागत करता है"
+        emailAddress: "ÃƒÂ Ã‚Â¤Ã‹â€ ÃƒÂ Ã‚Â¤Ã‚Â®ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¤Ã‚Â² ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã‚Â¤ÃƒÂ Ã‚Â¤Ã‚Â¾", emailPlaceholder: "name@example.com",
+        password: "ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¤Ã‚ÂµÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â¡", passwordPlaceholder: "ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¤Ã‚ÂµÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â¡",
+        forgotPassword: "ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¤Ã‚ÂµÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â¡ ÃƒÂ Ã‚Â¤Ã‚Â­ÃƒÂ Ã‚Â¥Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã‚Â² ÃƒÂ Ã‚Â¤Ã¢â‚¬â€ÃƒÂ Ã‚Â¤Ã‚Â?", signIn: "ÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¤Ã‚Â¨ ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¤Ã‚Â¨",
+        or: "ÃƒÂ Ã‚Â¤Ã‚Â¯ÃƒÂ Ã‚Â¤Ã‚Â¾", signInGoogle: "Google ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚Â¥ ÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¤Ã‚Â¨ ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¤Ã‚Â¨ ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡",
+        chooseRole: "ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¦ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¥Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¤Ã‚Â­ÃƒÂ Ã‚Â¥Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã‚Â®ÃƒÂ Ã‚Â¤Ã‚Â¿ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â¾ ÃƒÂ Ã‚Â¤Ã…Â¡ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡", chooseRoleSub: "ÃƒÂ Ã‚Â¤Ã‚ÂµÃƒÂ Ã‚Â¤Ã‚Â¹ ÃƒÂ Ã‚Â¤Ã‚Â­ÃƒÂ Ã‚Â¥Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã‚Â®ÃƒÂ Ã‚Â¤Ã‚Â¿ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â¾ ÃƒÂ Ã‚Â¤Ã…Â¡ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡ ÃƒÂ Ã‚Â¤Ã…â€œÃƒÂ Ã‚Â¥Ã¢â‚¬Â¹ ÃƒÂ Ã‚Â¤Ã¢â‚¬Â ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â¾ ÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¤Ã‚Â¬ÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¦ÃƒÂ Ã‚Â¤Ã…Â¡ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã¢â‚¬ÂºÃƒÂ Ã‚Â¤Ã‚Â¾ ÃƒÂ Ã‚Â¤Ã‚ÂµÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â£ÃƒÂ Ã‚Â¤Ã‚Â¨ ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¤Ã‚Â¤ÃƒÂ Ã‚Â¥Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¤Ã‚Â¹ÃƒÂ Ã‚Â¥Ã‹â€ ",
+        womanReg: "ÃƒÂ Ã‚Â¤Ã‚Â®ÃƒÂ Ã‚Â¤Ã‚Â¹ÃƒÂ Ã‚Â¤Ã‚Â¿ÃƒÂ Ã‚Â¤Ã‚Â²ÃƒÂ Ã‚Â¤Ã‚Â¾ ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã…â€œÃƒÂ Ã‚Â¥Ã¢â€šÂ¬ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¤Ã‚Â£", fullName: "ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¥Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¤Ã‚Â¾ ÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚Â®", fullNamePlaceholder: "ÃƒÂ Ã‚Â¤Ã¢â‚¬Â ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â¾ ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¥Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¤Ã‚Â¾ ÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚Â®",
+        skills: "ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¥Ã…â€™ÃƒÂ Ã‚Â¤Ã‚Â¶ÃƒÂ Ã‚Â¤Ã‚Â²", skillsPlaceholder: "ÃƒÂ Ã‚Â¤Ã¢â‚¬Â°ÃƒÂ Ã‚Â¤Ã‚Â¦ÃƒÂ Ã‚Â¤Ã‚Â¾. ÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¤Ã‚Â¿ÃƒÂ Ã‚Â¤Ã‚Â²ÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‹â€ , ÃƒÂ Ã‚Â¤Ã‚Â¹ÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â¤ÃƒÂ Ã‚Â¤Ã‚Â¶ÃƒÂ Ã‚Â¤Ã‚Â¿ÃƒÂ Ã‚Â¤Ã‚Â²ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Âª, ÃƒÂ Ã‚Â¤Ã‚Â¶ÃƒÂ Ã‚Â¤Ã‚Â¿ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â·ÃƒÂ Ã‚Â¤Ã‚Â£",
+        jobPref: "ÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¥Ã…â€™ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¥Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¥Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚Â¥ÃƒÂ Ã‚Â¤Ã‚Â®ÃƒÂ Ã‚Â¤Ã‚Â¿ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â¤ÃƒÂ Ã‚Â¤Ã‚Â¾", selectPref: "ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚Â¥ÃƒÂ Ã‚Â¤Ã‚Â®ÃƒÂ Ã‚Â¤Ã‚Â¿ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â¤ÃƒÂ Ã‚Â¤Ã‚Â¾ ÃƒÂ Ã‚Â¤Ã…Â¡ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡", createAccount: "ÃƒÂ Ã‚Â¤Ã¢â‚¬â€œÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚Â¤ÃƒÂ Ã‚Â¤Ã‚Â¾ ÃƒÂ Ã‚Â¤Ã‚Â¬ÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚ÂÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡",
+        companyReg: "ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¥Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã…â€œÃƒÂ Ã‚Â¥Ã¢â€šÂ¬ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¤Ã‚Â£", companyName: "ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¥Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â¾ ÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚Â®", industry: "ÃƒÂ Ã‚Â¤Ã¢â‚¬Â°ÃƒÂ Ã‚Â¤Ã‚Â¦ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â¯ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¹ÃƒÂ Ã‚Â¤Ã¢â‚¬â€",
+        address: "ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã‚Â¤ÃƒÂ Ã‚Â¤Ã‚Â¾", addressPlaceholder: "ÃƒÂ Ã‚Â¤Ã‚Â¶ÃƒÂ Ã‚Â¤Ã‚Â¹ÃƒÂ Ã‚Â¤Ã‚Â°, ÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã…â€œÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â¯", registerCompany: "ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¥Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã…â€œÃƒÂ Ã‚Â¥Ã¢â€šÂ¬ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¥Ã†â€™ÃƒÂ Ã‚Â¤Ã‚Â¤ ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡",
+        adminReg: "ÃƒÂ Ã‚Â¤Ã‚ÂµÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â¯ÃƒÂ Ã‚Â¤Ã‚ÂµÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â¥ÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã…â€œÃƒÂ Ã‚Â¥Ã¢â€šÂ¬ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¤Ã‚Â£", registerAdmin: "ÃƒÂ Ã‚Â¤Ã‚ÂµÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â¯ÃƒÂ Ã‚Â¤Ã‚ÂµÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â¥ÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¥Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã‚Âª ÃƒÂ Ã‚Â¤Ã‚Â®ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡ ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã…â€œÃƒÂ Ã‚Â¥Ã¢â€šÂ¬ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¤Ã‚Â£ ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡",
+        newToTarini: "Tarini ÃƒÂ Ã‚Â¤Ã‚Â®ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡ ÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¤Ã‚Â ÃƒÂ Ã‚Â¤Ã‚Â¹ÃƒÂ Ã‚Â¥Ã‹â€ ÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡?", signUp: "ÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¤Ã‚Â¨ ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¦ÃƒÂ Ã‚Â¤Ã‚Âª ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡",
+        alreadyHaveAccount: "ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â¯ÃƒÂ Ã‚Â¤Ã‚Â¾ ÃƒÂ Ã‚Â¤Ã¢â‚¬Â ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚Â¸ ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã‚Â¹ÃƒÂ Ã‚Â¤Ã‚Â²ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¤Ã¢â‚¬â€œÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚Â¤ÃƒÂ Ã‚Â¤Ã‚Â¾ ÃƒÂ Ã‚Â¤Ã‚Â¹ÃƒÂ Ã‚Â¥Ã‹â€ ?", back: "ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¥Ã¢â€šÂ¬ÃƒÂ Ã‚Â¤Ã¢â‚¬ÂºÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡",
+        welcomeBack: "Tarini ÃƒÂ Ã‚Â¤Ã‚Â®ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡ ÃƒÂ Ã‚Â¤Ã¢â‚¬Â ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â¾ ÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚ÂµÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã¢â‚¬â€ÃƒÂ Ã‚Â¤Ã‚Â¤ ÃƒÂ Ã‚Â¤Ã‚Â¹ÃƒÂ Ã‚Â¥Ã‹â€ ", tariniWelcomesYou: "ÃƒÂ¢Ã…â€œÃ‚Â¦ Tarini ÃƒÂ Ã‚Â¤Ã¢â‚¬Â ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â¾ ÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚ÂµÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã¢â‚¬â€ÃƒÂ Ã‚Â¤Ã‚Â¤ ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¤Ã‚Â¤ÃƒÂ Ã‚Â¤Ã‚Â¾ ÃƒÂ Ã‚Â¤Ã‚Â¹ÃƒÂ Ã‚Â¥Ã‹â€ "
     },
     bn: {
-        emailAddress: "ইমেইল ঠিকানা", emailPlaceholder: "name@example.com",
-        password: "পাসওয়ার্ড", passwordPlaceholder: "পাসওয়ার্ড",
-        forgotPassword: "পাসওয়ার্ড ভুলে গেছেন?", signIn: "সাইন ইন করুন",
-        or: "অথবা", signInGoogle: "Google এর সাথে সাইন ইন করুন",
-        chooseRole: "আপনার ভূমিকা চয়ন করুন", chooseRoleSub: "যে ভূমিকা আপনাকে সেরা বর্ণনা করে তা চয়ন করুন",
-        womanReg: "মহিলা নিবন্ধন", fullName: "পুরো নাম", fullNamePlaceholder: "আপনার পুরো নাম",
-        skills: "দক্ষতা", skillsPlaceholder: "উদাঃ সেলাই, হস্তশিল্প, শিক্ষা",
-        jobPref: "কাজের পছন্দ", selectPref: "পছন্দ নির্বাচন করুন", createAccount: "অ্যাকাউন্ট তৈরি করুন",
-        companyReg: "কোম্পানি নিবন্ধন", companyName: "কোম্পানির নাম", industry: "শিল্প",
-        address: "ঠিকানা", addressPlaceholder: "শহর, রাজ্য", registerCompany: "কোম্পানি নিবন্ধন করুন",
-        adminReg: "অ্যাডমিন নিবন্ধন", registerAdmin: "অ্যাডমিন হিসাবে নিবন্ধন করুন",
-        newToTarini: "Tarini তে নতুন?", signUp: "সাইন আপ করুন",
-        alreadyHaveAccount: "ইতোমধ্যে একটি অ্যাকাউন্ট আছে?", back: "ফিরে যান",
-        welcomeBack: "Tarini তে আপনাকে আবার স্বাগতম", tariniWelcomesYou: "✦ Tarini আপনাকে স্বাগত জানায়"
+        emailAddress: "ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¦Ã‚Â®ÃƒÂ Ã‚Â§Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¦Ã‚Â² ÃƒÂ Ã‚Â¦Ã‚Â ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¾", emailPlaceholder: "name@example.com",
+        password: "ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â¸ÃƒÂ Ã‚Â¦Ã¢â‚¬Å“ÃƒÂ Ã‚Â¦Ã‚Â¯ÃƒÂ Ã‚Â¦Ã‚Â¼ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â°ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¡", passwordPlaceholder: "ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â¸ÃƒÂ Ã‚Â¦Ã¢â‚¬Å“ÃƒÂ Ã‚Â¦Ã‚Â¯ÃƒÂ Ã‚Â¦Ã‚Â¼ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â°ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¡",
+        forgotPassword: "ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â¸ÃƒÂ Ã‚Â¦Ã¢â‚¬Å“ÃƒÂ Ã‚Â¦Ã‚Â¯ÃƒÂ Ã‚Â¦Ã‚Â¼ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â°ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¡ ÃƒÂ Ã‚Â¦Ã‚Â­ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â²ÃƒÂ Ã‚Â§Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¦Ã¢â‚¬â€ÃƒÂ Ã‚Â§Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¦Ã¢â‚¬ÂºÃƒÂ Ã‚Â§Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¦Ã‚Â¨?", signIn: "ÃƒÂ Ã‚Â¦Ã‚Â¸ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¦Ã‚Â¨ ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¦Ã‚Â¨ ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¦Ã‚Â°ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¨",
+        or: "ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¦ÃƒÂ Ã‚Â¦Ã‚Â¥ÃƒÂ Ã‚Â¦Ã‚Â¬ÃƒÂ Ã‚Â¦Ã‚Â¾", signInGoogle: "Google ÃƒÂ Ã‚Â¦Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â° ÃƒÂ Ã‚Â¦Ã‚Â¸ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â¥ÃƒÂ Ã‚Â§Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¦Ã‚Â¸ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¦Ã‚Â¨ ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¦Ã‚Â¨ ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¦Ã‚Â°ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¨",
+        chooseRole: "ÃƒÂ Ã‚Â¦Ã¢â‚¬Â ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â° ÃƒÂ Ã‚Â¦Ã‚Â­ÃƒÂ Ã‚Â§Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¦Ã‚Â®ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¦Ã‚Â¾ ÃƒÂ Ã‚Â¦Ã…Â¡ÃƒÂ Ã‚Â¦Ã‚Â¯ÃƒÂ Ã‚Â¦Ã‚Â¼ÃƒÂ Ã‚Â¦Ã‚Â¨ ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¦Ã‚Â°ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¨", chooseRoleSub: "ÃƒÂ Ã‚Â¦Ã‚Â¯ÃƒÂ Ã‚Â§Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¦Ã‚Â­ÃƒÂ Ã‚Â§Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¦Ã‚Â®ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¦Ã‚Â¾ ÃƒÂ Ã‚Â¦Ã¢â‚¬Â ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â§Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¦Ã‚Â¸ÃƒÂ Ã‚Â§Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¦Ã‚Â°ÃƒÂ Ã‚Â¦Ã‚Â¾ ÃƒÂ Ã‚Â¦Ã‚Â¬ÃƒÂ Ã‚Â¦Ã‚Â°ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â£ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¾ ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¦Ã‚Â°ÃƒÂ Ã‚Â§Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¦Ã‚Â¤ÃƒÂ Ã‚Â¦Ã‚Â¾ ÃƒÂ Ã‚Â¦Ã…Â¡ÃƒÂ Ã‚Â¦Ã‚Â¯ÃƒÂ Ã‚Â¦Ã‚Â¼ÃƒÂ Ã‚Â¦Ã‚Â¨ ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¦Ã‚Â°ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¨",
+        womanReg: "ÃƒÂ Ã‚Â¦Ã‚Â®ÃƒÂ Ã‚Â¦Ã‚Â¹ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã‚Â²ÃƒÂ Ã‚Â¦Ã‚Â¾ ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã‚Â¬ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â§ÃƒÂ Ã‚Â¦Ã‚Â¨", fullName: "ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â°ÃƒÂ Ã‚Â§Ã¢â‚¬Â¹ ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â®", fullNamePlaceholder: "ÃƒÂ Ã‚Â¦Ã¢â‚¬Â ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â° ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â°ÃƒÂ Ã‚Â§Ã¢â‚¬Â¹ ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â®",
+        skills: "ÃƒÂ Ã‚Â¦Ã‚Â¦ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â·ÃƒÂ Ã‚Â¦Ã‚Â¤ÃƒÂ Ã‚Â¦Ã‚Â¾", skillsPlaceholder: "ÃƒÂ Ã‚Â¦Ã¢â‚¬Â°ÃƒÂ Ã‚Â¦Ã‚Â¦ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã†â€™ ÃƒÂ Ã‚Â¦Ã‚Â¸ÃƒÂ Ã‚Â§Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¦Ã‚Â²ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¡, ÃƒÂ Ã‚Â¦Ã‚Â¹ÃƒÂ Ã‚Â¦Ã‚Â¸ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¤ÃƒÂ Ã‚Â¦Ã‚Â¶ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã‚Â²ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Âª, ÃƒÂ Ã‚Â¦Ã‚Â¶ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â·ÃƒÂ Ã‚Â¦Ã‚Â¾",
+        jobPref: "ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã…â€œÃƒÂ Ã‚Â§Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¦Ã‚Â° ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â¦Ã¢â‚¬ÂºÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¦", selectPref: "ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â¦Ã¢â‚¬ÂºÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¦ ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã‚Â°ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¬ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã…Â¡ÃƒÂ Ã‚Â¦Ã‚Â¨ ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¦Ã‚Â°ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¨", createAccount: "ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¦ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¯ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬Â°ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã…Â¸ ÃƒÂ Ã‚Â¦Ã‚Â¤ÃƒÂ Ã‚Â§Ã‹â€ ÃƒÂ Ã‚Â¦Ã‚Â°ÃƒÂ Ã‚Â¦Ã‚Â¿ ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¦Ã‚Â°ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¨",
+        companyReg: "ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â§Ã¢â‚¬Â¹ÃƒÂ Ã‚Â¦Ã‚Â®ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¿ ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã‚Â¬ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â§ÃƒÂ Ã‚Â¦Ã‚Â¨", companyName: "ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â§Ã¢â‚¬Â¹ÃƒÂ Ã‚Â¦Ã‚Â®ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã‚Â° ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â®", industry: "ÃƒÂ Ã‚Â¦Ã‚Â¶ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã‚Â²ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Âª",
+        address: "ÃƒÂ Ã‚Â¦Ã‚Â ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¾", addressPlaceholder: "ÃƒÂ Ã‚Â¦Ã‚Â¶ÃƒÂ Ã‚Â¦Ã‚Â¹ÃƒÂ Ã‚Â¦Ã‚Â°, ÃƒÂ Ã‚Â¦Ã‚Â°ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã…â€œÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¯", registerCompany: "ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â§Ã¢â‚¬Â¹ÃƒÂ Ã‚Â¦Ã‚Â®ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¿ ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã‚Â¬ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â§ÃƒÂ Ã‚Â¦Ã‚Â¨ ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¦Ã‚Â°ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¨",
+        adminReg: "ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¦ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¯ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â¡ÃƒÂ Ã‚Â¦Ã‚Â®ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã‚Â¨ ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã‚Â¬ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â§ÃƒÂ Ã‚Â¦Ã‚Â¨", registerAdmin: "ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¦ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¯ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â¡ÃƒÂ Ã‚Â¦Ã‚Â®ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã‚Â¨ ÃƒÂ Ã‚Â¦Ã‚Â¹ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã‚Â¸ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â¬ÃƒÂ Ã‚Â§Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã‚Â¬ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â§ÃƒÂ Ã‚Â¦Ã‚Â¨ ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¦Ã‚Â°ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¨",
+        newToTarini: "Tarini ÃƒÂ Ã‚Â¦Ã‚Â¤ÃƒÂ Ã‚Â§Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¤ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¨?", signUp: "ÃƒÂ Ã‚Â¦Ã‚Â¸ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¦Ã‚Â¨ ÃƒÂ Ã‚Â¦Ã¢â‚¬Â ÃƒÂ Ã‚Â¦Ã‚Âª ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¦Ã‚Â°ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¨",
+        alreadyHaveAccount: "ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¦Ã‚Â¤ÃƒÂ Ã‚Â§Ã¢â‚¬Â¹ÃƒÂ Ã‚Â¦Ã‚Â®ÃƒÂ Ã‚Â¦Ã‚Â§ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¯ÃƒÂ Ã‚Â§Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¦Ã‚ÂÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¦Ã…Â¸ÃƒÂ Ã‚Â¦Ã‚Â¿ ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¦ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¯ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬Â°ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã…Â¸ ÃƒÂ Ã‚Â¦Ã¢â‚¬Â ÃƒÂ Ã‚Â¦Ã¢â‚¬ÂºÃƒÂ Ã‚Â§Ã¢â‚¬Â¡?", back: "ÃƒÂ Ã‚Â¦Ã‚Â«ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã‚Â°ÃƒÂ Ã‚Â§Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¦Ã‚Â¯ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â¨",
+        welcomeBack: "Tarini ÃƒÂ Ã‚Â¦Ã‚Â¤ÃƒÂ Ã‚Â§Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¦Ã¢â‚¬Â ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â§Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¦Ã¢â‚¬Â ÃƒÂ Ã‚Â¦Ã‚Â¬ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â° ÃƒÂ Ã‚Â¦Ã‚Â¸ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¬ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬â€ÃƒÂ Ã‚Â¦Ã‚Â¤ÃƒÂ Ã‚Â¦Ã‚Â®", tariniWelcomesYou: "ÃƒÂ¢Ã…â€œÃ‚Â¦ Tarini ÃƒÂ Ã‚Â¦Ã¢â‚¬Â ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â§Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¦Ã‚Â¸ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¬ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬â€ÃƒÂ Ã‚Â¦Ã‚Â¤ ÃƒÂ Ã‚Â¦Ã…â€œÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â¯ÃƒÂ Ã‚Â¦Ã‚Â¼"
     },
     mr: {
-        emailAddress: "ईमेल पत्ता", emailPlaceholder: "name@example.com",
-        password: "पासवर्ड", passwordPlaceholder: "पासवर्ड",
-        forgotPassword: "पासवर्ड विसरलात?", signIn: "साइन इन करा",
-        or: "किंवा", signInGoogle: "Google सह साइन इन करा",
-        chooseRole: "तुमची भूमिका निवडा", chooseRoleSub: "तुमचे उत्तम वर्णन करणारी भूमिका निवडा",
-        womanReg: "महिला नोंदणी", fullName: "पूर्ण नाव", fullNamePlaceholder: "तुमचे पूर्ण नाव",
-        skills: "कौशल्ये", skillsPlaceholder: "उदा. शिवणकाम, हस्तकला, शिक्षण",
-        jobPref: "नोकरीची पसंती", selectPref: "पसंती निवडा", createAccount: "खाते तयार करा",
-        companyReg: "कंपनी नोंदणी", companyName: "कंपनीचे नाव", industry: "उद्योग",
-        address: "पत्ता", addressPlaceholder: "शहर, राज्य", registerCompany: "कंपनीची नोंदणी करा",
-        adminReg: "प्रशासक नोंदणी", registerAdmin: "प्रशासक म्हणून नोंदणी करा",
-        newToTarini: "Tarini वर नवीन आहात?", signUp: "साइन अप करा",
-        alreadyHaveAccount: "आधीपासूनच खाते आहे?", back: "मागे",
-        welcomeBack: "Tarini वर आपले पुन्हा स्वागत आहे", tariniWelcomesYou: "✦ Tarini आपले स्वागत करत आहे"
+        emailAddress: "ÃƒÂ Ã‚Â¤Ã‹â€ ÃƒÂ Ã‚Â¤Ã‚Â®ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¤Ã‚Â² ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã‚Â¤ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â¤ÃƒÂ Ã‚Â¤Ã‚Â¾", emailPlaceholder: "name@example.com",
+        password: "ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¤Ã‚ÂµÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â¡", passwordPlaceholder: "ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¤Ã‚ÂµÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â¡",
+        forgotPassword: "ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¤Ã‚ÂµÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â¡ ÃƒÂ Ã‚Â¤Ã‚ÂµÃƒÂ Ã‚Â¤Ã‚Â¿ÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¤Ã‚Â²ÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚Â¤?", signIn: "ÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¤Ã‚Â¨ ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¤Ã‚Â¨ ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¤Ã‚Â¾",
+        or: "ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â¿ÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã‚ÂµÃƒÂ Ã‚Â¤Ã‚Â¾", signInGoogle: "Google ÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¤Ã‚Â¹ ÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¤Ã‚Â¨ ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¤Ã‚Â¨ ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¤Ã‚Â¾",
+        chooseRole: "ÃƒÂ Ã‚Â¤Ã‚Â¤ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â®ÃƒÂ Ã‚Â¤Ã…Â¡ÃƒÂ Ã‚Â¥Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¤Ã‚Â­ÃƒÂ Ã‚Â¥Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã‚Â®ÃƒÂ Ã‚Â¤Ã‚Â¿ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â¾ ÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¤Ã‚Â¿ÃƒÂ Ã‚Â¤Ã‚ÂµÃƒÂ Ã‚Â¤Ã‚Â¡ÃƒÂ Ã‚Â¤Ã‚Â¾", chooseRoleSub: "ÃƒÂ Ã‚Â¤Ã‚Â¤ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â®ÃƒÂ Ã‚Â¤Ã…Â¡ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¤Ã¢â‚¬Â°ÃƒÂ Ã‚Â¤Ã‚Â¤ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â¤ÃƒÂ Ã‚Â¤Ã‚Â® ÃƒÂ Ã‚Â¤Ã‚ÂµÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â£ÃƒÂ Ã‚Â¤Ã‚Â¨ ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¤Ã‚Â£ÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¥Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¤Ã‚Â­ÃƒÂ Ã‚Â¥Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã‚Â®ÃƒÂ Ã‚Â¤Ã‚Â¿ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â¾ ÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¤Ã‚Â¿ÃƒÂ Ã‚Â¤Ã‚ÂµÃƒÂ Ã‚Â¤Ã‚Â¡ÃƒÂ Ã‚Â¤Ã‚Â¾",
+        womanReg: "ÃƒÂ Ã‚Â¤Ã‚Â®ÃƒÂ Ã‚Â¤Ã‚Â¹ÃƒÂ Ã‚Â¤Ã‚Â¿ÃƒÂ Ã‚Â¤Ã‚Â²ÃƒÂ Ã‚Â¤Ã‚Â¾ ÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¹ÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã‚Â¦ÃƒÂ Ã‚Â¤Ã‚Â£ÃƒÂ Ã‚Â¥Ã¢â€šÂ¬", fullName: "ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¥Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â£ ÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚Âµ", fullNamePlaceholder: "ÃƒÂ Ã‚Â¤Ã‚Â¤ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â®ÃƒÂ Ã‚Â¤Ã…Â¡ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¥Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â£ ÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚Âµ",
+        skills: "ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¥Ã…â€™ÃƒÂ Ã‚Â¤Ã‚Â¶ÃƒÂ Ã‚Â¤Ã‚Â²ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â¯ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡", skillsPlaceholder: "ÃƒÂ Ã‚Â¤Ã¢â‚¬Â°ÃƒÂ Ã‚Â¤Ã‚Â¦ÃƒÂ Ã‚Â¤Ã‚Â¾. ÃƒÂ Ã‚Â¤Ã‚Â¶ÃƒÂ Ã‚Â¤Ã‚Â¿ÃƒÂ Ã‚Â¤Ã‚ÂµÃƒÂ Ã‚Â¤Ã‚Â£ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚Â®, ÃƒÂ Ã‚Â¤Ã‚Â¹ÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â¤ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â²ÃƒÂ Ã‚Â¤Ã‚Â¾, ÃƒÂ Ã‚Â¤Ã‚Â¶ÃƒÂ Ã‚Â¤Ã‚Â¿ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â·ÃƒÂ Ã‚Â¤Ã‚Â£",
+        jobPref: "ÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¹ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¥Ã¢â€šÂ¬ÃƒÂ Ã‚Â¤Ã…Â¡ÃƒÂ Ã‚Â¥Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã‚Â¤ÃƒÂ Ã‚Â¥Ã¢â€šÂ¬", selectPref: "ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã‚Â¤ÃƒÂ Ã‚Â¥Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¤Ã‚Â¿ÃƒÂ Ã‚Â¤Ã‚ÂµÃƒÂ Ã‚Â¤Ã‚Â¡ÃƒÂ Ã‚Â¤Ã‚Â¾", createAccount: "ÃƒÂ Ã‚Â¤Ã¢â‚¬â€œÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚Â¤ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¤Ã‚Â¤ÃƒÂ Ã‚Â¤Ã‚Â¯ÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚Â° ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¤Ã‚Â¾",
+        companyReg: "ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¥Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¹ÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã‚Â¦ÃƒÂ Ã‚Â¤Ã‚Â£ÃƒÂ Ã‚Â¥Ã¢â€šÂ¬", companyName: "ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¥Ã¢â€šÂ¬ÃƒÂ Ã‚Â¤Ã…Â¡ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚Âµ", industry: "ÃƒÂ Ã‚Â¤Ã¢â‚¬Â°ÃƒÂ Ã‚Â¤Ã‚Â¦ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â¯ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¹ÃƒÂ Ã‚Â¤Ã¢â‚¬â€",
+        address: "ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã‚Â¤ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â¤ÃƒÂ Ã‚Â¤Ã‚Â¾", addressPlaceholder: "ÃƒÂ Ã‚Â¤Ã‚Â¶ÃƒÂ Ã‚Â¤Ã‚Â¹ÃƒÂ Ã‚Â¤Ã‚Â°, ÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã…â€œÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â¯", registerCompany: "ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¥Ã¢â€šÂ¬ÃƒÂ Ã‚Â¤Ã…Â¡ÃƒÂ Ã‚Â¥Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¹ÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã‚Â¦ÃƒÂ Ã‚Â¤Ã‚Â£ÃƒÂ Ã‚Â¥Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¤Ã‚Â¾",
+        adminReg: "ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¤Ã‚Â¶ÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ ÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¹ÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã‚Â¦ÃƒÂ Ã‚Â¤Ã‚Â£ÃƒÂ Ã‚Â¥Ã¢â€šÂ¬", registerAdmin: "ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¤Ã‚Â¶ÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ ÃƒÂ Ã‚Â¤Ã‚Â®ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â¹ÃƒÂ Ã‚Â¤Ã‚Â£ÃƒÂ Ã‚Â¥Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã‚Â¨ ÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¹ÃƒÂ Ã‚Â¤Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã‚Â¦ÃƒÂ Ã‚Â¤Ã‚Â£ÃƒÂ Ã‚Â¥Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¤Ã‚Â¾",
+        newToTarini: "Tarini ÃƒÂ Ã‚Â¤Ã‚ÂµÃƒÂ Ã‚Â¤Ã‚Â° ÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¤Ã‚ÂµÃƒÂ Ã‚Â¥Ã¢â€šÂ¬ÃƒÂ Ã‚Â¤Ã‚Â¨ ÃƒÂ Ã‚Â¤Ã¢â‚¬Â ÃƒÂ Ã‚Â¤Ã‚Â¹ÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚Â¤?", signUp: "ÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¤Ã‚Â¨ ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¦ÃƒÂ Ã‚Â¤Ã‚Âª ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¤Ã‚Â¾",
+        alreadyHaveAccount: "ÃƒÂ Ã‚Â¤Ã¢â‚¬Â ÃƒÂ Ã‚Â¤Ã‚Â§ÃƒÂ Ã‚Â¥Ã¢â€šÂ¬ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¥Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¤Ã…Â¡ ÃƒÂ Ã‚Â¤Ã¢â‚¬â€œÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã‚Â¤ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¤Ã¢â‚¬Â ÃƒÂ Ã‚Â¤Ã‚Â¹ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡?", back: "ÃƒÂ Ã‚Â¤Ã‚Â®ÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã¢â‚¬â€ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡",
+        welcomeBack: "Tarini ÃƒÂ Ã‚Â¤Ã‚ÂµÃƒÂ Ã‚Â¤Ã‚Â° ÃƒÂ Ã‚Â¤Ã¢â‚¬Â ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã‚Â²ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â¨ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚Â¹ÃƒÂ Ã‚Â¤Ã‚Â¾ ÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚ÂµÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã¢â‚¬â€ÃƒÂ Ã‚Â¤Ã‚Â¤ ÃƒÂ Ã‚Â¤Ã¢â‚¬Â ÃƒÂ Ã‚Â¤Ã‚Â¹ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡", tariniWelcomesYou: "ÃƒÂ¢Ã…â€œÃ‚Â¦ Tarini ÃƒÂ Ã‚Â¤Ã¢â‚¬Â ÃƒÂ Ã‚Â¤Ã‚ÂªÃƒÂ Ã‚Â¤Ã‚Â²ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¤Ã‚Â¸ÃƒÂ Ã‚Â¥Ã‚ÂÃƒÂ Ã‚Â¤Ã‚ÂµÃƒÂ Ã‚Â¤Ã‚Â¾ÃƒÂ Ã‚Â¤Ã¢â‚¬â€ÃƒÂ Ã‚Â¤Ã‚Â¤ ÃƒÂ Ã‚Â¤Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¤Ã‚Â°ÃƒÂ Ã‚Â¤Ã‚Â¤ ÃƒÂ Ã‚Â¤Ã¢â‚¬Â ÃƒÂ Ã‚Â¤Ã‚Â¹ÃƒÂ Ã‚Â¥Ã¢â‚¬Â¡"
     },
     ta: {
-        emailAddress: "மின்னஞ்சல் முகவரி", emailPlaceholder: "name@example.com",
-        password: "கடவுச்சொல்", passwordPlaceholder: "கடவுச்சொல்",
-        forgotPassword: "கடவுச்சொல்லை மறந்துவிட்டீர்களா?", signIn: "உள்நுழைக",
-        or: "அல்லது", signInGoogle: "Google உடன் உள்நுழைக",
-        chooseRole: "உங்கள் பங்கைத் தேர்வுசெய்க", chooseRoleSub: "உங்களைச் சிறப்பாக விவரிக்கும் பங்கைத் தேர்ந்தெடுக்கவும்",
-        womanReg: "பெண் பதிவு", fullName: "முழு பெயர்", fullNamePlaceholder: "உங்கள் முழு பெயர்",
-        skills: "திறன்கள்", skillsPlaceholder: "எ.கா. தையல், கைவினைப்பொருட்கள்",
-        jobPref: "வேலை விருப்பம்", selectPref: "விருப்பத்தை தேர்ந்தெடுக்கவும்", createAccount: "கணக்கை உருவாக்கவும்",
-        companyReg: "நிறுவனத்தின் பதிவு", companyName: "நிறுவனத்தின் பெயர்", industry: "தொழில்",
-        address: "முகவரி", addressPlaceholder: "நகரம், மாநிலம்", registerCompany: "நிறுவனத்தை பதிவு செய்யவும்",
-        adminReg: "நிர்வாகி பதிவு", registerAdmin: "நிவாகியாக பதிவு செய்யவும்",
-        newToTarini: "Tarini க்கு புதியவரா?", signUp: "பதிவு செய்க",
-        alreadyHaveAccount: "ஏற்கனவே கணக்கு உள்ளதா?", back: "பின்செல்",
-        welcomeBack: "Tarini க்கு மீண்டும் வரவேற்கிறோம்", tariniWelcomesYou: "✦ Tarini உங்களை வரவேற்கிறது"
+        emailAddress: "ÃƒÂ Ã‚Â®Ã‚Â®ÃƒÂ Ã‚Â®Ã‚Â¿ÃƒÂ Ã‚Â®Ã‚Â©ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â©ÃƒÂ Ã‚Â®Ã…Â¾ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã…Â¡ÃƒÂ Ã‚Â®Ã‚Â²ÃƒÂ Ã‚Â¯Ã‚Â ÃƒÂ Ã‚Â®Ã‚Â®ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â®Ã‚Â°ÃƒÂ Ã‚Â®Ã‚Â¿", emailPlaceholder: "name@example.com",
+        password: "ÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â®Ã…Â¸ÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã…Â¡ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã…Â¡ÃƒÂ Ã‚Â¯Ã…Â ÃƒÂ Ã‚Â®Ã‚Â²ÃƒÂ Ã‚Â¯Ã‚Â", passwordPlaceholder: "ÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â®Ã…Â¸ÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã…Â¡ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã…Â¡ÃƒÂ Ã‚Â¯Ã…Â ÃƒÂ Ã‚Â®Ã‚Â²ÃƒÂ Ã‚Â¯Ã‚Â",
+        forgotPassword: "ÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â®Ã…Â¸ÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã…Â¡ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã…Â¡ÃƒÂ Ã‚Â¯Ã…Â ÃƒÂ Ã‚Â®Ã‚Â²ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â²ÃƒÂ Ã‚Â¯Ã‹â€  ÃƒÂ Ã‚Â®Ã‚Â®ÃƒÂ Ã‚Â®Ã‚Â±ÃƒÂ Ã‚Â®Ã‚Â¨ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â¤ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â®Ã‚Â¿ÃƒÂ Ã‚Â®Ã…Â¸ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã…Â¸ÃƒÂ Ã‚Â¯Ã¢â€šÂ¬ÃƒÂ Ã‚Â®Ã‚Â°ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â®Ã‚Â³ÃƒÂ Ã‚Â®Ã‚Â¾?", signIn: "ÃƒÂ Ã‚Â®Ã¢â‚¬Â°ÃƒÂ Ã‚Â®Ã‚Â³ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â¨ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â´ÃƒÂ Ã‚Â¯Ã‹â€ ÃƒÂ Ã‚Â®Ã¢â‚¬Â¢",
+        or: "ÃƒÂ Ã‚Â®Ã¢â‚¬Â¦ÃƒÂ Ã‚Â®Ã‚Â²ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â²ÃƒÂ Ã‚Â®Ã‚Â¤ÃƒÂ Ã‚Â¯Ã‚Â", signInGoogle: "Google ÃƒÂ Ã‚Â®Ã¢â‚¬Â°ÃƒÂ Ã‚Â®Ã…Â¸ÃƒÂ Ã‚Â®Ã‚Â©ÃƒÂ Ã‚Â¯Ã‚Â ÃƒÂ Ã‚Â®Ã¢â‚¬Â°ÃƒÂ Ã‚Â®Ã‚Â³ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â¨ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â´ÃƒÂ Ã‚Â¯Ã‹â€ ÃƒÂ Ã‚Â®Ã¢â‚¬Â¢",
+        chooseRole: "ÃƒÂ Ã‚Â®Ã¢â‚¬Â°ÃƒÂ Ã‚Â®Ã¢â€žÂ¢ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â®Ã‚Â³ÃƒÂ Ã‚Â¯Ã‚Â ÃƒÂ Ã‚Â®Ã‚ÂªÃƒÂ Ã‚Â®Ã¢â€žÂ¢ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¯Ã‹â€ ÃƒÂ Ã‚Â®Ã‚Â¤ÃƒÂ Ã‚Â¯Ã‚Â ÃƒÂ Ã‚Â®Ã‚Â¤ÃƒÂ Ã‚Â¯Ã¢â‚¬Â¡ÃƒÂ Ã‚Â®Ã‚Â°ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã…Â¡ÃƒÂ Ã‚Â¯Ã¢â‚¬Â ÃƒÂ Ã‚Â®Ã‚Â¯ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã¢â‚¬Â¢", chooseRoleSub: "ÃƒÂ Ã‚Â®Ã¢â‚¬Â°ÃƒÂ Ã‚Â®Ã¢â€žÂ¢ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â®Ã‚Â³ÃƒÂ Ã‚Â¯Ã‹â€ ÃƒÂ Ã‚Â®Ã…Â¡ÃƒÂ Ã‚Â¯Ã‚Â ÃƒÂ Ã‚Â®Ã…Â¡ÃƒÂ Ã‚Â®Ã‚Â¿ÃƒÂ Ã‚Â®Ã‚Â±ÃƒÂ Ã‚Â®Ã‚ÂªÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚ÂªÃƒÂ Ã‚Â®Ã‚Â¾ÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ ÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â®Ã‚Â¿ÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â®Ã‚Â°ÃƒÂ Ã‚Â®Ã‚Â¿ÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â®ÃƒÂ Ã‚Â¯Ã‚Â ÃƒÂ Ã‚Â®Ã‚ÂªÃƒÂ Ã‚Â®Ã¢â€žÂ¢ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¯Ã‹â€ ÃƒÂ Ã‚Â®Ã‚Â¤ÃƒÂ Ã‚Â¯Ã‚Â ÃƒÂ Ã‚Â®Ã‚Â¤ÃƒÂ Ã‚Â¯Ã¢â‚¬Â¡ÃƒÂ Ã‚Â®Ã‚Â°ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â¨ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â¤ÃƒÂ Ã‚Â¯Ã¢â‚¬Â ÃƒÂ Ã‚Â®Ã…Â¸ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â®ÃƒÂ Ã‚Â¯Ã‚Â",
+        womanReg: "ÃƒÂ Ã‚Â®Ã‚ÂªÃƒÂ Ã‚Â¯Ã¢â‚¬Â ÃƒÂ Ã‚Â®Ã‚Â£ÃƒÂ Ã‚Â¯Ã‚Â ÃƒÂ Ã‚Â®Ã‚ÂªÃƒÂ Ã‚Â®Ã‚Â¤ÃƒÂ Ã‚Â®Ã‚Â¿ÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â¯Ã‚Â", fullName: "ÃƒÂ Ã‚Â®Ã‚Â®ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â´ÃƒÂ Ã‚Â¯Ã‚Â ÃƒÂ Ã‚Â®Ã‚ÂªÃƒÂ Ã‚Â¯Ã¢â‚¬Â ÃƒÂ Ã‚Â®Ã‚Â¯ÃƒÂ Ã‚Â®Ã‚Â°ÃƒÂ Ã‚Â¯Ã‚Â", fullNamePlaceholder: "ÃƒÂ Ã‚Â®Ã¢â‚¬Â°ÃƒÂ Ã‚Â®Ã¢â€žÂ¢ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â®Ã‚Â³ÃƒÂ Ã‚Â¯Ã‚Â ÃƒÂ Ã‚Â®Ã‚Â®ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â´ÃƒÂ Ã‚Â¯Ã‚Â ÃƒÂ Ã‚Â®Ã‚ÂªÃƒÂ Ã‚Â¯Ã¢â‚¬Â ÃƒÂ Ã‚Â®Ã‚Â¯ÃƒÂ Ã‚Â®Ã‚Â°ÃƒÂ Ã‚Â¯Ã‚Â",
+        skills: "ÃƒÂ Ã‚Â®Ã‚Â¤ÃƒÂ Ã‚Â®Ã‚Â¿ÃƒÂ Ã‚Â®Ã‚Â±ÃƒÂ Ã‚Â®Ã‚Â©ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â®Ã‚Â³ÃƒÂ Ã‚Â¯Ã‚Â", skillsPlaceholder: "ÃƒÂ Ã‚Â®Ã…Â½.ÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â®Ã‚Â¾. ÃƒÂ Ã‚Â®Ã‚Â¤ÃƒÂ Ã‚Â¯Ã‹â€ ÃƒÂ Ã‚Â®Ã‚Â¯ÃƒÂ Ã‚Â®Ã‚Â²ÃƒÂ Ã‚Â¯Ã‚Â, ÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¯Ã‹â€ ÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â®Ã‚Â¿ÃƒÂ Ã‚Â®Ã‚Â©ÃƒÂ Ã‚Â¯Ã‹â€ ÃƒÂ Ã‚Â®Ã‚ÂªÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚ÂªÃƒÂ Ã‚Â¯Ã…Â ÃƒÂ Ã‚Â®Ã‚Â°ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã…Â¸ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â®Ã‚Â³ÃƒÂ Ã‚Â¯Ã‚Â",
+        jobPref: "ÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â¯Ã¢â‚¬Â¡ÃƒÂ Ã‚Â®Ã‚Â²ÃƒÂ Ã‚Â¯Ã‹â€  ÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â®Ã‚Â¿ÃƒÂ Ã‚Â®Ã‚Â°ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚ÂªÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚ÂªÃƒÂ Ã‚Â®Ã‚Â®ÃƒÂ Ã‚Â¯Ã‚Â", selectPref: "ÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â®Ã‚Â¿ÃƒÂ Ã‚Â®Ã‚Â°ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚ÂªÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚ÂªÃƒÂ Ã‚Â®Ã‚Â¤ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â¤ÃƒÂ Ã‚Â¯Ã‹â€  ÃƒÂ Ã‚Â®Ã‚Â¤ÃƒÂ Ã‚Â¯Ã¢â‚¬Â¡ÃƒÂ Ã‚Â®Ã‚Â°ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â¨ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â¤ÃƒÂ Ã‚Â¯Ã¢â‚¬Â ÃƒÂ Ã‚Â®Ã…Â¸ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â®ÃƒÂ Ã‚Â¯Ã‚Â", createAccount: "ÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â®Ã‚Â£ÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¯Ã‹â€  ÃƒÂ Ã‚Â®Ã¢â‚¬Â°ÃƒÂ Ã‚Â®Ã‚Â°ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â®Ã‚Â¾ÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â®ÃƒÂ Ã‚Â¯Ã‚Â",
+        companyReg: "ÃƒÂ Ã‚Â®Ã‚Â¨ÃƒÂ Ã‚Â®Ã‚Â¿ÃƒÂ Ã‚Â®Ã‚Â±ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â®Ã‚Â©ÃƒÂ Ã‚Â®Ã‚Â¤ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â¤ÃƒÂ Ã‚Â®Ã‚Â¿ÃƒÂ Ã‚Â®Ã‚Â©ÃƒÂ Ã‚Â¯Ã‚Â ÃƒÂ Ã‚Â®Ã‚ÂªÃƒÂ Ã‚Â®Ã‚Â¤ÃƒÂ Ã‚Â®Ã‚Â¿ÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â¯Ã‚Â", companyName: "ÃƒÂ Ã‚Â®Ã‚Â¨ÃƒÂ Ã‚Â®Ã‚Â¿ÃƒÂ Ã‚Â®Ã‚Â±ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â®Ã‚Â©ÃƒÂ Ã‚Â®Ã‚Â¤ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â¤ÃƒÂ Ã‚Â®Ã‚Â¿ÃƒÂ Ã‚Â®Ã‚Â©ÃƒÂ Ã‚Â¯Ã‚Â ÃƒÂ Ã‚Â®Ã‚ÂªÃƒÂ Ã‚Â¯Ã¢â‚¬Â ÃƒÂ Ã‚Â®Ã‚Â¯ÃƒÂ Ã‚Â®Ã‚Â°ÃƒÂ Ã‚Â¯Ã‚Â", industry: "ÃƒÂ Ã‚Â®Ã‚Â¤ÃƒÂ Ã‚Â¯Ã…Â ÃƒÂ Ã‚Â®Ã‚Â´ÃƒÂ Ã‚Â®Ã‚Â¿ÃƒÂ Ã‚Â®Ã‚Â²ÃƒÂ Ã‚Â¯Ã‚Â",
+        address: "ÃƒÂ Ã‚Â®Ã‚Â®ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â®Ã‚Â°ÃƒÂ Ã‚Â®Ã‚Â¿", addressPlaceholder: "ÃƒÂ Ã‚Â®Ã‚Â¨ÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â®Ã‚Â°ÃƒÂ Ã‚Â®Ã‚Â®ÃƒÂ Ã‚Â¯Ã‚Â, ÃƒÂ Ã‚Â®Ã‚Â®ÃƒÂ Ã‚Â®Ã‚Â¾ÃƒÂ Ã‚Â®Ã‚Â¨ÃƒÂ Ã‚Â®Ã‚Â¿ÃƒÂ Ã‚Â®Ã‚Â²ÃƒÂ Ã‚Â®Ã‚Â®ÃƒÂ Ã‚Â¯Ã‚Â", registerCompany: "ÃƒÂ Ã‚Â®Ã‚Â¨ÃƒÂ Ã‚Â®Ã‚Â¿ÃƒÂ Ã‚Â®Ã‚Â±ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â®Ã‚Â©ÃƒÂ Ã‚Â®Ã‚Â¤ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â¤ÃƒÂ Ã‚Â¯Ã‹â€  ÃƒÂ Ã‚Â®Ã‚ÂªÃƒÂ Ã‚Â®Ã‚Â¤ÃƒÂ Ã‚Â®Ã‚Â¿ÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â¯Ã‚Â ÃƒÂ Ã‚Â®Ã…Â¡ÃƒÂ Ã‚Â¯Ã¢â‚¬Â ÃƒÂ Ã‚Â®Ã‚Â¯ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â¯ÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â®ÃƒÂ Ã‚Â¯Ã‚Â",
+        adminReg: "ÃƒÂ Ã‚Â®Ã‚Â¨ÃƒÂ Ã‚Â®Ã‚Â¿ÃƒÂ Ã‚Â®Ã‚Â°ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â®Ã‚Â¾ÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â®Ã‚Â¿ ÃƒÂ Ã‚Â®Ã‚ÂªÃƒÂ Ã‚Â®Ã‚Â¤ÃƒÂ Ã‚Â®Ã‚Â¿ÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â¯Ã‚Â", registerAdmin: "ÃƒÂ Ã‚Â®Ã‚Â¨ÃƒÂ Ã‚Â®Ã‚Â¿ÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â®Ã‚Â¾ÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â®Ã‚Â¿ÃƒÂ Ã‚Â®Ã‚Â¯ÃƒÂ Ã‚Â®Ã‚Â¾ÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ ÃƒÂ Ã‚Â®Ã‚ÂªÃƒÂ Ã‚Â®Ã‚Â¤ÃƒÂ Ã‚Â®Ã‚Â¿ÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â¯Ã‚Â ÃƒÂ Ã‚Â®Ã…Â¡ÃƒÂ Ã‚Â¯Ã¢â‚¬Â ÃƒÂ Ã‚Â®Ã‚Â¯ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â¯ÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â®ÃƒÂ Ã‚Â¯Ã‚Â",
+        newToTarini: "Tarini ÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¯Ã‚Â ÃƒÂ Ã‚Â®Ã‚ÂªÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â¤ÃƒÂ Ã‚Â®Ã‚Â¿ÃƒÂ Ã‚Â®Ã‚Â¯ÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â®Ã‚Â°ÃƒÂ Ã‚Â®Ã‚Â¾?", signUp: "ÃƒÂ Ã‚Â®Ã‚ÂªÃƒÂ Ã‚Â®Ã‚Â¤ÃƒÂ Ã‚Â®Ã‚Â¿ÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â¯Ã‚Â ÃƒÂ Ã‚Â®Ã…Â¡ÃƒÂ Ã‚Â¯Ã¢â‚¬Â ÃƒÂ Ã‚Â®Ã‚Â¯ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã¢â‚¬Â¢",
+        alreadyHaveAccount: "ÃƒÂ Ã‚Â®Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â±ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â®Ã‚Â©ÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â¯Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â®Ã‚Â£ÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¯Ã‚Â ÃƒÂ Ã‚Â®Ã¢â‚¬Â°ÃƒÂ Ã‚Â®Ã‚Â³ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â³ÃƒÂ Ã‚Â®Ã‚Â¤ÃƒÂ Ã‚Â®Ã‚Â¾?", back: "ÃƒÂ Ã‚Â®Ã‚ÂªÃƒÂ Ã‚Â®Ã‚Â¿ÃƒÂ Ã‚Â®Ã‚Â©ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã…Â¡ÃƒÂ Ã‚Â¯Ã¢â‚¬Â ÃƒÂ Ã‚Â®Ã‚Â²ÃƒÂ Ã‚Â¯Ã‚Â",
+        welcomeBack: "Tarini ÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¯Ã‚Â ÃƒÂ Ã‚Â®Ã‚Â®ÃƒÂ Ã‚Â¯Ã¢â€šÂ¬ÃƒÂ Ã‚Â®Ã‚Â£ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã…Â¸ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã‚Â®ÃƒÂ Ã‚Â¯Ã‚Â ÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â®Ã‚Â°ÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â¯Ã¢â‚¬Â¡ÃƒÂ Ã‚Â®Ã‚Â±ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â®Ã‚Â¿ÃƒÂ Ã‚Â®Ã‚Â±ÃƒÂ Ã‚Â¯Ã¢â‚¬Â¹ÃƒÂ Ã‚Â®Ã‚Â®ÃƒÂ Ã‚Â¯Ã‚Â", tariniWelcomesYou: "ÃƒÂ¢Ã…â€œÃ‚Â¦ Tarini ÃƒÂ Ã‚Â®Ã¢â‚¬Â°ÃƒÂ Ã‚Â®Ã¢â€žÂ¢ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â®Ã‚Â³ÃƒÂ Ã‚Â¯Ã‹â€  ÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â®Ã‚Â°ÃƒÂ Ã‚Â®Ã‚ÂµÃƒÂ Ã‚Â¯Ã¢â‚¬Â¡ÃƒÂ Ã‚Â®Ã‚Â±ÃƒÂ Ã‚Â¯Ã‚ÂÃƒÂ Ã‚Â®Ã¢â‚¬Â¢ÃƒÂ Ã‚Â®Ã‚Â¿ÃƒÂ Ã‚Â®Ã‚Â±ÃƒÂ Ã‚Â®Ã‚Â¤ÃƒÂ Ã‚Â¯Ã‚Â"
     },
     te: {
-        emailAddress: "ఇమెయిల్ చిరునామా", emailPlaceholder: "name@example.com",
-        password: "పాస్వర్డ్", passwordPlaceholder: "పాస్వర్డ్",
-        forgotPassword: "పాస్వర్డ్ మర్చిపోయారా?", signIn: "సైన్ ఇన్ చేయండి",
-        or: "లేదా", signInGoogle: "Google తో సైన్ ఇన్ చేయండి",
-        chooseRole: "మీ పాత్రను ఎంచుకోండి", chooseRoleSub: "మిమ్మల్ని ఉత్తమంగా వివరించే పాత్రను ఎంచుకోండి",
-        womanReg: "మహిళా నమోదు", fullName: "పూర్తి పేరు", fullNamePlaceholder: "మీ పూర్తి పేరు",
-        skills: "నైపుణ్యాలు", skillsPlaceholder: "ఉదా. కుట్టుపని, హస్తకళలు",
-        jobPref: "ఉద్యోగ ప్రాధాన్యత", selectPref: "ప్రాధాన్యతను ఎంచుకోండి", createAccount: "ఖాతాను సృష్టించండి",
-        companyReg: "కంపెనీ నమోదు", companyName: "కంపెనీ పేరు", industry: "పరిశ్రమ",
-        address: "చిరునామా", addressPlaceholder: "నగరం, రాష్ట్రం", registerCompany: "కంపెనీని నమోదు చేయండి",
-        adminReg: "అడ్మిన్ నమోదు", registerAdmin: "అడ్మిన్ గా నమోదు చేయండి",
-        newToTarini: "Tarini కి కొత్తా?", signUp: "సైన్ అప్ చేయండి",
-        alreadyHaveAccount: "ఇప్పటికే ఖాతా ఉందా?", back: "వెనుకకు",
-        welcomeBack: "Tarini కి తిరిగి స్వాగతం", tariniWelcomesYou: "✦ Tarini మీకు స్వాగతం పలుకుతోంది"
+        emailAddress: "ÃƒÂ Ã‚Â°Ã¢â‚¬Â¡ÃƒÂ Ã‚Â°Ã‚Â®ÃƒÂ Ã‚Â±Ã¢â‚¬Â ÃƒÂ Ã‚Â°Ã‚Â¯ÃƒÂ Ã‚Â°Ã‚Â¿ÃƒÂ Ã‚Â°Ã‚Â²ÃƒÂ Ã‚Â±Ã‚Â ÃƒÂ Ã‚Â°Ã…Â¡ÃƒÂ Ã‚Â°Ã‚Â¿ÃƒÂ Ã‚Â°Ã‚Â°ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚Â¨ÃƒÂ Ã‚Â°Ã‚Â¾ÃƒÂ Ã‚Â°Ã‚Â®ÃƒÂ Ã‚Â°Ã‚Â¾", emailPlaceholder: "name@example.com",
+        password: "ÃƒÂ Ã‚Â°Ã‚ÂªÃƒÂ Ã‚Â°Ã‚Â¾ÃƒÂ Ã‚Â°Ã‚Â¸ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚ÂµÃƒÂ Ã‚Â°Ã‚Â°ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚Â¡ÃƒÂ Ã‚Â±Ã‚Â", passwordPlaceholder: "ÃƒÂ Ã‚Â°Ã‚ÂªÃƒÂ Ã‚Â°Ã‚Â¾ÃƒÂ Ã‚Â°Ã‚Â¸ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚ÂµÃƒÂ Ã‚Â°Ã‚Â°ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚Â¡ÃƒÂ Ã‚Â±Ã‚Â",
+        forgotPassword: "ÃƒÂ Ã‚Â°Ã‚ÂªÃƒÂ Ã‚Â°Ã‚Â¾ÃƒÂ Ã‚Â°Ã‚Â¸ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚ÂµÃƒÂ Ã‚Â°Ã‚Â°ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚Â¡ÃƒÂ Ã‚Â±Ã‚Â ÃƒÂ Ã‚Â°Ã‚Â®ÃƒÂ Ã‚Â°Ã‚Â°ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã…Â¡ÃƒÂ Ã‚Â°Ã‚Â¿ÃƒÂ Ã‚Â°Ã‚ÂªÃƒÂ Ã‚Â±Ã¢â‚¬Â¹ÃƒÂ Ã‚Â°Ã‚Â¯ÃƒÂ Ã‚Â°Ã‚Â¾ÃƒÂ Ã‚Â°Ã‚Â°ÃƒÂ Ã‚Â°Ã‚Â¾?", signIn: "ÃƒÂ Ã‚Â°Ã‚Â¸ÃƒÂ Ã‚Â±Ã‹â€ ÃƒÂ Ã‚Â°Ã‚Â¨ÃƒÂ Ã‚Â±Ã‚Â ÃƒÂ Ã‚Â°Ã¢â‚¬Â¡ÃƒÂ Ã‚Â°Ã‚Â¨ÃƒÂ Ã‚Â±Ã‚Â ÃƒÂ Ã‚Â°Ã…Â¡ÃƒÂ Ã‚Â±Ã¢â‚¬Â¡ÃƒÂ Ã‚Â°Ã‚Â¯ÃƒÂ Ã‚Â°Ã¢â‚¬Å¡ÃƒÂ Ã‚Â°Ã‚Â¡ÃƒÂ Ã‚Â°Ã‚Â¿",
+        or: "ÃƒÂ Ã‚Â°Ã‚Â²ÃƒÂ Ã‚Â±Ã¢â‚¬Â¡ÃƒÂ Ã‚Â°Ã‚Â¦ÃƒÂ Ã‚Â°Ã‚Â¾", signInGoogle: "Google ÃƒÂ Ã‚Â°Ã‚Â¤ÃƒÂ Ã‚Â±Ã¢â‚¬Â¹ ÃƒÂ Ã‚Â°Ã‚Â¸ÃƒÂ Ã‚Â±Ã‹â€ ÃƒÂ Ã‚Â°Ã‚Â¨ÃƒÂ Ã‚Â±Ã‚Â ÃƒÂ Ã‚Â°Ã¢â‚¬Â¡ÃƒÂ Ã‚Â°Ã‚Â¨ÃƒÂ Ã‚Â±Ã‚Â ÃƒÂ Ã‚Â°Ã…Â¡ÃƒÂ Ã‚Â±Ã¢â‚¬Â¡ÃƒÂ Ã‚Â°Ã‚Â¯ÃƒÂ Ã‚Â°Ã¢â‚¬Å¡ÃƒÂ Ã‚Â°Ã‚Â¡ÃƒÂ Ã‚Â°Ã‚Â¿",
+        chooseRole: "ÃƒÂ Ã‚Â°Ã‚Â®ÃƒÂ Ã‚Â±Ã¢â€šÂ¬ ÃƒÂ Ã‚Â°Ã‚ÂªÃƒÂ Ã‚Â°Ã‚Â¾ÃƒÂ Ã‚Â°Ã‚Â¤ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚Â°ÃƒÂ Ã‚Â°Ã‚Â¨ÃƒÂ Ã‚Â±Ã‚Â ÃƒÂ Ã‚Â°Ã…Â½ÃƒÂ Ã‚Â°Ã¢â‚¬Å¡ÃƒÂ Ã‚Â°Ã…Â¡ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã¢â‚¬Â¢ÃƒÂ Ã‚Â±Ã¢â‚¬Â¹ÃƒÂ Ã‚Â°Ã¢â‚¬Å¡ÃƒÂ Ã‚Â°Ã‚Â¡ÃƒÂ Ã‚Â°Ã‚Â¿", chooseRoleSub: "ÃƒÂ Ã‚Â°Ã‚Â®ÃƒÂ Ã‚Â°Ã‚Â¿ÃƒÂ Ã‚Â°Ã‚Â®ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚Â®ÃƒÂ Ã‚Â°Ã‚Â²ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚Â¨ÃƒÂ Ã‚Â°Ã‚Â¿ ÃƒÂ Ã‚Â°Ã¢â‚¬Â°ÃƒÂ Ã‚Â°Ã‚Â¤ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚Â¤ÃƒÂ Ã‚Â°Ã‚Â®ÃƒÂ Ã‚Â°Ã¢â‚¬Å¡ÃƒÂ Ã‚Â°Ã¢â‚¬â€ÃƒÂ Ã‚Â°Ã‚Â¾ ÃƒÂ Ã‚Â°Ã‚ÂµÃƒÂ Ã‚Â°Ã‚Â¿ÃƒÂ Ã‚Â°Ã‚ÂµÃƒÂ Ã‚Â°Ã‚Â°ÃƒÂ Ã‚Â°Ã‚Â¿ÃƒÂ Ã‚Â°Ã¢â‚¬Å¡ÃƒÂ Ã‚Â°Ã…Â¡ÃƒÂ Ã‚Â±Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â°Ã‚ÂªÃƒÂ Ã‚Â°Ã‚Â¾ÃƒÂ Ã‚Â°Ã‚Â¤ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚Â°ÃƒÂ Ã‚Â°Ã‚Â¨ÃƒÂ Ã‚Â±Ã‚Â ÃƒÂ Ã‚Â°Ã…Â½ÃƒÂ Ã‚Â°Ã¢â‚¬Å¡ÃƒÂ Ã‚Â°Ã…Â¡ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã¢â‚¬Â¢ÃƒÂ Ã‚Â±Ã¢â‚¬Â¹ÃƒÂ Ã‚Â°Ã¢â‚¬Å¡ÃƒÂ Ã‚Â°Ã‚Â¡ÃƒÂ Ã‚Â°Ã‚Â¿",
+        womanReg: "ÃƒÂ Ã‚Â°Ã‚Â®ÃƒÂ Ã‚Â°Ã‚Â¹ÃƒÂ Ã‚Â°Ã‚Â¿ÃƒÂ Ã‚Â°Ã‚Â³ÃƒÂ Ã‚Â°Ã‚Â¾ ÃƒÂ Ã‚Â°Ã‚Â¨ÃƒÂ Ã‚Â°Ã‚Â®ÃƒÂ Ã‚Â±Ã¢â‚¬Â¹ÃƒÂ Ã‚Â°Ã‚Â¦ÃƒÂ Ã‚Â±Ã‚Â", fullName: "ÃƒÂ Ã‚Â°Ã‚ÂªÃƒÂ Ã‚Â±Ã¢â‚¬Å¡ÃƒÂ Ã‚Â°Ã‚Â°ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚Â¤ÃƒÂ Ã‚Â°Ã‚Â¿ ÃƒÂ Ã‚Â°Ã‚ÂªÃƒÂ Ã‚Â±Ã¢â‚¬Â¡ÃƒÂ Ã‚Â°Ã‚Â°ÃƒÂ Ã‚Â±Ã‚Â", fullNamePlaceholder: "ÃƒÂ Ã‚Â°Ã‚Â®ÃƒÂ Ã‚Â±Ã¢â€šÂ¬ ÃƒÂ Ã‚Â°Ã‚ÂªÃƒÂ Ã‚Â±Ã¢â‚¬Å¡ÃƒÂ Ã‚Â°Ã‚Â°ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚Â¤ÃƒÂ Ã‚Â°Ã‚Â¿ ÃƒÂ Ã‚Â°Ã‚ÂªÃƒÂ Ã‚Â±Ã¢â‚¬Â¡ÃƒÂ Ã‚Â°Ã‚Â°ÃƒÂ Ã‚Â±Ã‚Â",
+        skills: "ÃƒÂ Ã‚Â°Ã‚Â¨ÃƒÂ Ã‚Â±Ã‹â€ ÃƒÂ Ã‚Â°Ã‚ÂªÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚Â£ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚Â¯ÃƒÂ Ã‚Â°Ã‚Â¾ÃƒÂ Ã‚Â°Ã‚Â²ÃƒÂ Ã‚Â±Ã‚Â", skillsPlaceholder: "ÃƒÂ Ã‚Â°Ã¢â‚¬Â°ÃƒÂ Ã‚Â°Ã‚Â¦ÃƒÂ Ã‚Â°Ã‚Â¾. ÃƒÂ Ã‚Â°Ã¢â‚¬Â¢ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã…Â¸ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã…Â¸ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚ÂªÃƒÂ Ã‚Â°Ã‚Â¨ÃƒÂ Ã‚Â°Ã‚Â¿, ÃƒÂ Ã‚Â°Ã‚Â¹ÃƒÂ Ã‚Â°Ã‚Â¸ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚Â¤ÃƒÂ Ã‚Â°Ã¢â‚¬Â¢ÃƒÂ Ã‚Â°Ã‚Â³ÃƒÂ Ã‚Â°Ã‚Â²ÃƒÂ Ã‚Â±Ã‚Â",
+        jobPref: "ÃƒÂ Ã‚Â°Ã¢â‚¬Â°ÃƒÂ Ã‚Â°Ã‚Â¦ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚Â¯ÃƒÂ Ã‚Â±Ã¢â‚¬Â¹ÃƒÂ Ã‚Â°Ã¢â‚¬â€ ÃƒÂ Ã‚Â°Ã‚ÂªÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚Â°ÃƒÂ Ã‚Â°Ã‚Â¾ÃƒÂ Ã‚Â°Ã‚Â§ÃƒÂ Ã‚Â°Ã‚Â¾ÃƒÂ Ã‚Â°Ã‚Â¨ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚Â¯ÃƒÂ Ã‚Â°Ã‚Â¤", selectPref: "ÃƒÂ Ã‚Â°Ã‚ÂªÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚Â°ÃƒÂ Ã‚Â°Ã‚Â¾ÃƒÂ Ã‚Â°Ã‚Â§ÃƒÂ Ã‚Â°Ã‚Â¾ÃƒÂ Ã‚Â°Ã‚Â¨ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚Â¯ÃƒÂ Ã‚Â°Ã‚Â¤ÃƒÂ Ã‚Â°Ã‚Â¨ÃƒÂ Ã‚Â±Ã‚Â ÃƒÂ Ã‚Â°Ã…Â½ÃƒÂ Ã‚Â°Ã¢â‚¬Å¡ÃƒÂ Ã‚Â°Ã…Â¡ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã¢â‚¬Â¢ÃƒÂ Ã‚Â±Ã¢â‚¬Â¹ÃƒÂ Ã‚Â°Ã¢â‚¬Å¡ÃƒÂ Ã‚Â°Ã‚Â¡ÃƒÂ Ã‚Â°Ã‚Â¿", createAccount: "ÃƒÂ Ã‚Â°Ã¢â‚¬â€œÃƒÂ Ã‚Â°Ã‚Â¾ÃƒÂ Ã‚Â°Ã‚Â¤ÃƒÂ Ã‚Â°Ã‚Â¾ÃƒÂ Ã‚Â°Ã‚Â¨ÃƒÂ Ã‚Â±Ã‚Â ÃƒÂ Ã‚Â°Ã‚Â¸ÃƒÂ Ã‚Â±Ã†â€™ÃƒÂ Ã‚Â°Ã‚Â·ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã…Â¸ÃƒÂ Ã‚Â°Ã‚Â¿ÃƒÂ Ã‚Â°Ã¢â‚¬Å¡ÃƒÂ Ã‚Â°Ã…Â¡ÃƒÂ Ã‚Â°Ã¢â‚¬Å¡ÃƒÂ Ã‚Â°Ã‚Â¡ÃƒÂ Ã‚Â°Ã‚Â¿",
+        companyReg: "ÃƒÂ Ã‚Â°Ã¢â‚¬Â¢ÃƒÂ Ã‚Â°Ã¢â‚¬Å¡ÃƒÂ Ã‚Â°Ã‚ÂªÃƒÂ Ã‚Â±Ã¢â‚¬Â ÃƒÂ Ã‚Â°Ã‚Â¨ÃƒÂ Ã‚Â±Ã¢â€šÂ¬ ÃƒÂ Ã‚Â°Ã‚Â¨ÃƒÂ Ã‚Â°Ã‚Â®ÃƒÂ Ã‚Â±Ã¢â‚¬Â¹ÃƒÂ Ã‚Â°Ã‚Â¦ÃƒÂ Ã‚Â±Ã‚Â", companyName: "ÃƒÂ Ã‚Â°Ã¢â‚¬Â¢ÃƒÂ Ã‚Â°Ã¢â‚¬Å¡ÃƒÂ Ã‚Â°Ã‚ÂªÃƒÂ Ã‚Â±Ã¢â‚¬Â ÃƒÂ Ã‚Â°Ã‚Â¨ÃƒÂ Ã‚Â±Ã¢â€šÂ¬ ÃƒÂ Ã‚Â°Ã‚ÂªÃƒÂ Ã‚Â±Ã¢â‚¬Â¡ÃƒÂ Ã‚Â°Ã‚Â°ÃƒÂ Ã‚Â±Ã‚Â", industry: "ÃƒÂ Ã‚Â°Ã‚ÂªÃƒÂ Ã‚Â°Ã‚Â°ÃƒÂ Ã‚Â°Ã‚Â¿ÃƒÂ Ã‚Â°Ã‚Â¶ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚Â°ÃƒÂ Ã‚Â°Ã‚Â®",
+        address: "ÃƒÂ Ã‚Â°Ã…Â¡ÃƒÂ Ã‚Â°Ã‚Â¿ÃƒÂ Ã‚Â°Ã‚Â°ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚Â¨ÃƒÂ Ã‚Â°Ã‚Â¾ÃƒÂ Ã‚Â°Ã‚Â®ÃƒÂ Ã‚Â°Ã‚Â¾", addressPlaceholder: "ÃƒÂ Ã‚Â°Ã‚Â¨ÃƒÂ Ã‚Â°Ã¢â‚¬â€ÃƒÂ Ã‚Â°Ã‚Â°ÃƒÂ Ã‚Â°Ã¢â‚¬Å¡, ÃƒÂ Ã‚Â°Ã‚Â°ÃƒÂ Ã‚Â°Ã‚Â¾ÃƒÂ Ã‚Â°Ã‚Â·ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã…Â¸ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚Â°ÃƒÂ Ã‚Â°Ã¢â‚¬Å¡", registerCompany: "ÃƒÂ Ã‚Â°Ã¢â‚¬Â¢ÃƒÂ Ã‚Â°Ã¢â‚¬Å¡ÃƒÂ Ã‚Â°Ã‚ÂªÃƒÂ Ã‚Â±Ã¢â‚¬Â ÃƒÂ Ã‚Â°Ã‚Â¨ÃƒÂ Ã‚Â±Ã¢â€šÂ¬ÃƒÂ Ã‚Â°Ã‚Â¨ÃƒÂ Ã‚Â°Ã‚Â¿ ÃƒÂ Ã‚Â°Ã‚Â¨ÃƒÂ Ã‚Â°Ã‚Â®ÃƒÂ Ã‚Â±Ã¢â‚¬Â¹ÃƒÂ Ã‚Â°Ã‚Â¦ÃƒÂ Ã‚Â±Ã‚Â ÃƒÂ Ã‚Â°Ã…Â¡ÃƒÂ Ã‚Â±Ã¢â‚¬Â¡ÃƒÂ Ã‚Â°Ã‚Â¯ÃƒÂ Ã‚Â°Ã¢â‚¬Å¡ÃƒÂ Ã‚Â°Ã‚Â¡ÃƒÂ Ã‚Â°Ã‚Â¿",
+        adminReg: "ÃƒÂ Ã‚Â°Ã¢â‚¬Â¦ÃƒÂ Ã‚Â°Ã‚Â¡ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚Â®ÃƒÂ Ã‚Â°Ã‚Â¿ÃƒÂ Ã‚Â°Ã‚Â¨ÃƒÂ Ã‚Â±Ã‚Â ÃƒÂ Ã‚Â°Ã‚Â¨ÃƒÂ Ã‚Â°Ã‚Â®ÃƒÂ Ã‚Â±Ã¢â‚¬Â¹ÃƒÂ Ã‚Â°Ã‚Â¦ÃƒÂ Ã‚Â±Ã‚Â", registerAdmin: "ÃƒÂ Ã‚Â°Ã¢â‚¬Â¦ÃƒÂ Ã‚Â°Ã‚Â¡ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚Â®ÃƒÂ Ã‚Â°Ã‚Â¿ÃƒÂ Ã‚Â°Ã‚Â¨ÃƒÂ Ã‚Â±Ã‚Â ÃƒÂ Ã‚Â°Ã¢â‚¬â€ÃƒÂ Ã‚Â°Ã‚Â¾ ÃƒÂ Ã‚Â°Ã‚Â¨ÃƒÂ Ã‚Â°Ã‚Â®ÃƒÂ Ã‚Â±Ã¢â‚¬Â¹ÃƒÂ Ã‚Â°Ã‚Â¦ÃƒÂ Ã‚Â±Ã‚Â ÃƒÂ Ã‚Â°Ã…Â¡ÃƒÂ Ã‚Â±Ã¢â‚¬Â¡ÃƒÂ Ã‚Â°Ã‚Â¯ÃƒÂ Ã‚Â°Ã¢â‚¬Å¡ÃƒÂ Ã‚Â°Ã‚Â¡ÃƒÂ Ã‚Â°Ã‚Â¿",
+        newToTarini: "Tarini ÃƒÂ Ã‚Â°Ã¢â‚¬Â¢ÃƒÂ Ã‚Â°Ã‚Â¿ ÃƒÂ Ã‚Â°Ã¢â‚¬Â¢ÃƒÂ Ã‚Â±Ã…Â ÃƒÂ Ã‚Â°Ã‚Â¤ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚Â¤ÃƒÂ Ã‚Â°Ã‚Â¾?", signUp: "ÃƒÂ Ã‚Â°Ã‚Â¸ÃƒÂ Ã‚Â±Ã‹â€ ÃƒÂ Ã‚Â°Ã‚Â¨ÃƒÂ Ã‚Â±Ã‚Â ÃƒÂ Ã‚Â°Ã¢â‚¬Â¦ÃƒÂ Ã‚Â°Ã‚ÂªÃƒÂ Ã‚Â±Ã‚Â ÃƒÂ Ã‚Â°Ã…Â¡ÃƒÂ Ã‚Â±Ã¢â‚¬Â¡ÃƒÂ Ã‚Â°Ã‚Â¯ÃƒÂ Ã‚Â°Ã¢â‚¬Å¡ÃƒÂ Ã‚Â°Ã‚Â¡ÃƒÂ Ã‚Â°Ã‚Â¿",
+        alreadyHaveAccount: "ÃƒÂ Ã‚Â°Ã¢â‚¬Â¡ÃƒÂ Ã‚Â°Ã‚ÂªÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚ÂªÃƒÂ Ã‚Â°Ã…Â¸ÃƒÂ Ã‚Â°Ã‚Â¿ÃƒÂ Ã‚Â°Ã¢â‚¬Â¢ÃƒÂ Ã‚Â±Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â°Ã¢â‚¬â€œÃƒÂ Ã‚Â°Ã‚Â¾ÃƒÂ Ã‚Â°Ã‚Â¤ÃƒÂ Ã‚Â°Ã‚Â¾ ÃƒÂ Ã‚Â°Ã¢â‚¬Â°ÃƒÂ Ã‚Â°Ã¢â‚¬Å¡ÃƒÂ Ã‚Â°Ã‚Â¦ÃƒÂ Ã‚Â°Ã‚Â¾?", back: "ÃƒÂ Ã‚Â°Ã‚ÂµÃƒÂ Ã‚Â±Ã¢â‚¬Â ÃƒÂ Ã‚Â°Ã‚Â¨ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã¢â‚¬Â¢ÃƒÂ Ã‚Â°Ã¢â‚¬Â¢ÃƒÂ Ã‚Â±Ã‚Â",
+        welcomeBack: "Tarini ÃƒÂ Ã‚Â°Ã¢â‚¬Â¢ÃƒÂ Ã‚Â°Ã‚Â¿ ÃƒÂ Ã‚Â°Ã‚Â¤ÃƒÂ Ã‚Â°Ã‚Â¿ÃƒÂ Ã‚Â°Ã‚Â°ÃƒÂ Ã‚Â°Ã‚Â¿ÃƒÂ Ã‚Â°Ã¢â‚¬â€ÃƒÂ Ã‚Â°Ã‚Â¿ ÃƒÂ Ã‚Â°Ã‚Â¸ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚ÂµÃƒÂ Ã‚Â°Ã‚Â¾ÃƒÂ Ã‚Â°Ã¢â‚¬â€ÃƒÂ Ã‚Â°Ã‚Â¤ÃƒÂ Ã‚Â°Ã¢â‚¬Å¡", tariniWelcomesYou: "ÃƒÂ¢Ã…â€œÃ‚Â¦ Tarini ÃƒÂ Ã‚Â°Ã‚Â®ÃƒÂ Ã‚Â±Ã¢â€šÂ¬ÃƒÂ Ã‚Â°Ã¢â‚¬Â¢ÃƒÂ Ã‚Â±Ã‚Â ÃƒÂ Ã‚Â°Ã‚Â¸ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚ÂµÃƒÂ Ã‚Â°Ã‚Â¾ÃƒÂ Ã‚Â°Ã¢â‚¬â€ÃƒÂ Ã‚Â°Ã‚Â¤ÃƒÂ Ã‚Â°Ã¢â‚¬Å¡ ÃƒÂ Ã‚Â°Ã‚ÂªÃƒÂ Ã‚Â°Ã‚Â²ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã¢â‚¬Â¢ÃƒÂ Ã‚Â±Ã‚ÂÃƒÂ Ã‚Â°Ã‚Â¤ÃƒÂ Ã‚Â±Ã¢â‚¬Â¹ÃƒÂ Ã‚Â°Ã¢â‚¬Å¡ÃƒÂ Ã‚Â°Ã‚Â¦ÃƒÂ Ã‚Â°Ã‚Â¿"
     },
     gu: {
-        emailAddress: "ઇમેઇલ સરનામું", emailPlaceholder: "name@example.com",
-        password: "પાસવર્ડ", passwordPlaceholder: "પાસવર્ડ",
-        forgotPassword: "પાસવર્ડ ભૂલી ગયા છો?", signIn: "સાઇન ઇન કરો",
-        or: "અથવા", signInGoogle: "Google સાથે સાઇન ઇન કરો",
-        chooseRole: "તમારી ભૂમિકા પસંદ કરો", chooseRoleSub: "તમારું શ્રેષ્ઠ વર્ણન કરતી ભૂમિકા પસંદ કરો",
-        womanReg: "મહિલા નોંધણી", fullName: "પૂરું નામ", fullNamePlaceholder: "તમારું પૂરું નામ",
-        skills: "કૌશલ્યો", skillsPlaceholder: "દા.ત. સિલાઈ, હસ્તકલા",
-        jobPref: "નોકરીની પસંદગી", selectPref: "પસંદગી પસંદ કરો", createAccount: "ખાતું બનાવો",
-        companyReg: "કંપની નોંધણી", companyName: "કંપનીનું નામ", industry: "ઉદ્યોગ",
-        address: "સરનામું", addressPlaceholder: "શહેર, રાજ્ય", registerCompany: "કંપનીની નોંધણી કરો",
-        adminReg: "એડમિન નોંધણી", registerAdmin: "એડમિન તરીકે નોંધણી કરો",
-        newToTarini: "Tarini માં નવા છો?", signUp: "સાઇન અપ કરો",
-        alreadyHaveAccount: "પહેલેથી જ ખાતું છે?", back: "પાછળ",
-        welcomeBack: "Tarini માં ફરીથી સ્વાગત છે", tariniWelcomesYou: "✦ Tarini તમારું સ્વાગત કરે છે"
+        emailAddress: "ÃƒÂ Ã‚ÂªÃ¢â‚¬Â¡ÃƒÂ Ã‚ÂªÃ‚Â®ÃƒÂ Ã‚Â«Ã¢â‚¬Â¡ÃƒÂ Ã‚ÂªÃ¢â‚¬Â¡ÃƒÂ Ã‚ÂªÃ‚Â² ÃƒÂ Ã‚ÂªÃ‚Â¸ÃƒÂ Ã‚ÂªÃ‚Â°ÃƒÂ Ã‚ÂªÃ‚Â¨ÃƒÂ Ã‚ÂªÃ‚Â¾ÃƒÂ Ã‚ÂªÃ‚Â®ÃƒÂ Ã‚Â«Ã‚ÂÃƒÂ Ã‚ÂªÃ¢â‚¬Å¡", emailPlaceholder: "name@example.com",
+        password: "ÃƒÂ Ã‚ÂªÃ‚ÂªÃƒÂ Ã‚ÂªÃ‚Â¾ÃƒÂ Ã‚ÂªÃ‚Â¸ÃƒÂ Ã‚ÂªÃ‚ÂµÃƒÂ Ã‚ÂªÃ‚Â°ÃƒÂ Ã‚Â«Ã‚ÂÃƒÂ Ã‚ÂªÃ‚Â¡", passwordPlaceholder: "ÃƒÂ Ã‚ÂªÃ‚ÂªÃƒÂ Ã‚ÂªÃ‚Â¾ÃƒÂ Ã‚ÂªÃ‚Â¸ÃƒÂ Ã‚ÂªÃ‚ÂµÃƒÂ Ã‚ÂªÃ‚Â°ÃƒÂ Ã‚Â«Ã‚ÂÃƒÂ Ã‚ÂªÃ‚Â¡",
+        forgotPassword: "ÃƒÂ Ã‚ÂªÃ‚ÂªÃƒÂ Ã‚ÂªÃ‚Â¾ÃƒÂ Ã‚ÂªÃ‚Â¸ÃƒÂ Ã‚ÂªÃ‚ÂµÃƒÂ Ã‚ÂªÃ‚Â°ÃƒÂ Ã‚Â«Ã‚ÂÃƒÂ Ã‚ÂªÃ‚Â¡ ÃƒÂ Ã‚ÂªÃ‚Â­ÃƒÂ Ã‚Â«Ã¢â‚¬Å¡ÃƒÂ Ã‚ÂªÃ‚Â²ÃƒÂ Ã‚Â«Ã¢â€šÂ¬ ÃƒÂ Ã‚ÂªÃ¢â‚¬â€ÃƒÂ Ã‚ÂªÃ‚Â¯ÃƒÂ Ã‚ÂªÃ‚Â¾ ÃƒÂ Ã‚ÂªÃ¢â‚¬ÂºÃƒÂ Ã‚Â«Ã¢â‚¬Â¹?", signIn: "ÃƒÂ Ã‚ÂªÃ‚Â¸ÃƒÂ Ã‚ÂªÃ‚Â¾ÃƒÂ Ã‚ÂªÃ¢â‚¬Â¡ÃƒÂ Ã‚ÂªÃ‚Â¨ ÃƒÂ Ã‚ÂªÃ¢â‚¬Â¡ÃƒÂ Ã‚ÂªÃ‚Â¨ ÃƒÂ Ã‚ÂªÃ¢â‚¬Â¢ÃƒÂ Ã‚ÂªÃ‚Â°ÃƒÂ Ã‚Â«Ã¢â‚¬Â¹",
+        or: "ÃƒÂ Ã‚ÂªÃ¢â‚¬Â¦ÃƒÂ Ã‚ÂªÃ‚Â¥ÃƒÂ Ã‚ÂªÃ‚ÂµÃƒÂ Ã‚ÂªÃ‚Â¾", signInGoogle: "Google ÃƒÂ Ã‚ÂªÃ‚Â¸ÃƒÂ Ã‚ÂªÃ‚Â¾ÃƒÂ Ã‚ÂªÃ‚Â¥ÃƒÂ Ã‚Â«Ã¢â‚¬Â¡ ÃƒÂ Ã‚ÂªÃ‚Â¸ÃƒÂ Ã‚ÂªÃ‚Â¾ÃƒÂ Ã‚ÂªÃ¢â‚¬Â¡ÃƒÂ Ã‚ÂªÃ‚Â¨ ÃƒÂ Ã‚ÂªÃ¢â‚¬Â¡ÃƒÂ Ã‚ÂªÃ‚Â¨ ÃƒÂ Ã‚ÂªÃ¢â‚¬Â¢ÃƒÂ Ã‚ÂªÃ‚Â°ÃƒÂ Ã‚Â«Ã¢â‚¬Â¹",
+        chooseRole: "ÃƒÂ Ã‚ÂªÃ‚Â¤ÃƒÂ Ã‚ÂªÃ‚Â®ÃƒÂ Ã‚ÂªÃ‚Â¾ÃƒÂ Ã‚ÂªÃ‚Â°ÃƒÂ Ã‚Â«Ã¢â€šÂ¬ ÃƒÂ Ã‚ÂªÃ‚Â­ÃƒÂ Ã‚Â«Ã¢â‚¬Å¡ÃƒÂ Ã‚ÂªÃ‚Â®ÃƒÂ Ã‚ÂªÃ‚Â¿ÃƒÂ Ã‚ÂªÃ¢â‚¬Â¢ÃƒÂ Ã‚ÂªÃ‚Â¾ ÃƒÂ Ã‚ÂªÃ‚ÂªÃƒÂ Ã‚ÂªÃ‚Â¸ÃƒÂ Ã‚ÂªÃ¢â‚¬Å¡ÃƒÂ Ã‚ÂªÃ‚Â¦ ÃƒÂ Ã‚ÂªÃ¢â‚¬Â¢ÃƒÂ Ã‚ÂªÃ‚Â°ÃƒÂ Ã‚Â«Ã¢â‚¬Â¹", chooseRoleSub: "ÃƒÂ Ã‚ÂªÃ‚Â¤ÃƒÂ Ã‚ÂªÃ‚Â®ÃƒÂ Ã‚ÂªÃ‚Â¾ÃƒÂ Ã‚ÂªÃ‚Â°ÃƒÂ Ã‚Â«Ã‚ÂÃƒÂ Ã‚ÂªÃ¢â‚¬Å¡ ÃƒÂ Ã‚ÂªÃ‚Â¶ÃƒÂ Ã‚Â«Ã‚ÂÃƒÂ Ã‚ÂªÃ‚Â°ÃƒÂ Ã‚Â«Ã¢â‚¬Â¡ÃƒÂ Ã‚ÂªÃ‚Â·ÃƒÂ Ã‚Â«Ã‚ÂÃƒÂ Ã‚ÂªÃ‚Â  ÃƒÂ Ã‚ÂªÃ‚ÂµÃƒÂ Ã‚ÂªÃ‚Â°ÃƒÂ Ã‚Â«Ã‚ÂÃƒÂ Ã‚ÂªÃ‚Â£ÃƒÂ Ã‚ÂªÃ‚Â¨ ÃƒÂ Ã‚ÂªÃ¢â‚¬Â¢ÃƒÂ Ã‚ÂªÃ‚Â°ÃƒÂ Ã‚ÂªÃ‚Â¤ÃƒÂ Ã‚Â«Ã¢â€šÂ¬ ÃƒÂ Ã‚ÂªÃ‚Â­ÃƒÂ Ã‚Â«Ã¢â‚¬Å¡ÃƒÂ Ã‚ÂªÃ‚Â®ÃƒÂ Ã‚ÂªÃ‚Â¿ÃƒÂ Ã‚ÂªÃ¢â‚¬Â¢ÃƒÂ Ã‚ÂªÃ‚Â¾ ÃƒÂ Ã‚ÂªÃ‚ÂªÃƒÂ Ã‚ÂªÃ‚Â¸ÃƒÂ Ã‚ÂªÃ¢â‚¬Å¡ÃƒÂ Ã‚ÂªÃ‚Â¦ ÃƒÂ Ã‚ÂªÃ¢â‚¬Â¢ÃƒÂ Ã‚ÂªÃ‚Â°ÃƒÂ Ã‚Â«Ã¢â‚¬Â¹",
+        womanReg: "ÃƒÂ Ã‚ÂªÃ‚Â®ÃƒÂ Ã‚ÂªÃ‚Â¹ÃƒÂ Ã‚ÂªÃ‚Â¿ÃƒÂ Ã‚ÂªÃ‚Â²ÃƒÂ Ã‚ÂªÃ‚Â¾ ÃƒÂ Ã‚ÂªÃ‚Â¨ÃƒÂ Ã‚Â«Ã¢â‚¬Â¹ÃƒÂ Ã‚ÂªÃ¢â‚¬Å¡ÃƒÂ Ã‚ÂªÃ‚Â§ÃƒÂ Ã‚ÂªÃ‚Â£ÃƒÂ Ã‚Â«Ã¢â€šÂ¬", fullName: "ÃƒÂ Ã‚ÂªÃ‚ÂªÃƒÂ Ã‚Â«Ã¢â‚¬Å¡ÃƒÂ Ã‚ÂªÃ‚Â°ÃƒÂ Ã‚Â«Ã‚ÂÃƒÂ Ã‚ÂªÃ¢â‚¬Å¡ ÃƒÂ Ã‚ÂªÃ‚Â¨ÃƒÂ Ã‚ÂªÃ‚Â¾ÃƒÂ Ã‚ÂªÃ‚Â®", fullNamePlaceholder: "ÃƒÂ Ã‚ÂªÃ‚Â¤ÃƒÂ Ã‚ÂªÃ‚Â®ÃƒÂ Ã‚ÂªÃ‚Â¾ÃƒÂ Ã‚ÂªÃ‚Â°ÃƒÂ Ã‚Â«Ã‚ÂÃƒÂ Ã‚ÂªÃ¢â‚¬Å¡ ÃƒÂ Ã‚ÂªÃ‚ÂªÃƒÂ Ã‚Â«Ã¢â‚¬Å¡ÃƒÂ Ã‚ÂªÃ‚Â°ÃƒÂ Ã‚Â«Ã‚ÂÃƒÂ Ã‚ÂªÃ¢â‚¬Å¡ ÃƒÂ Ã‚ÂªÃ‚Â¨ÃƒÂ Ã‚ÂªÃ‚Â¾ÃƒÂ Ã‚ÂªÃ‚Â®",
+        skills: "ÃƒÂ Ã‚ÂªÃ¢â‚¬Â¢ÃƒÂ Ã‚Â«Ã…â€™ÃƒÂ Ã‚ÂªÃ‚Â¶ÃƒÂ Ã‚ÂªÃ‚Â²ÃƒÂ Ã‚Â«Ã‚ÂÃƒÂ Ã‚ÂªÃ‚Â¯ÃƒÂ Ã‚Â«Ã¢â‚¬Â¹", skillsPlaceholder: "ÃƒÂ Ã‚ÂªÃ‚Â¦ÃƒÂ Ã‚ÂªÃ‚Â¾.ÃƒÂ Ã‚ÂªÃ‚Â¤. ÃƒÂ Ã‚ÂªÃ‚Â¸ÃƒÂ Ã‚ÂªÃ‚Â¿ÃƒÂ Ã‚ÂªÃ‚Â²ÃƒÂ Ã‚ÂªÃ‚Â¾ÃƒÂ Ã‚ÂªÃ‹â€ , ÃƒÂ Ã‚ÂªÃ‚Â¹ÃƒÂ Ã‚ÂªÃ‚Â¸ÃƒÂ Ã‚Â«Ã‚ÂÃƒÂ Ã‚ÂªÃ‚Â¤ÃƒÂ Ã‚ÂªÃ¢â‚¬Â¢ÃƒÂ Ã‚ÂªÃ‚Â²ÃƒÂ Ã‚ÂªÃ‚Â¾",
+        jobPref: "ÃƒÂ Ã‚ÂªÃ‚Â¨ÃƒÂ Ã‚Â«Ã¢â‚¬Â¹ÃƒÂ Ã‚ÂªÃ¢â‚¬Â¢ÃƒÂ Ã‚ÂªÃ‚Â°ÃƒÂ Ã‚Â«Ã¢â€šÂ¬ÃƒÂ Ã‚ÂªÃ‚Â¨ÃƒÂ Ã‚Â«Ã¢â€šÂ¬ ÃƒÂ Ã‚ÂªÃ‚ÂªÃƒÂ Ã‚ÂªÃ‚Â¸ÃƒÂ Ã‚ÂªÃ¢â‚¬Å¡ÃƒÂ Ã‚ÂªÃ‚Â¦ÃƒÂ Ã‚ÂªÃ¢â‚¬â€ÃƒÂ Ã‚Â«Ã¢â€šÂ¬", selectPref: "ÃƒÂ Ã‚ÂªÃ‚ÂªÃƒÂ Ã‚ÂªÃ‚Â¸ÃƒÂ Ã‚ÂªÃ¢â‚¬Å¡ÃƒÂ Ã‚ÂªÃ‚Â¦ÃƒÂ Ã‚ÂªÃ¢â‚¬â€ÃƒÂ Ã‚Â«Ã¢â€šÂ¬ ÃƒÂ Ã‚ÂªÃ‚ÂªÃƒÂ Ã‚ÂªÃ‚Â¸ÃƒÂ Ã‚ÂªÃ¢â‚¬Å¡ÃƒÂ Ã‚ÂªÃ‚Â¦ ÃƒÂ Ã‚ÂªÃ¢â‚¬Â¢ÃƒÂ Ã‚ÂªÃ‚Â°ÃƒÂ Ã‚Â«Ã¢â‚¬Â¹", createAccount: "ÃƒÂ Ã‚ÂªÃ¢â‚¬â€œÃƒÂ Ã‚ÂªÃ‚Â¾ÃƒÂ Ã‚ÂªÃ‚Â¤ÃƒÂ Ã‚Â«Ã‚ÂÃƒÂ Ã‚ÂªÃ¢â‚¬Å¡ ÃƒÂ Ã‚ÂªÃ‚Â¬ÃƒÂ Ã‚ÂªÃ‚Â¨ÃƒÂ Ã‚ÂªÃ‚Â¾ÃƒÂ Ã‚ÂªÃ‚ÂµÃƒÂ Ã‚Â«Ã¢â‚¬Â¹",
+        companyReg: "ÃƒÂ Ã‚ÂªÃ¢â‚¬Â¢ÃƒÂ Ã‚ÂªÃ¢â‚¬Å¡ÃƒÂ Ã‚ÂªÃ‚ÂªÃƒÂ Ã‚ÂªÃ‚Â¨ÃƒÂ Ã‚Â«Ã¢â€šÂ¬ ÃƒÂ Ã‚ÂªÃ‚Â¨ÃƒÂ Ã‚Â«Ã¢â‚¬Â¹ÃƒÂ Ã‚ÂªÃ¢â‚¬Å¡ÃƒÂ Ã‚ÂªÃ‚Â§ÃƒÂ Ã‚ÂªÃ‚Â£ÃƒÂ Ã‚Â«Ã¢â€šÂ¬", companyName: "ÃƒÂ Ã‚ÂªÃ¢â‚¬Â¢ÃƒÂ Ã‚ÂªÃ¢â‚¬Å¡ÃƒÂ Ã‚ÂªÃ‚ÂªÃƒÂ Ã‚ÂªÃ‚Â¨ÃƒÂ Ã‚Â«Ã¢â€šÂ¬ÃƒÂ Ã‚ÂªÃ‚Â¨ÃƒÂ Ã‚Â«Ã‚ÂÃƒÂ Ã‚ÂªÃ¢â‚¬Å¡ ÃƒÂ Ã‚ÂªÃ‚Â¨ÃƒÂ Ã‚ÂªÃ‚Â¾ÃƒÂ Ã‚ÂªÃ‚Â®", industry: "ÃƒÂ Ã‚ÂªÃ¢â‚¬Â°ÃƒÂ Ã‚ÂªÃ‚Â¦ÃƒÂ Ã‚Â«Ã‚ÂÃƒÂ Ã‚ÂªÃ‚Â¯ÃƒÂ Ã‚Â«Ã¢â‚¬Â¹ÃƒÂ Ã‚ÂªÃ¢â‚¬â€",
+        address: "ÃƒÂ Ã‚ÂªÃ‚Â¸ÃƒÂ Ã‚ÂªÃ‚Â°ÃƒÂ Ã‚ÂªÃ‚Â¨ÃƒÂ Ã‚ÂªÃ‚Â¾ÃƒÂ Ã‚ÂªÃ‚Â®ÃƒÂ Ã‚Â«Ã‚ÂÃƒÂ Ã‚ÂªÃ¢â‚¬Å¡", addressPlaceholder: "ÃƒÂ Ã‚ÂªÃ‚Â¶ÃƒÂ Ã‚ÂªÃ‚Â¹ÃƒÂ Ã‚Â«Ã¢â‚¬Â¡ÃƒÂ Ã‚ÂªÃ‚Â°, ÃƒÂ Ã‚ÂªÃ‚Â°ÃƒÂ Ã‚ÂªÃ‚Â¾ÃƒÂ Ã‚ÂªÃ…â€œÃƒÂ Ã‚Â«Ã‚ÂÃƒÂ Ã‚ÂªÃ‚Â¯", registerCompany: "ÃƒÂ Ã‚ÂªÃ¢â‚¬Â¢ÃƒÂ Ã‚ÂªÃ¢â‚¬Å¡ÃƒÂ Ã‚ÂªÃ‚ÂªÃƒÂ Ã‚ÂªÃ‚Â¨ÃƒÂ Ã‚Â«Ã¢â€šÂ¬ÃƒÂ Ã‚ÂªÃ‚Â¨ÃƒÂ Ã‚Â«Ã¢â€šÂ¬ ÃƒÂ Ã‚ÂªÃ‚Â¨ÃƒÂ Ã‚Â«Ã¢â‚¬Â¹ÃƒÂ Ã‚ÂªÃ¢â‚¬Å¡ÃƒÂ Ã‚ÂªÃ‚Â§ÃƒÂ Ã‚ÂªÃ‚Â£ÃƒÂ Ã‚Â«Ã¢â€šÂ¬ ÃƒÂ Ã‚ÂªÃ¢â‚¬Â¢ÃƒÂ Ã‚ÂªÃ‚Â°ÃƒÂ Ã‚Â«Ã¢â‚¬Â¹",
+        adminReg: "ÃƒÂ Ã‚ÂªÃ‚ÂÃƒÂ Ã‚ÂªÃ‚Â¡ÃƒÂ Ã‚ÂªÃ‚Â®ÃƒÂ Ã‚ÂªÃ‚Â¿ÃƒÂ Ã‚ÂªÃ‚Â¨ ÃƒÂ Ã‚ÂªÃ‚Â¨ÃƒÂ Ã‚Â«Ã¢â‚¬Â¹ÃƒÂ Ã‚ÂªÃ¢â‚¬Å¡ÃƒÂ Ã‚ÂªÃ‚Â§ÃƒÂ Ã‚ÂªÃ‚Â£ÃƒÂ Ã‚Â«Ã¢â€šÂ¬", registerAdmin: "ÃƒÂ Ã‚ÂªÃ‚ÂÃƒÂ Ã‚ÂªÃ‚Â¡ÃƒÂ Ã‚ÂªÃ‚Â®ÃƒÂ Ã‚ÂªÃ‚Â¿ÃƒÂ Ã‚ÂªÃ‚Â¨ ÃƒÂ Ã‚ÂªÃ‚Â¤ÃƒÂ Ã‚ÂªÃ‚Â°ÃƒÂ Ã‚Â«Ã¢â€šÂ¬ÃƒÂ Ã‚ÂªÃ¢â‚¬Â¢ÃƒÂ Ã‚Â«Ã¢â‚¬Â¡ ÃƒÂ Ã‚ÂªÃ‚Â¨ÃƒÂ Ã‚Â«Ã¢â‚¬Â¹ÃƒÂ Ã‚ÂªÃ¢â‚¬Å¡ÃƒÂ Ã‚ÂªÃ‚Â§ÃƒÂ Ã‚ÂªÃ‚Â£ÃƒÂ Ã‚Â«Ã¢â€šÂ¬ ÃƒÂ Ã‚ÂªÃ¢â‚¬Â¢ÃƒÂ Ã‚ÂªÃ‚Â°ÃƒÂ Ã‚Â«Ã¢â‚¬Â¹",
+        newToTarini: "Tarini ÃƒÂ Ã‚ÂªÃ‚Â®ÃƒÂ Ã‚ÂªÃ‚Â¾ÃƒÂ Ã‚ÂªÃ¢â‚¬Å¡ ÃƒÂ Ã‚ÂªÃ‚Â¨ÃƒÂ Ã‚ÂªÃ‚ÂµÃƒÂ Ã‚ÂªÃ‚Â¾ ÃƒÂ Ã‚ÂªÃ¢â‚¬ÂºÃƒÂ Ã‚Â«Ã¢â‚¬Â¹?", signUp: "ÃƒÂ Ã‚ÂªÃ‚Â¸ÃƒÂ Ã‚ÂªÃ‚Â¾ÃƒÂ Ã‚ÂªÃ¢â‚¬Â¡ÃƒÂ Ã‚ÂªÃ‚Â¨ ÃƒÂ Ã‚ÂªÃ¢â‚¬Â¦ÃƒÂ Ã‚ÂªÃ‚Âª ÃƒÂ Ã‚ÂªÃ¢â‚¬Â¢ÃƒÂ Ã‚ÂªÃ‚Â°ÃƒÂ Ã‚Â«Ã¢â‚¬Â¹",
+        alreadyHaveAccount: "ÃƒÂ Ã‚ÂªÃ‚ÂªÃƒÂ Ã‚ÂªÃ‚Â¹ÃƒÂ Ã‚Â«Ã¢â‚¬Â¡ÃƒÂ Ã‚ÂªÃ‚Â²ÃƒÂ Ã‚Â«Ã¢â‚¬Â¡ÃƒÂ Ã‚ÂªÃ‚Â¥ÃƒÂ Ã‚Â«Ã¢â€šÂ¬ ÃƒÂ Ã‚ÂªÃ…â€œ ÃƒÂ Ã‚ÂªÃ¢â‚¬â€œÃƒÂ Ã‚ÂªÃ‚Â¾ÃƒÂ Ã‚ÂªÃ‚Â¤ÃƒÂ Ã‚Â«Ã‚ÂÃƒÂ Ã‚ÂªÃ¢â‚¬Å¡ ÃƒÂ Ã‚ÂªÃ¢â‚¬ÂºÃƒÂ Ã‚Â«Ã¢â‚¬Â¡?", back: "ÃƒÂ Ã‚ÂªÃ‚ÂªÃƒÂ Ã‚ÂªÃ‚Â¾ÃƒÂ Ã‚ÂªÃ¢â‚¬ÂºÃƒÂ Ã‚ÂªÃ‚Â³",
+        welcomeBack: "Tarini ÃƒÂ Ã‚ÂªÃ‚Â®ÃƒÂ Ã‚ÂªÃ‚Â¾ÃƒÂ Ã‚ÂªÃ¢â‚¬Å¡ ÃƒÂ Ã‚ÂªÃ‚Â«ÃƒÂ Ã‚ÂªÃ‚Â°ÃƒÂ Ã‚Â«Ã¢â€šÂ¬ÃƒÂ Ã‚ÂªÃ‚Â¥ÃƒÂ Ã‚Â«Ã¢â€šÂ¬ ÃƒÂ Ã‚ÂªÃ‚Â¸ÃƒÂ Ã‚Â«Ã‚ÂÃƒÂ Ã‚ÂªÃ‚ÂµÃƒÂ Ã‚ÂªÃ‚Â¾ÃƒÂ Ã‚ÂªÃ¢â‚¬â€ÃƒÂ Ã‚ÂªÃ‚Â¤ ÃƒÂ Ã‚ÂªÃ¢â‚¬ÂºÃƒÂ Ã‚Â«Ã¢â‚¬Â¡", tariniWelcomesYou: "ÃƒÂ¢Ã…â€œÃ‚Â¦ Tarini ÃƒÂ Ã‚ÂªÃ‚Â¤ÃƒÂ Ã‚ÂªÃ‚Â®ÃƒÂ Ã‚ÂªÃ‚Â¾ÃƒÂ Ã‚ÂªÃ‚Â°ÃƒÂ Ã‚Â«Ã‚ÂÃƒÂ Ã‚ÂªÃ¢â‚¬Å¡ ÃƒÂ Ã‚ÂªÃ‚Â¸ÃƒÂ Ã‚Â«Ã‚ÂÃƒÂ Ã‚ÂªÃ‚ÂµÃƒÂ Ã‚ÂªÃ‚Â¾ÃƒÂ Ã‚ÂªÃ¢â‚¬â€ÃƒÂ Ã‚ÂªÃ‚Â¤ ÃƒÂ Ã‚ÂªÃ¢â‚¬Â¢ÃƒÂ Ã‚ÂªÃ‚Â°ÃƒÂ Ã‚Â«Ã¢â‚¬Â¡ ÃƒÂ Ã‚ÂªÃ¢â‚¬ÂºÃƒÂ Ã‚Â«Ã¢â‚¬Â¡"
     },
     kn: {
-        emailAddress: "ಇಮೇಲ್ ವಿಳಾಸ", emailPlaceholder: "name@example.com",
-        password: "ಪಾಸ್‌ವರ್ಡ್", passwordPlaceholder: "ಪಾಸ್‌ವರ್ಡ್",
-        forgotPassword: "ಪಾಸ್‌ವರ್ಡ್ ಮರೆತಿರಾ?", signIn: "ಸೈನ್ ಇನ್ ಮಾಡಿ",
-        or: "ಅಥವಾ", signInGoogle: "Google ನೊಂದಿಗೆ ಸೈನ್ ಇನ್ ಮಾಡಿ",
-        chooseRole: "ನಿಮ್ಮ ಪಾತ್ರವನ್ನು ಆರಿಸಿ", chooseRoleSub: "ನಿಮ್ಮನ್ನು ಉತ್ತಮವಾಗಿ ವಿವರಿಸುವ ಪಾತ್ರವನ್ನು ಆರಿಸಿ",
-        womanReg: "ಮಹಿಳಾ ನೋಂದಣಿ", fullName: "ಪೂರ್ಣ ಹೆಸರು", fullNamePlaceholder: "ನಿಮ್ಮ ಪೂರ್ಣ ಹೆಸರು",
-        skills: "ಕೌಶಲ್ಯಗಳು", skillsPlaceholder: "ಉದಾ. ಹೊಲಿಗೆ, ಕರಕುಶಲ ವಸ್ತುಗಳು",
-        jobPref: "ಉದ್ಯೋಗದ ಆದ್ಯತೆ", selectPref: "ಆದ್ಯತೆಯನ್ನು ಆರಿಸಿ", createAccount: "ಖಾತೆಯನ್ನು ರಚಿಸಿ",
-        companyReg: "ಕಂಪನಿ ನೋಂದಣಿ", companyName: "ಕಂಪನಿಯ ಹೆಸರು", industry: "ಉದ್ಯಮ",
-        address: "ವಿಳಾಸ", addressPlaceholder: "ನಗರ, ರಾಜ್ಯ", registerCompany: "ಕಂಪನಿಯನ್ನು ನೋಂದಾಯಿಸಿ",
-        adminReg: "ನಿರ್ವಾಹಕ ನೋಂದಣಿ", registerAdmin: "ನಿರ್ವಾಹಕರಾಗಿ ನೋಂದಾಯಿಸಿ",
-        newToTarini: "Tarini ಗೆ ಹೊಸಬರೇ?", signUp: "ಸೈನ್ ಅಪ್ ಮಾಡಿ",
-        alreadyHaveAccount: "ಈಗಾಗಲೇ ಖಾತೆ ಇದೆಯೇ?", back: "ಹಿಂದೆ",
-        welcomeBack: "Tarini ಗೆ ಮರಳಿ ಸ್ವಾಗತ", tariniWelcomesYou: "✦ Tarini ನಿಮ್ಮನ್ನು ಸ್ವಾಗತಿಸುತ್ತದೆ"
+        emailAddress: "ÃƒÂ Ã‚Â²Ã¢â‚¬Â¡ÃƒÂ Ã‚Â²Ã‚Â®ÃƒÂ Ã‚Â³Ã¢â‚¬Â¡ÃƒÂ Ã‚Â²Ã‚Â²ÃƒÂ Ã‚Â³Ã‚Â ÃƒÂ Ã‚Â²Ã‚ÂµÃƒÂ Ã‚Â²Ã‚Â¿ÃƒÂ Ã‚Â²Ã‚Â³ÃƒÂ Ã‚Â²Ã‚Â¾ÃƒÂ Ã‚Â²Ã‚Â¸", emailPlaceholder: "name@example.com",
+        password: "ÃƒÂ Ã‚Â²Ã‚ÂªÃƒÂ Ã‚Â²Ã‚Â¾ÃƒÂ Ã‚Â²Ã‚Â¸ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€™ÃƒÂ Ã‚Â²Ã‚ÂµÃƒÂ Ã‚Â²Ã‚Â°ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Â¡ÃƒÂ Ã‚Â³Ã‚Â", passwordPlaceholder: "ÃƒÂ Ã‚Â²Ã‚ÂªÃƒÂ Ã‚Â²Ã‚Â¾ÃƒÂ Ã‚Â²Ã‚Â¸ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€™ÃƒÂ Ã‚Â²Ã‚ÂµÃƒÂ Ã‚Â²Ã‚Â°ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Â¡ÃƒÂ Ã‚Â³Ã‚Â",
+        forgotPassword: "ÃƒÂ Ã‚Â²Ã‚ÂªÃƒÂ Ã‚Â²Ã‚Â¾ÃƒÂ Ã‚Â²Ã‚Â¸ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€™ÃƒÂ Ã‚Â²Ã‚ÂµÃƒÂ Ã‚Â²Ã‚Â°ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Â¡ÃƒÂ Ã‚Â³Ã‚Â ÃƒÂ Ã‚Â²Ã‚Â®ÃƒÂ Ã‚Â²Ã‚Â°ÃƒÂ Ã‚Â³Ã¢â‚¬Â ÃƒÂ Ã‚Â²Ã‚Â¤ÃƒÂ Ã‚Â²Ã‚Â¿ÃƒÂ Ã‚Â²Ã‚Â°ÃƒÂ Ã‚Â²Ã‚Â¾?", signIn: "ÃƒÂ Ã‚Â²Ã‚Â¸ÃƒÂ Ã‚Â³Ã‹â€ ÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â³Ã‚Â ÃƒÂ Ã‚Â²Ã¢â‚¬Â¡ÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â³Ã‚Â ÃƒÂ Ã‚Â²Ã‚Â®ÃƒÂ Ã‚Â²Ã‚Â¾ÃƒÂ Ã‚Â²Ã‚Â¡ÃƒÂ Ã‚Â²Ã‚Â¿",
+        or: "ÃƒÂ Ã‚Â²Ã¢â‚¬Â¦ÃƒÂ Ã‚Â²Ã‚Â¥ÃƒÂ Ã‚Â²Ã‚ÂµÃƒÂ Ã‚Â²Ã‚Â¾", signInGoogle: "Google ÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â³Ã…Â ÃƒÂ Ã‚Â²Ã¢â‚¬Å¡ÃƒÂ Ã‚Â²Ã‚Â¦ÃƒÂ Ã‚Â²Ã‚Â¿ÃƒÂ Ã‚Â²Ã¢â‚¬â€ÃƒÂ Ã‚Â³Ã¢â‚¬Â  ÃƒÂ Ã‚Â²Ã‚Â¸ÃƒÂ Ã‚Â³Ã‹â€ ÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â³Ã‚Â ÃƒÂ Ã‚Â²Ã¢â‚¬Â¡ÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â³Ã‚Â ÃƒÂ Ã‚Â²Ã‚Â®ÃƒÂ Ã‚Â²Ã‚Â¾ÃƒÂ Ã‚Â²Ã‚Â¡ÃƒÂ Ã‚Â²Ã‚Â¿",
+        chooseRole: "ÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â²Ã‚Â¿ÃƒÂ Ã‚Â²Ã‚Â®ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Â® ÃƒÂ Ã‚Â²Ã‚ÂªÃƒÂ Ã‚Â²Ã‚Â¾ÃƒÂ Ã‚Â²Ã‚Â¤ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Â°ÃƒÂ Ã‚Â²Ã‚ÂµÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â³Ã‚Â ÃƒÂ Ã‚Â²Ã¢â‚¬Â ÃƒÂ Ã‚Â²Ã‚Â°ÃƒÂ Ã‚Â²Ã‚Â¿ÃƒÂ Ã‚Â²Ã‚Â¸ÃƒÂ Ã‚Â²Ã‚Â¿", chooseRoleSub: "ÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â²Ã‚Â¿ÃƒÂ Ã‚Â²Ã‚Â®ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Â®ÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â³Ã‚Â ÃƒÂ Ã‚Â²Ã¢â‚¬Â°ÃƒÂ Ã‚Â²Ã‚Â¤ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Â¤ÃƒÂ Ã‚Â²Ã‚Â®ÃƒÂ Ã‚Â²Ã‚ÂµÃƒÂ Ã‚Â²Ã‚Â¾ÃƒÂ Ã‚Â²Ã¢â‚¬â€ÃƒÂ Ã‚Â²Ã‚Â¿ ÃƒÂ Ã‚Â²Ã‚ÂµÃƒÂ Ã‚Â²Ã‚Â¿ÃƒÂ Ã‚Â²Ã‚ÂµÃƒÂ Ã‚Â²Ã‚Â°ÃƒÂ Ã‚Â²Ã‚Â¿ÃƒÂ Ã‚Â²Ã‚Â¸ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Âµ ÃƒÂ Ã‚Â²Ã‚ÂªÃƒÂ Ã‚Â²Ã‚Â¾ÃƒÂ Ã‚Â²Ã‚Â¤ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Â°ÃƒÂ Ã‚Â²Ã‚ÂµÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â³Ã‚Â ÃƒÂ Ã‚Â²Ã¢â‚¬Â ÃƒÂ Ã‚Â²Ã‚Â°ÃƒÂ Ã‚Â²Ã‚Â¿ÃƒÂ Ã‚Â²Ã‚Â¸ÃƒÂ Ã‚Â²Ã‚Â¿",
+        womanReg: "ÃƒÂ Ã‚Â²Ã‚Â®ÃƒÂ Ã‚Â²Ã‚Â¹ÃƒÂ Ã‚Â²Ã‚Â¿ÃƒÂ Ã‚Â²Ã‚Â³ÃƒÂ Ã‚Â²Ã‚Â¾ ÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â³Ã¢â‚¬Â¹ÃƒÂ Ã‚Â²Ã¢â‚¬Å¡ÃƒÂ Ã‚Â²Ã‚Â¦ÃƒÂ Ã‚Â²Ã‚Â£ÃƒÂ Ã‚Â²Ã‚Â¿", fullName: "ÃƒÂ Ã‚Â²Ã‚ÂªÃƒÂ Ã‚Â³Ã¢â‚¬Å¡ÃƒÂ Ã‚Â²Ã‚Â°ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Â£ ÃƒÂ Ã‚Â²Ã‚Â¹ÃƒÂ Ã‚Â³Ã¢â‚¬Â ÃƒÂ Ã‚Â²Ã‚Â¸ÃƒÂ Ã‚Â²Ã‚Â°ÃƒÂ Ã‚Â³Ã‚Â", fullNamePlaceholder: "ÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â²Ã‚Â¿ÃƒÂ Ã‚Â²Ã‚Â®ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Â® ÃƒÂ Ã‚Â²Ã‚ÂªÃƒÂ Ã‚Â³Ã¢â‚¬Å¡ÃƒÂ Ã‚Â²Ã‚Â°ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Â£ ÃƒÂ Ã‚Â²Ã‚Â¹ÃƒÂ Ã‚Â³Ã¢â‚¬Â ÃƒÂ Ã‚Â²Ã‚Â¸ÃƒÂ Ã‚Â²Ã‚Â°ÃƒÂ Ã‚Â³Ã‚Â",
+        skills: "ÃƒÂ Ã‚Â²Ã¢â‚¬Â¢ÃƒÂ Ã‚Â³Ã…â€™ÃƒÂ Ã‚Â²Ã‚Â¶ÃƒÂ Ã‚Â²Ã‚Â²ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Â¯ÃƒÂ Ã‚Â²Ã¢â‚¬â€ÃƒÂ Ã‚Â²Ã‚Â³ÃƒÂ Ã‚Â³Ã‚Â", skillsPlaceholder: "ÃƒÂ Ã‚Â²Ã¢â‚¬Â°ÃƒÂ Ã‚Â²Ã‚Â¦ÃƒÂ Ã‚Â²Ã‚Â¾. ÃƒÂ Ã‚Â²Ã‚Â¹ÃƒÂ Ã‚Â³Ã…Â ÃƒÂ Ã‚Â²Ã‚Â²ÃƒÂ Ã‚Â²Ã‚Â¿ÃƒÂ Ã‚Â²Ã¢â‚¬â€ÃƒÂ Ã‚Â³Ã¢â‚¬Â , ÃƒÂ Ã‚Â²Ã¢â‚¬Â¢ÃƒÂ Ã‚Â²Ã‚Â°ÃƒÂ Ã‚Â²Ã¢â‚¬Â¢ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Â¶ÃƒÂ Ã‚Â²Ã‚Â² ÃƒÂ Ã‚Â²Ã‚ÂµÃƒÂ Ã‚Â²Ã‚Â¸ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Â¤ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã¢â‚¬â€ÃƒÂ Ã‚Â²Ã‚Â³ÃƒÂ Ã‚Â³Ã‚Â",
+        jobPref: "ÃƒÂ Ã‚Â²Ã¢â‚¬Â°ÃƒÂ Ã‚Â²Ã‚Â¦ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Â¯ÃƒÂ Ã‚Â³Ã¢â‚¬Â¹ÃƒÂ Ã‚Â²Ã¢â‚¬â€ÃƒÂ Ã‚Â²Ã‚Â¦ ÃƒÂ Ã‚Â²Ã¢â‚¬Â ÃƒÂ Ã‚Â²Ã‚Â¦ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Â¯ÃƒÂ Ã‚Â²Ã‚Â¤ÃƒÂ Ã‚Â³Ã¢â‚¬Â ", selectPref: "ÃƒÂ Ã‚Â²Ã¢â‚¬Â ÃƒÂ Ã‚Â²Ã‚Â¦ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Â¯ÃƒÂ Ã‚Â²Ã‚Â¤ÃƒÂ Ã‚Â³Ã¢â‚¬Â ÃƒÂ Ã‚Â²Ã‚Â¯ÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â³Ã‚Â ÃƒÂ Ã‚Â²Ã¢â‚¬Â ÃƒÂ Ã‚Â²Ã‚Â°ÃƒÂ Ã‚Â²Ã‚Â¿ÃƒÂ Ã‚Â²Ã‚Â¸ÃƒÂ Ã‚Â²Ã‚Â¿", createAccount: "ÃƒÂ Ã‚Â²Ã¢â‚¬â€œÃƒÂ Ã‚Â²Ã‚Â¾ÃƒÂ Ã‚Â²Ã‚Â¤ÃƒÂ Ã‚Â³Ã¢â‚¬Â ÃƒÂ Ã‚Â²Ã‚Â¯ÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â³Ã‚Â ÃƒÂ Ã‚Â²Ã‚Â°ÃƒÂ Ã‚Â²Ã…Â¡ÃƒÂ Ã‚Â²Ã‚Â¿ÃƒÂ Ã‚Â²Ã‚Â¸ÃƒÂ Ã‚Â²Ã‚Â¿",
+        companyReg: "ÃƒÂ Ã‚Â²Ã¢â‚¬Â¢ÃƒÂ Ã‚Â²Ã¢â‚¬Å¡ÃƒÂ Ã‚Â²Ã‚ÂªÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â²Ã‚Â¿ ÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â³Ã¢â‚¬Â¹ÃƒÂ Ã‚Â²Ã¢â‚¬Å¡ÃƒÂ Ã‚Â²Ã‚Â¦ÃƒÂ Ã‚Â²Ã‚Â£ÃƒÂ Ã‚Â²Ã‚Â¿", companyName: "ÃƒÂ Ã‚Â²Ã¢â‚¬Â¢ÃƒÂ Ã‚Â²Ã¢â‚¬Å¡ÃƒÂ Ã‚Â²Ã‚ÂªÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â²Ã‚Â¿ÃƒÂ Ã‚Â²Ã‚Â¯ ÃƒÂ Ã‚Â²Ã‚Â¹ÃƒÂ Ã‚Â³Ã¢â‚¬Â ÃƒÂ Ã‚Â²Ã‚Â¸ÃƒÂ Ã‚Â²Ã‚Â°ÃƒÂ Ã‚Â³Ã‚Â", industry: "ÃƒÂ Ã‚Â²Ã¢â‚¬Â°ÃƒÂ Ã‚Â²Ã‚Â¦ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Â¯ÃƒÂ Ã‚Â²Ã‚Â®",
+        address: "ÃƒÂ Ã‚Â²Ã‚ÂµÃƒÂ Ã‚Â²Ã‚Â¿ÃƒÂ Ã‚Â²Ã‚Â³ÃƒÂ Ã‚Â²Ã‚Â¾ÃƒÂ Ã‚Â²Ã‚Â¸", addressPlaceholder: "ÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â²Ã¢â‚¬â€ÃƒÂ Ã‚Â²Ã‚Â°, ÃƒÂ Ã‚Â²Ã‚Â°ÃƒÂ Ã‚Â²Ã‚Â¾ÃƒÂ Ã‚Â²Ã…â€œÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Â¯", registerCompany: "ÃƒÂ Ã‚Â²Ã¢â‚¬Â¢ÃƒÂ Ã‚Â²Ã¢â‚¬Å¡ÃƒÂ Ã‚Â²Ã‚ÂªÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â²Ã‚Â¿ÃƒÂ Ã‚Â²Ã‚Â¯ÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â³Ã‚Â ÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â³Ã¢â‚¬Â¹ÃƒÂ Ã‚Â²Ã¢â‚¬Å¡ÃƒÂ Ã‚Â²Ã‚Â¦ÃƒÂ Ã‚Â²Ã‚Â¾ÃƒÂ Ã‚Â²Ã‚Â¯ÃƒÂ Ã‚Â²Ã‚Â¿ÃƒÂ Ã‚Â²Ã‚Â¸ÃƒÂ Ã‚Â²Ã‚Â¿",
+        adminReg: "ÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â²Ã‚Â¿ÃƒÂ Ã‚Â²Ã‚Â°ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚ÂµÃƒÂ Ã‚Â²Ã‚Â¾ÃƒÂ Ã‚Â²Ã‚Â¹ÃƒÂ Ã‚Â²Ã¢â‚¬Â¢ ÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â³Ã¢â‚¬Â¹ÃƒÂ Ã‚Â²Ã¢â‚¬Å¡ÃƒÂ Ã‚Â²Ã‚Â¦ÃƒÂ Ã‚Â²Ã‚Â£ÃƒÂ Ã‚Â²Ã‚Â¿", registerAdmin: "ÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â²Ã‚Â¿ÃƒÂ Ã‚Â²Ã‚Â°ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚ÂµÃƒÂ Ã‚Â²Ã‚Â¾ÃƒÂ Ã‚Â²Ã‚Â¹ÃƒÂ Ã‚Â²Ã¢â‚¬Â¢ÃƒÂ Ã‚Â²Ã‚Â°ÃƒÂ Ã‚Â²Ã‚Â¾ÃƒÂ Ã‚Â²Ã¢â‚¬â€ÃƒÂ Ã‚Â²Ã‚Â¿ ÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â³Ã¢â‚¬Â¹ÃƒÂ Ã‚Â²Ã¢â‚¬Å¡ÃƒÂ Ã‚Â²Ã‚Â¦ÃƒÂ Ã‚Â²Ã‚Â¾ÃƒÂ Ã‚Â²Ã‚Â¯ÃƒÂ Ã‚Â²Ã‚Â¿ÃƒÂ Ã‚Â²Ã‚Â¸ÃƒÂ Ã‚Â²Ã‚Â¿",
+        newToTarini: "Tarini ÃƒÂ Ã‚Â²Ã¢â‚¬â€ÃƒÂ Ã‚Â³Ã¢â‚¬Â  ÃƒÂ Ã‚Â²Ã‚Â¹ÃƒÂ Ã‚Â³Ã…Â ÃƒÂ Ã‚Â²Ã‚Â¸ÃƒÂ Ã‚Â²Ã‚Â¬ÃƒÂ Ã‚Â²Ã‚Â°ÃƒÂ Ã‚Â³Ã¢â‚¬Â¡?", signUp: "ÃƒÂ Ã‚Â²Ã‚Â¸ÃƒÂ Ã‚Â³Ã‹â€ ÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â³Ã‚Â ÃƒÂ Ã‚Â²Ã¢â‚¬Â¦ÃƒÂ Ã‚Â²Ã‚ÂªÃƒÂ Ã‚Â³Ã‚Â ÃƒÂ Ã‚Â²Ã‚Â®ÃƒÂ Ã‚Â²Ã‚Â¾ÃƒÂ Ã‚Â²Ã‚Â¡ÃƒÂ Ã‚Â²Ã‚Â¿",
+        alreadyHaveAccount: "ÃƒÂ Ã‚Â²Ã‹â€ ÃƒÂ Ã‚Â²Ã¢â‚¬â€ÃƒÂ Ã‚Â²Ã‚Â¾ÃƒÂ Ã‚Â²Ã¢â‚¬â€ÃƒÂ Ã‚Â²Ã‚Â²ÃƒÂ Ã‚Â³Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â²Ã¢â‚¬â€œÃƒÂ Ã‚Â²Ã‚Â¾ÃƒÂ Ã‚Â²Ã‚Â¤ÃƒÂ Ã‚Â³Ã¢â‚¬Â  ÃƒÂ Ã‚Â²Ã¢â‚¬Â¡ÃƒÂ Ã‚Â²Ã‚Â¦ÃƒÂ Ã‚Â³Ã¢â‚¬Â ÃƒÂ Ã‚Â²Ã‚Â¯ÃƒÂ Ã‚Â³Ã¢â‚¬Â¡?", back: "ÃƒÂ Ã‚Â²Ã‚Â¹ÃƒÂ Ã‚Â²Ã‚Â¿ÃƒÂ Ã‚Â²Ã¢â‚¬Å¡ÃƒÂ Ã‚Â²Ã‚Â¦ÃƒÂ Ã‚Â³Ã¢â‚¬Â ",
+        welcomeBack: "Tarini ÃƒÂ Ã‚Â²Ã¢â‚¬â€ÃƒÂ Ã‚Â³Ã¢â‚¬Â  ÃƒÂ Ã‚Â²Ã‚Â®ÃƒÂ Ã‚Â²Ã‚Â°ÃƒÂ Ã‚Â²Ã‚Â³ÃƒÂ Ã‚Â²Ã‚Â¿ ÃƒÂ Ã‚Â²Ã‚Â¸ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚ÂµÃƒÂ Ã‚Â²Ã‚Â¾ÃƒÂ Ã‚Â²Ã¢â‚¬â€ÃƒÂ Ã‚Â²Ã‚Â¤", tariniWelcomesYou: "ÃƒÂ¢Ã…â€œÃ‚Â¦ Tarini ÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â²Ã‚Â¿ÃƒÂ Ã‚Â²Ã‚Â®ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Â®ÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Â¨ÃƒÂ Ã‚Â³Ã‚Â ÃƒÂ Ã‚Â²Ã‚Â¸ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚ÂµÃƒÂ Ã‚Â²Ã‚Â¾ÃƒÂ Ã‚Â²Ã¢â‚¬â€ÃƒÂ Ã‚Â²Ã‚Â¤ÃƒÂ Ã‚Â²Ã‚Â¿ÃƒÂ Ã‚Â²Ã‚Â¸ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Â¤ÃƒÂ Ã‚Â³Ã‚ÂÃƒÂ Ã‚Â²Ã‚Â¤ÃƒÂ Ã‚Â²Ã‚Â¦ÃƒÂ Ã‚Â³Ã¢â‚¬Â "
     },
     ml: {
-        emailAddress: "ഇമെയിൽ വിലാസം", emailPlaceholder: "name@example.com",
-        password: "പാസ്‌വേഡ്", passwordPlaceholder: "പാസ്‌വേഡ്",
-        forgotPassword: "പാസ്‌വേഡ് മറന്നോ?", signIn: "സൈൻ ഇൻ ചെയ്യുക",
-        or: "അല്ലെങ്കിൽ", signInGoogle: "Google വഴി സൈൻ ഇൻ ചെയ്യുക",
-        chooseRole: "നിങ്ങളുടെ റോൾ തിരഞ്ഞെടുക്കുക", chooseRoleSub: "നിങ്ങളെ ഏറ്റവും നന്നായി വിവരിക്കുന്ന റോൾ തിരഞ്ഞെടുക്കുക",
-        womanReg: "വനിതാ രജിസ്ട്രേഷൻ", fullName: "പൂർണ്ണമായ പേര്", fullNamePlaceholder: "നിങ്ങളുടെ പൂർണ്ണനാമം",
-        skills: "കഴിവുകൾ", skillsPlaceholder: "ഉദാ. തയ്യൽ, കരകൗശലം",
-        jobPref: "ജോലി മുൻഗണന", selectPref: "മുൻഗണന തിരഞ്ഞെടുക്കുക", createAccount: "അക്കൗണ്ട് സൃഷ്ടിക്കുക",
-        companyReg: "കമ്പനി രജിസ്ട്രേഷൻ", companyName: "കമ്പനിയുടെ പേര്", industry: "വ്യവസായം",
-        address: "വിലാസം", addressPlaceholder: "നഗരം, സംസ്ഥാനം", registerCompany: "കമ്പനി രജിസ്റ്റർ ചെയ്യുക",
-        adminReg: "അഡ്മിൻ രജിസ്ട്രേഷൻ", registerAdmin: "അഡ്മിനായി രജിസ്റ്റർ ചെയ്യുക",
-        newToTarini: "Tarini-യിൽ പുതിയതാണോ?", signUp: "സൈൻ അപ്പ് ചെയ്യുക",
-        alreadyHaveAccount: "നേരത്തെ തന്നെ അക്കൗണ്ട് ഉണ്ടോ?", back: "തിരികെ",
-        welcomeBack: "Tarini-ലേക്ക് വീണ്ടും സ്വാഗതം", tariniWelcomesYou: "✦ Tarini നിങ്ങളെ സ്വാഗതം ചെയ്യുന്നു"
+        emailAddress: "ÃƒÂ Ã‚Â´Ã¢â‚¬Â¡ÃƒÂ Ã‚Â´Ã‚Â®ÃƒÂ Ã‚ÂµÃ¢â‚¬Â ÃƒÂ Ã‚Â´Ã‚Â¯ÃƒÂ Ã‚Â´Ã‚Â¿ÃƒÂ Ã‚ÂµÃ‚Â½ ÃƒÂ Ã‚Â´Ã‚ÂµÃƒÂ Ã‚Â´Ã‚Â¿ÃƒÂ Ã‚Â´Ã‚Â²ÃƒÂ Ã‚Â´Ã‚Â¾ÃƒÂ Ã‚Â´Ã‚Â¸ÃƒÂ Ã‚Â´Ã¢â‚¬Å¡", emailPlaceholder: "name@example.com",
+        password: "ÃƒÂ Ã‚Â´Ã‚ÂªÃƒÂ Ã‚Â´Ã‚Â¾ÃƒÂ Ã‚Â´Ã‚Â¸ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€™ÃƒÂ Ã‚Â´Ã‚ÂµÃƒÂ Ã‚ÂµÃ¢â‚¬Â¡ÃƒÂ Ã‚Â´Ã‚Â¡ÃƒÂ Ã‚ÂµÃ‚Â", passwordPlaceholder: "ÃƒÂ Ã‚Â´Ã‚ÂªÃƒÂ Ã‚Â´Ã‚Â¾ÃƒÂ Ã‚Â´Ã‚Â¸ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€™ÃƒÂ Ã‚Â´Ã‚ÂµÃƒÂ Ã‚ÂµÃ¢â‚¬Â¡ÃƒÂ Ã‚Â´Ã‚Â¡ÃƒÂ Ã‚ÂµÃ‚Â",
+        forgotPassword: "ÃƒÂ Ã‚Â´Ã‚ÂªÃƒÂ Ã‚Â´Ã‚Â¾ÃƒÂ Ã‚Â´Ã‚Â¸ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ¢Ã¢â€šÂ¬Ã…â€™ÃƒÂ Ã‚Â´Ã‚ÂµÃƒÂ Ã‚ÂµÃ¢â‚¬Â¡ÃƒÂ Ã‚Â´Ã‚Â¡ÃƒÂ Ã‚ÂµÃ‚Â ÃƒÂ Ã‚Â´Ã‚Â®ÃƒÂ Ã‚Â´Ã‚Â±ÃƒÂ Ã‚Â´Ã‚Â¨ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â¨ÃƒÂ Ã‚ÂµÃ¢â‚¬Â¹?", signIn: "ÃƒÂ Ã‚Â´Ã‚Â¸ÃƒÂ Ã‚ÂµÃ‹â€ ÃƒÂ Ã‚ÂµÃ‚Â» ÃƒÂ Ã‚Â´Ã¢â‚¬Â¡ÃƒÂ Ã‚ÂµÃ‚Â» ÃƒÂ Ã‚Â´Ã…Â¡ÃƒÂ Ã‚ÂµÃ¢â‚¬Â ÃƒÂ Ã‚Â´Ã‚Â¯ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â¯ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã¢â‚¬Â¢",
+        or: "ÃƒÂ Ã‚Â´Ã¢â‚¬Â¦ÃƒÂ Ã‚Â´Ã‚Â²ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â²ÃƒÂ Ã‚ÂµÃ¢â‚¬Â ÃƒÂ Ã‚Â´Ã¢â€žÂ¢ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã¢â‚¬Â¢ÃƒÂ Ã‚Â´Ã‚Â¿ÃƒÂ Ã‚ÂµÃ‚Â½", signInGoogle: "Google ÃƒÂ Ã‚Â´Ã‚ÂµÃƒÂ Ã‚Â´Ã‚Â´ÃƒÂ Ã‚Â´Ã‚Â¿ ÃƒÂ Ã‚Â´Ã‚Â¸ÃƒÂ Ã‚ÂµÃ‹â€ ÃƒÂ Ã‚ÂµÃ‚Â» ÃƒÂ Ã‚Â´Ã¢â‚¬Â¡ÃƒÂ Ã‚ÂµÃ‚Â» ÃƒÂ Ã‚Â´Ã…Â¡ÃƒÂ Ã‚ÂµÃ¢â‚¬Â ÃƒÂ Ã‚Â´Ã‚Â¯ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â¯ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã¢â‚¬Â¢",
+        chooseRole: "ÃƒÂ Ã‚Â´Ã‚Â¨ÃƒÂ Ã‚Â´Ã‚Â¿ÃƒÂ Ã‚Â´Ã¢â€žÂ¢ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã¢â€žÂ¢ÃƒÂ Ã‚Â´Ã‚Â³ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã…Â¸ÃƒÂ Ã‚ÂµÃ¢â‚¬Â  ÃƒÂ Ã‚Â´Ã‚Â±ÃƒÂ Ã‚ÂµÃ¢â‚¬Â¹ÃƒÂ Ã‚ÂµÃ‚Â¾ ÃƒÂ Ã‚Â´Ã‚Â¤ÃƒÂ Ã‚Â´Ã‚Â¿ÃƒÂ Ã‚Â´Ã‚Â°ÃƒÂ Ã‚Â´Ã…Â¾ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã…Â¾ÃƒÂ Ã‚ÂµÃ¢â‚¬Â ÃƒÂ Ã‚Â´Ã…Â¸ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã¢â‚¬Â¢ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã¢â‚¬Â¢ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã¢â‚¬Â¢", chooseRoleSub: "ÃƒÂ Ã‚Â´Ã‚Â¨ÃƒÂ Ã‚Â´Ã‚Â¿ÃƒÂ Ã‚Â´Ã¢â€žÂ¢ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã¢â€žÂ¢ÃƒÂ Ã‚Â´Ã‚Â³ÃƒÂ Ã‚ÂµÃ¢â‚¬Â  ÃƒÂ Ã‚Â´Ã‚ÂÃƒÂ Ã‚Â´Ã‚Â±ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â±ÃƒÂ Ã‚Â´Ã‚ÂµÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã¢â‚¬Å¡ ÃƒÂ Ã‚Â´Ã‚Â¨ÃƒÂ Ã‚Â´Ã‚Â¨ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â¨ÃƒÂ Ã‚Â´Ã‚Â¾ÃƒÂ Ã‚Â´Ã‚Â¯ÃƒÂ Ã‚Â´Ã‚Â¿ ÃƒÂ Ã‚Â´Ã‚ÂµÃƒÂ Ã‚Â´Ã‚Â¿ÃƒÂ Ã‚Â´Ã‚ÂµÃƒÂ Ã‚Â´Ã‚Â°ÃƒÂ Ã‚Â´Ã‚Â¿ÃƒÂ Ã‚Â´Ã¢â‚¬Â¢ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã¢â‚¬Â¢ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â¨ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â¨ ÃƒÂ Ã‚Â´Ã‚Â±ÃƒÂ Ã‚ÂµÃ¢â‚¬Â¹ÃƒÂ Ã‚ÂµÃ‚Â¾ ÃƒÂ Ã‚Â´Ã‚Â¤ÃƒÂ Ã‚Â´Ã‚Â¿ÃƒÂ Ã‚Â´Ã‚Â°ÃƒÂ Ã‚Â´Ã…Â¾ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã…Â¾ÃƒÂ Ã‚ÂµÃ¢â‚¬Â ÃƒÂ Ã‚Â´Ã…Â¸ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã¢â‚¬Â¢ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã¢â‚¬Â¢ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã¢â‚¬Â¢",
+        womanReg: "ÃƒÂ Ã‚Â´Ã‚ÂµÃƒÂ Ã‚Â´Ã‚Â¨ÃƒÂ Ã‚Â´Ã‚Â¿ÃƒÂ Ã‚Â´Ã‚Â¤ÃƒÂ Ã‚Â´Ã‚Â¾ ÃƒÂ Ã‚Â´Ã‚Â°ÃƒÂ Ã‚Â´Ã…â€œÃƒÂ Ã‚Â´Ã‚Â¿ÃƒÂ Ã‚Â´Ã‚Â¸ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã…Â¸ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â°ÃƒÂ Ã‚ÂµÃ¢â‚¬Â¡ÃƒÂ Ã‚Â´Ã‚Â·ÃƒÂ Ã‚ÂµÃ‚Â»", fullName: "ÃƒÂ Ã‚Â´Ã‚ÂªÃƒÂ Ã‚ÂµÃ¢â‚¬Å¡ÃƒÂ Ã‚ÂµÃ‚Â¼ÃƒÂ Ã‚Â´Ã‚Â£ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â£ÃƒÂ Ã‚Â´Ã‚Â®ÃƒÂ Ã‚Â´Ã‚Â¾ÃƒÂ Ã‚Â´Ã‚Â¯ ÃƒÂ Ã‚Â´Ã‚ÂªÃƒÂ Ã‚ÂµÃ¢â‚¬Â¡ÃƒÂ Ã‚Â´Ã‚Â°ÃƒÂ Ã‚ÂµÃ‚Â", fullNamePlaceholder: "ÃƒÂ Ã‚Â´Ã‚Â¨ÃƒÂ Ã‚Â´Ã‚Â¿ÃƒÂ Ã‚Â´Ã¢â€žÂ¢ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã¢â€žÂ¢ÃƒÂ Ã‚Â´Ã‚Â³ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã…Â¸ÃƒÂ Ã‚ÂµÃ¢â‚¬Â  ÃƒÂ Ã‚Â´Ã‚ÂªÃƒÂ Ã‚ÂµÃ¢â‚¬Å¡ÃƒÂ Ã‚ÂµÃ‚Â¼ÃƒÂ Ã‚Â´Ã‚Â£ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â£ÃƒÂ Ã‚Â´Ã‚Â¨ÃƒÂ Ã‚Â´Ã‚Â¾ÃƒÂ Ã‚Â´Ã‚Â®ÃƒÂ Ã‚Â´Ã¢â‚¬Å¡",
+        skills: "ÃƒÂ Ã‚Â´Ã¢â‚¬Â¢ÃƒÂ Ã‚Â´Ã‚Â´ÃƒÂ Ã‚Â´Ã‚Â¿ÃƒÂ Ã‚Â´Ã‚ÂµÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã¢â‚¬Â¢ÃƒÂ Ã‚ÂµÃ‚Â¾", skillsPlaceholder: "ÃƒÂ Ã‚Â´Ã¢â‚¬Â°ÃƒÂ Ã‚Â´Ã‚Â¦ÃƒÂ Ã‚Â´Ã‚Â¾. ÃƒÂ Ã‚Â´Ã‚Â¤ÃƒÂ Ã‚Â´Ã‚Â¯ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â¯ÃƒÂ Ã‚ÂµÃ‚Â½, ÃƒÂ Ã‚Â´Ã¢â‚¬Â¢ÃƒÂ Ã‚Â´Ã‚Â°ÃƒÂ Ã‚Â´Ã¢â‚¬Â¢ÃƒÂ Ã‚ÂµÃ¢â‚¬â€ÃƒÂ Ã‚Â´Ã‚Â¶ÃƒÂ Ã‚Â´Ã‚Â²ÃƒÂ Ã‚Â´Ã¢â‚¬Å¡",
+        jobPref: "ÃƒÂ Ã‚Â´Ã…â€œÃƒÂ Ã‚ÂµÃ¢â‚¬Â¹ÃƒÂ Ã‚Â´Ã‚Â²ÃƒÂ Ã‚Â´Ã‚Â¿ ÃƒÂ Ã‚Â´Ã‚Â®ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚ÂµÃ‚Â»ÃƒÂ Ã‚Â´Ã¢â‚¬â€ÃƒÂ Ã‚Â´Ã‚Â£ÃƒÂ Ã‚Â´Ã‚Â¨", selectPref: "ÃƒÂ Ã‚Â´Ã‚Â®ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚ÂµÃ‚Â»ÃƒÂ Ã‚Â´Ã¢â‚¬â€ÃƒÂ Ã‚Â´Ã‚Â£ÃƒÂ Ã‚Â´Ã‚Â¨ ÃƒÂ Ã‚Â´Ã‚Â¤ÃƒÂ Ã‚Â´Ã‚Â¿ÃƒÂ Ã‚Â´Ã‚Â°ÃƒÂ Ã‚Â´Ã…Â¾ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã…Â¾ÃƒÂ Ã‚ÂµÃ¢â‚¬Â ÃƒÂ Ã‚Â´Ã…Â¸ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã¢â‚¬Â¢ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã¢â‚¬Â¢ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã¢â‚¬Â¢", createAccount: "ÃƒÂ Ã‚Â´Ã¢â‚¬Â¦ÃƒÂ Ã‚Â´Ã¢â‚¬Â¢ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã¢â‚¬Â¢ÃƒÂ Ã‚ÂµÃ¢â‚¬â€ÃƒÂ Ã‚Â´Ã‚Â£ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã…Â¸ÃƒÂ Ã‚ÂµÃ‚Â ÃƒÂ Ã‚Â´Ã‚Â¸ÃƒÂ Ã‚ÂµÃ†â€™ÃƒÂ Ã‚Â´Ã‚Â·ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã…Â¸ÃƒÂ Ã‚Â´Ã‚Â¿ÃƒÂ Ã‚Â´Ã¢â‚¬Â¢ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã¢â‚¬Â¢ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã¢â‚¬Â¢",
+        companyReg: "ÃƒÂ Ã‚Â´Ã¢â‚¬Â¢ÃƒÂ Ã‚Â´Ã‚Â®ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚ÂªÃƒÂ Ã‚Â´Ã‚Â¨ÃƒÂ Ã‚Â´Ã‚Â¿ ÃƒÂ Ã‚Â´Ã‚Â°ÃƒÂ Ã‚Â´Ã…â€œÃƒÂ Ã‚Â´Ã‚Â¿ÃƒÂ Ã‚Â´Ã‚Â¸ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã…Â¸ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â°ÃƒÂ Ã‚ÂµÃ¢â‚¬Â¡ÃƒÂ Ã‚Â´Ã‚Â·ÃƒÂ Ã‚ÂµÃ‚Â»", companyName: "ÃƒÂ Ã‚Â´Ã¢â‚¬Â¢ÃƒÂ Ã‚Â´Ã‚Â®ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚ÂªÃƒÂ Ã‚Â´Ã‚Â¨ÃƒÂ Ã‚Â´Ã‚Â¿ÃƒÂ Ã‚Â´Ã‚Â¯ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã…Â¸ÃƒÂ Ã‚ÂµÃ¢â‚¬Â  ÃƒÂ Ã‚Â´Ã‚ÂªÃƒÂ Ã‚ÂµÃ¢â‚¬Â¡ÃƒÂ Ã‚Â´Ã‚Â°ÃƒÂ Ã‚ÂµÃ‚Â", industry: "ÃƒÂ Ã‚Â´Ã‚ÂµÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â¯ÃƒÂ Ã‚Â´Ã‚ÂµÃƒÂ Ã‚Â´Ã‚Â¸ÃƒÂ Ã‚Â´Ã‚Â¾ÃƒÂ Ã‚Â´Ã‚Â¯ÃƒÂ Ã‚Â´Ã¢â‚¬Å¡",
+        address: "ÃƒÂ Ã‚Â´Ã‚ÂµÃƒÂ Ã‚Â´Ã‚Â¿ÃƒÂ Ã‚Â´Ã‚Â²ÃƒÂ Ã‚Â´Ã‚Â¾ÃƒÂ Ã‚Â´Ã‚Â¸ÃƒÂ Ã‚Â´Ã¢â‚¬Å¡", addressPlaceholder: "ÃƒÂ Ã‚Â´Ã‚Â¨ÃƒÂ Ã‚Â´Ã¢â‚¬â€ÃƒÂ Ã‚Â´Ã‚Â°ÃƒÂ Ã‚Â´Ã¢â‚¬Å¡, ÃƒÂ Ã‚Â´Ã‚Â¸ÃƒÂ Ã‚Â´Ã¢â‚¬Å¡ÃƒÂ Ã‚Â´Ã‚Â¸ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â¥ÃƒÂ Ã‚Â´Ã‚Â¾ÃƒÂ Ã‚Â´Ã‚Â¨ÃƒÂ Ã‚Â´Ã¢â‚¬Å¡", registerCompany: "ÃƒÂ Ã‚Â´Ã¢â‚¬Â¢ÃƒÂ Ã‚Â´Ã‚Â®ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚ÂªÃƒÂ Ã‚Â´Ã‚Â¨ÃƒÂ Ã‚Â´Ã‚Â¿ ÃƒÂ Ã‚Â´Ã‚Â°ÃƒÂ Ã‚Â´Ã…â€œÃƒÂ Ã‚Â´Ã‚Â¿ÃƒÂ Ã‚Â´Ã‚Â¸ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â±ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â±ÃƒÂ Ã‚ÂµÃ‚Â¼ ÃƒÂ Ã‚Â´Ã…Â¡ÃƒÂ Ã‚ÂµÃ¢â‚¬Â ÃƒÂ Ã‚Â´Ã‚Â¯ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â¯ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã¢â‚¬Â¢",
+        adminReg: "ÃƒÂ Ã‚Â´Ã¢â‚¬Â¦ÃƒÂ Ã‚Â´Ã‚Â¡ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â®ÃƒÂ Ã‚Â´Ã‚Â¿ÃƒÂ Ã‚ÂµÃ‚Â» ÃƒÂ Ã‚Â´Ã‚Â°ÃƒÂ Ã‚Â´Ã…â€œÃƒÂ Ã‚Â´Ã‚Â¿ÃƒÂ Ã‚Â´Ã‚Â¸ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã…Â¸ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â°ÃƒÂ Ã‚ÂµÃ¢â‚¬Â¡ÃƒÂ Ã‚Â´Ã‚Â·ÃƒÂ Ã‚ÂµÃ‚Â»", registerAdmin: "ÃƒÂ Ã‚Â´Ã¢â‚¬Â¦ÃƒÂ Ã‚Â´Ã‚Â¡ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â®ÃƒÂ Ã‚Â´Ã‚Â¿ÃƒÂ Ã‚Â´Ã‚Â¨ÃƒÂ Ã‚Â´Ã‚Â¾ÃƒÂ Ã‚Â´Ã‚Â¯ÃƒÂ Ã‚Â´Ã‚Â¿ ÃƒÂ Ã‚Â´Ã‚Â°ÃƒÂ Ã‚Â´Ã…â€œÃƒÂ Ã‚Â´Ã‚Â¿ÃƒÂ Ã‚Â´Ã‚Â¸ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â±ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â±ÃƒÂ Ã‚ÂµÃ‚Â¼ ÃƒÂ Ã‚Â´Ã…Â¡ÃƒÂ Ã‚ÂµÃ¢â‚¬Â ÃƒÂ Ã‚Â´Ã‚Â¯ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â¯ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã¢â‚¬Â¢",
+        newToTarini: "Tarini-ÃƒÂ Ã‚Â´Ã‚Â¯ÃƒÂ Ã‚Â´Ã‚Â¿ÃƒÂ Ã‚ÂµÃ‚Â½ ÃƒÂ Ã‚Â´Ã‚ÂªÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â¤ÃƒÂ Ã‚Â´Ã‚Â¿ÃƒÂ Ã‚Â´Ã‚Â¯ÃƒÂ Ã‚Â´Ã‚Â¤ÃƒÂ Ã‚Â´Ã‚Â¾ÃƒÂ Ã‚Â´Ã‚Â£ÃƒÂ Ã‚ÂµÃ¢â‚¬Â¹?", signUp: "ÃƒÂ Ã‚Â´Ã‚Â¸ÃƒÂ Ã‚ÂµÃ‹â€ ÃƒÂ Ã‚ÂµÃ‚Â» ÃƒÂ Ã‚Â´Ã¢â‚¬Â¦ÃƒÂ Ã‚Â´Ã‚ÂªÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚ÂªÃƒÂ Ã‚ÂµÃ‚Â ÃƒÂ Ã‚Â´Ã…Â¡ÃƒÂ Ã‚ÂµÃ¢â‚¬Â ÃƒÂ Ã‚Â´Ã‚Â¯ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â¯ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã¢â‚¬Â¢",
+        alreadyHaveAccount: "ÃƒÂ Ã‚Â´Ã‚Â¨ÃƒÂ Ã‚ÂµÃ¢â‚¬Â¡ÃƒÂ Ã‚Â´Ã‚Â°ÃƒÂ Ã‚Â´Ã‚Â¤ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â¤ÃƒÂ Ã‚ÂµÃ¢â‚¬Â  ÃƒÂ Ã‚Â´Ã‚Â¤ÃƒÂ Ã‚Â´Ã‚Â¨ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â¨ÃƒÂ Ã‚ÂµÃ¢â‚¬Â  ÃƒÂ Ã‚Â´Ã¢â‚¬Â¦ÃƒÂ Ã‚Â´Ã¢â‚¬Â¢ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã¢â‚¬Â¢ÃƒÂ Ã‚ÂµÃ¢â‚¬â€ÃƒÂ Ã‚Â´Ã‚Â£ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã…Â¸ÃƒÂ Ã‚ÂµÃ‚Â ÃƒÂ Ã‚Â´Ã¢â‚¬Â°ÃƒÂ Ã‚Â´Ã‚Â£ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã…Â¸ÃƒÂ Ã‚ÂµÃ¢â‚¬Â¹?", back: "ÃƒÂ Ã‚Â´Ã‚Â¤ÃƒÂ Ã‚Â´Ã‚Â¿ÃƒÂ Ã‚Â´Ã‚Â°ÃƒÂ Ã‚Â´Ã‚Â¿ÃƒÂ Ã‚Â´Ã¢â‚¬Â¢ÃƒÂ Ã‚ÂµÃ¢â‚¬Â ",
+        welcomeBack: "Tarini-ÃƒÂ Ã‚Â´Ã‚Â²ÃƒÂ Ã‚ÂµÃ¢â‚¬Â¡ÃƒÂ Ã‚Â´Ã¢â‚¬Â¢ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã¢â‚¬Â¢ÃƒÂ Ã‚ÂµÃ‚Â ÃƒÂ Ã‚Â´Ã‚ÂµÃƒÂ Ã‚ÂµÃ¢â€šÂ¬ÃƒÂ Ã‚Â´Ã‚Â£ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã…Â¸ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã¢â‚¬Å¡ ÃƒÂ Ã‚Â´Ã‚Â¸ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚ÂµÃƒÂ Ã‚Â´Ã‚Â¾ÃƒÂ Ã‚Â´Ã¢â‚¬â€ÃƒÂ Ã‚Â´Ã‚Â¤ÃƒÂ Ã‚Â´Ã¢â‚¬Å¡", tariniWelcomesYou: "ÃƒÂ¢Ã…â€œÃ‚Â¦ Tarini ÃƒÂ Ã‚Â´Ã‚Â¨ÃƒÂ Ã‚Â´Ã‚Â¿ÃƒÂ Ã‚Â´Ã¢â€žÂ¢ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã¢â€žÂ¢ÃƒÂ Ã‚Â´Ã‚Â³ÃƒÂ Ã‚ÂµÃ¢â‚¬Â  ÃƒÂ Ã‚Â´Ã‚Â¸ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚ÂµÃƒÂ Ã‚Â´Ã‚Â¾ÃƒÂ Ã‚Â´Ã¢â‚¬â€ÃƒÂ Ã‚Â´Ã‚Â¤ÃƒÂ Ã‚Â´Ã¢â‚¬Å¡ ÃƒÂ Ã‚Â´Ã…Â¡ÃƒÂ Ã‚ÂµÃ¢â‚¬Â ÃƒÂ Ã‚Â´Ã‚Â¯ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â¯ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â¨ÃƒÂ Ã‚ÂµÃ‚ÂÃƒÂ Ã‚Â´Ã‚Â¨ÃƒÂ Ã‚ÂµÃ‚Â"
     },
     pa: {
-        emailAddress: "ਈਮੇਲ ਪਤਾ", emailPlaceholder: "name@example.com",
-        password: "ਪਾਸਵਰਡ", passwordPlaceholder: "ਪਾਸਵਰਡ",
-        forgotPassword: "ਪਾਸਵਰਡ ਭੁੱਲ ਗਏ?", signIn: "ਸਾਈਨ ਇਨ ਕਰੋ",
-        or: "ਜਾਂ", signInGoogle: "Google ਨਾਲ ਸਾਈਨ ਇਨ ਕਰੋ",
-        chooseRole: "ਆਪਣੀ ਭੂਮਿਕਾ ਚੁਣੋ", chooseRoleSub: "ਉਹ ਭੂਮਿਕਾ ਚੁਣੋ ਜੋ ਤੁਹਾਡਾ ਸਭ ਤੋਂ ਵਧੀਆ ਵਰਣਨ ਕਰਦੀ ਹੈ",
-        womanReg: "ਮਹਿਲਾ ਰਜਿਸਟ੍ਰੇਸ਼ਨ", fullName: "ਪੂਰਾ ਨਾਮ", fullNamePlaceholder: "ਤੁਹਾਡਾ ਪੂਰਾ ਨਾਮ",
-        skills: "ਹੁਨਰ", skillsPlaceholder: "ਉਦਾਹਰਨ ਲਈ: ਸਿਲਾਈ, ਦਸਤਕਾਰੀ",
-        jobPref: "ਨੌਕਰੀ ਦੀ ਤਰਜੀਹ", selectPref: "ਤਰਜੀਹ ਚੁਣੋ", createAccount: "ਖਾਤਾ ਬਣਾਓ",
-        companyReg: "ਕੰਪਨੀ ਰਜਿਸਟ੍ਰੇਸ਼ਨ", companyName: "ਕੰਪਨੀ ਦਾ ਨਾਮ", industry: "ਉਦਯੋਗ",
-        address: "ਪਤਾ", addressPlaceholder: "ਸ਼ਹਿਰ, ਰਾਜ", registerCompany: "ਕੰਪਨੀ ਰਜਿਸਟਰ ਕਰੋ",
-        adminReg: "ਐਡਮਿਨ ਰਜਿਸਟ੍ਰੇਸ਼ਨ", registerAdmin: "ਐਡਮਿਨ ਵਜੋਂ ਰਜਿਸਟਰ ਕਰੋ",
-        newToTarini: "Tarini 'ਤੇ ਨਵੇਂ ਹੋ?", signUp: "ਸਾਈਨ ਅੱਪ ਕਰੋ",
-        alreadyHaveAccount: "ਕੀ ਪਹਿਲਾਂ ਹੀ ਕੋਈ ਖਾਤਾ ਹੈ?", back: "ਪਿੱਛੇ",
-        welcomeBack: "Tarini 'ਤੇ ਤੁਹਾਡੀ ਵਾਪਸੀ ਦਾ ਸੁਆਗਤ ਹੈ", tariniWelcomesYou: "✦ Tarini ਤੁਹਾਡਾ ਸੁਆਗਤ ਕਰਦਾ ਹੈ"
+        emailAddress: "ÃƒÂ Ã‚Â¨Ã‹â€ ÃƒÂ Ã‚Â¨Ã‚Â®ÃƒÂ Ã‚Â©Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¨Ã‚Â² ÃƒÂ Ã‚Â¨Ã‚ÂªÃƒÂ Ã‚Â¨Ã‚Â¤ÃƒÂ Ã‚Â¨Ã‚Â¾", emailPlaceholder: "name@example.com",
+        password: "ÃƒÂ Ã‚Â¨Ã‚ÂªÃƒÂ Ã‚Â¨Ã‚Â¾ÃƒÂ Ã‚Â¨Ã‚Â¸ÃƒÂ Ã‚Â¨Ã‚ÂµÃƒÂ Ã‚Â¨Ã‚Â°ÃƒÂ Ã‚Â¨Ã‚Â¡", passwordPlaceholder: "ÃƒÂ Ã‚Â¨Ã‚ÂªÃƒÂ Ã‚Â¨Ã‚Â¾ÃƒÂ Ã‚Â¨Ã‚Â¸ÃƒÂ Ã‚Â¨Ã‚ÂµÃƒÂ Ã‚Â¨Ã‚Â°ÃƒÂ Ã‚Â¨Ã‚Â¡",
+        forgotPassword: "ÃƒÂ Ã‚Â¨Ã‚ÂªÃƒÂ Ã‚Â¨Ã‚Â¾ÃƒÂ Ã‚Â¨Ã‚Â¸ÃƒÂ Ã‚Â¨Ã‚ÂµÃƒÂ Ã‚Â¨Ã‚Â°ÃƒÂ Ã‚Â¨Ã‚Â¡ ÃƒÂ Ã‚Â¨Ã‚Â­ÃƒÂ Ã‚Â©Ã‚ÂÃƒÂ Ã‚Â©Ã‚Â±ÃƒÂ Ã‚Â¨Ã‚Â² ÃƒÂ Ã‚Â¨Ã¢â‚¬â€ÃƒÂ Ã‚Â¨Ã‚Â?", signIn: "ÃƒÂ Ã‚Â¨Ã‚Â¸ÃƒÂ Ã‚Â¨Ã‚Â¾ÃƒÂ Ã‚Â¨Ã‹â€ ÃƒÂ Ã‚Â¨Ã‚Â¨ ÃƒÂ Ã‚Â¨Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¨Ã‚Â¨ ÃƒÂ Ã‚Â¨Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¨Ã‚Â°ÃƒÂ Ã‚Â©Ã¢â‚¬Â¹",
+        or: "ÃƒÂ Ã‚Â¨Ã…â€œÃƒÂ Ã‚Â¨Ã‚Â¾ÃƒÂ Ã‚Â¨Ã¢â‚¬Å¡", signInGoogle: "Google ÃƒÂ Ã‚Â¨Ã‚Â¨ÃƒÂ Ã‚Â¨Ã‚Â¾ÃƒÂ Ã‚Â¨Ã‚Â² ÃƒÂ Ã‚Â¨Ã‚Â¸ÃƒÂ Ã‚Â¨Ã‚Â¾ÃƒÂ Ã‚Â¨Ã‹â€ ÃƒÂ Ã‚Â¨Ã‚Â¨ ÃƒÂ Ã‚Â¨Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¨Ã‚Â¨ ÃƒÂ Ã‚Â¨Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¨Ã‚Â°ÃƒÂ Ã‚Â©Ã¢â‚¬Â¹",
+        chooseRole: "ÃƒÂ Ã‚Â¨Ã¢â‚¬Â ÃƒÂ Ã‚Â¨Ã‚ÂªÃƒÂ Ã‚Â¨Ã‚Â£ÃƒÂ Ã‚Â©Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¨Ã‚Â­ÃƒÂ Ã‚Â©Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¨Ã‚Â®ÃƒÂ Ã‚Â¨Ã‚Â¿ÃƒÂ Ã‚Â¨Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¨Ã‚Â¾ ÃƒÂ Ã‚Â¨Ã…Â¡ÃƒÂ Ã‚Â©Ã‚ÂÃƒÂ Ã‚Â¨Ã‚Â£ÃƒÂ Ã‚Â©Ã¢â‚¬Â¹", chooseRoleSub: "ÃƒÂ Ã‚Â¨Ã¢â‚¬Â°ÃƒÂ Ã‚Â¨Ã‚Â¹ ÃƒÂ Ã‚Â¨Ã‚Â­ÃƒÂ Ã‚Â©Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¨Ã‚Â®ÃƒÂ Ã‚Â¨Ã‚Â¿ÃƒÂ Ã‚Â¨Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¨Ã‚Â¾ ÃƒÂ Ã‚Â¨Ã…Â¡ÃƒÂ Ã‚Â©Ã‚ÂÃƒÂ Ã‚Â¨Ã‚Â£ÃƒÂ Ã‚Â©Ã¢â‚¬Â¹ ÃƒÂ Ã‚Â¨Ã…â€œÃƒÂ Ã‚Â©Ã¢â‚¬Â¹ ÃƒÂ Ã‚Â¨Ã‚Â¤ÃƒÂ Ã‚Â©Ã‚ÂÃƒÂ Ã‚Â¨Ã‚Â¹ÃƒÂ Ã‚Â¨Ã‚Â¾ÃƒÂ Ã‚Â¨Ã‚Â¡ÃƒÂ Ã‚Â¨Ã‚Â¾ ÃƒÂ Ã‚Â¨Ã‚Â¸ÃƒÂ Ã‚Â¨Ã‚Â­ ÃƒÂ Ã‚Â¨Ã‚Â¤ÃƒÂ Ã‚Â©Ã¢â‚¬Â¹ÃƒÂ Ã‚Â¨Ã¢â‚¬Å¡ ÃƒÂ Ã‚Â¨Ã‚ÂµÃƒÂ Ã‚Â¨Ã‚Â§ÃƒÂ Ã‚Â©Ã¢â€šÂ¬ÃƒÂ Ã‚Â¨Ã¢â‚¬Â  ÃƒÂ Ã‚Â¨Ã‚ÂµÃƒÂ Ã‚Â¨Ã‚Â°ÃƒÂ Ã‚Â¨Ã‚Â£ÃƒÂ Ã‚Â¨Ã‚Â¨ ÃƒÂ Ã‚Â¨Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¨Ã‚Â°ÃƒÂ Ã‚Â¨Ã‚Â¦ÃƒÂ Ã‚Â©Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¨Ã‚Â¹ÃƒÂ Ã‚Â©Ã‹â€ ",
+        womanReg: "ÃƒÂ Ã‚Â¨Ã‚Â®ÃƒÂ Ã‚Â¨Ã‚Â¹ÃƒÂ Ã‚Â¨Ã‚Â¿ÃƒÂ Ã‚Â¨Ã‚Â²ÃƒÂ Ã‚Â¨Ã‚Â¾ ÃƒÂ Ã‚Â¨Ã‚Â°ÃƒÂ Ã‚Â¨Ã…â€œÃƒÂ Ã‚Â¨Ã‚Â¿ÃƒÂ Ã‚Â¨Ã‚Â¸ÃƒÂ Ã‚Â¨Ã…Â¸ÃƒÂ Ã‚Â©Ã‚ÂÃƒÂ Ã‚Â¨Ã‚Â°ÃƒÂ Ã‚Â©Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¨Ã‚Â¸ÃƒÂ Ã‚Â¨Ã‚Â¼ÃƒÂ Ã‚Â¨Ã‚Â¨", fullName: "ÃƒÂ Ã‚Â¨Ã‚ÂªÃƒÂ Ã‚Â©Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¨Ã‚Â°ÃƒÂ Ã‚Â¨Ã‚Â¾ ÃƒÂ Ã‚Â¨Ã‚Â¨ÃƒÂ Ã‚Â¨Ã‚Â¾ÃƒÂ Ã‚Â¨Ã‚Â®", fullNamePlaceholder: "ÃƒÂ Ã‚Â¨Ã‚Â¤ÃƒÂ Ã‚Â©Ã‚ÂÃƒÂ Ã‚Â¨Ã‚Â¹ÃƒÂ Ã‚Â¨Ã‚Â¾ÃƒÂ Ã‚Â¨Ã‚Â¡ÃƒÂ Ã‚Â¨Ã‚Â¾ ÃƒÂ Ã‚Â¨Ã‚ÂªÃƒÂ Ã‚Â©Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¨Ã‚Â°ÃƒÂ Ã‚Â¨Ã‚Â¾ ÃƒÂ Ã‚Â¨Ã‚Â¨ÃƒÂ Ã‚Â¨Ã‚Â¾ÃƒÂ Ã‚Â¨Ã‚Â®",
+        skills: "ÃƒÂ Ã‚Â¨Ã‚Â¹ÃƒÂ Ã‚Â©Ã‚ÂÃƒÂ Ã‚Â¨Ã‚Â¨ÃƒÂ Ã‚Â¨Ã‚Â°", skillsPlaceholder: "ÃƒÂ Ã‚Â¨Ã¢â‚¬Â°ÃƒÂ Ã‚Â¨Ã‚Â¦ÃƒÂ Ã‚Â¨Ã‚Â¾ÃƒÂ Ã‚Â¨Ã‚Â¹ÃƒÂ Ã‚Â¨Ã‚Â°ÃƒÂ Ã‚Â¨Ã‚Â¨ ÃƒÂ Ã‚Â¨Ã‚Â²ÃƒÂ Ã‚Â¨Ã‹â€ : ÃƒÂ Ã‚Â¨Ã‚Â¸ÃƒÂ Ã‚Â¨Ã‚Â¿ÃƒÂ Ã‚Â¨Ã‚Â²ÃƒÂ Ã‚Â¨Ã‚Â¾ÃƒÂ Ã‚Â¨Ã‹â€ , ÃƒÂ Ã‚Â¨Ã‚Â¦ÃƒÂ Ã‚Â¨Ã‚Â¸ÃƒÂ Ã‚Â¨Ã‚Â¤ÃƒÂ Ã‚Â¨Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¨Ã‚Â¾ÃƒÂ Ã‚Â¨Ã‚Â°ÃƒÂ Ã‚Â©Ã¢â€šÂ¬",
+        jobPref: "ÃƒÂ Ã‚Â¨Ã‚Â¨ÃƒÂ Ã‚Â©Ã…â€™ÃƒÂ Ã‚Â¨Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¨Ã‚Â°ÃƒÂ Ã‚Â©Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¨Ã‚Â¦ÃƒÂ Ã‚Â©Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¨Ã‚Â¤ÃƒÂ Ã‚Â¨Ã‚Â°ÃƒÂ Ã‚Â¨Ã…â€œÃƒÂ Ã‚Â©Ã¢â€šÂ¬ÃƒÂ Ã‚Â¨Ã‚Â¹", selectPref: "ÃƒÂ Ã‚Â¨Ã‚Â¤ÃƒÂ Ã‚Â¨Ã‚Â°ÃƒÂ Ã‚Â¨Ã…â€œÃƒÂ Ã‚Â©Ã¢â€šÂ¬ÃƒÂ Ã‚Â¨Ã‚Â¹ ÃƒÂ Ã‚Â¨Ã…Â¡ÃƒÂ Ã‚Â©Ã‚ÂÃƒÂ Ã‚Â¨Ã‚Â£ÃƒÂ Ã‚Â©Ã¢â‚¬Â¹", createAccount: "ÃƒÂ Ã‚Â¨Ã¢â‚¬â€œÃƒÂ Ã‚Â¨Ã‚Â¾ÃƒÂ Ã‚Â¨Ã‚Â¤ÃƒÂ Ã‚Â¨Ã‚Â¾ ÃƒÂ Ã‚Â¨Ã‚Â¬ÃƒÂ Ã‚Â¨Ã‚Â£ÃƒÂ Ã‚Â¨Ã‚Â¾ÃƒÂ Ã‚Â¨Ã¢â‚¬Å“",
+        companyReg: "ÃƒÂ Ã‚Â¨Ã¢â‚¬Â¢ÃƒÂ Ã‚Â©Ã‚Â°ÃƒÂ Ã‚Â¨Ã‚ÂªÃƒÂ Ã‚Â¨Ã‚Â¨ÃƒÂ Ã‚Â©Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¨Ã‚Â°ÃƒÂ Ã‚Â¨Ã…â€œÃƒÂ Ã‚Â¨Ã‚Â¿ÃƒÂ Ã‚Â¨Ã‚Â¸ÃƒÂ Ã‚Â¨Ã…Â¸ÃƒÂ Ã‚Â©Ã‚ÂÃƒÂ Ã‚Â¨Ã‚Â°ÃƒÂ Ã‚Â©Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¨Ã‚Â¸ÃƒÂ Ã‚Â¨Ã‚Â¼ÃƒÂ Ã‚Â¨Ã‚Â¨", companyName: "ÃƒÂ Ã‚Â¨Ã¢â‚¬Â¢ÃƒÂ Ã‚Â©Ã‚Â°ÃƒÂ Ã‚Â¨Ã‚ÂªÃƒÂ Ã‚Â¨Ã‚Â¨ÃƒÂ Ã‚Â©Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¨Ã‚Â¦ÃƒÂ Ã‚Â¨Ã‚Â¾ ÃƒÂ Ã‚Â¨Ã‚Â¨ÃƒÂ Ã‚Â¨Ã‚Â¾ÃƒÂ Ã‚Â¨Ã‚Â®", industry: "ÃƒÂ Ã‚Â¨Ã¢â‚¬Â°ÃƒÂ Ã‚Â¨Ã‚Â¦ÃƒÂ Ã‚Â¨Ã‚Â¯ÃƒÂ Ã‚Â©Ã¢â‚¬Â¹ÃƒÂ Ã‚Â¨Ã¢â‚¬â€",
+        address: "ÃƒÂ Ã‚Â¨Ã‚ÂªÃƒÂ Ã‚Â¨Ã‚Â¤ÃƒÂ Ã‚Â¨Ã‚Â¾", addressPlaceholder: "ÃƒÂ Ã‚Â¨Ã‚Â¸ÃƒÂ Ã‚Â¨Ã‚Â¼ÃƒÂ Ã‚Â¨Ã‚Â¹ÃƒÂ Ã‚Â¨Ã‚Â¿ÃƒÂ Ã‚Â¨Ã‚Â°, ÃƒÂ Ã‚Â¨Ã‚Â°ÃƒÂ Ã‚Â¨Ã‚Â¾ÃƒÂ Ã‚Â¨Ã…â€œ", registerCompany: "ÃƒÂ Ã‚Â¨Ã¢â‚¬Â¢ÃƒÂ Ã‚Â©Ã‚Â°ÃƒÂ Ã‚Â¨Ã‚ÂªÃƒÂ Ã‚Â¨Ã‚Â¨ÃƒÂ Ã‚Â©Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¨Ã‚Â°ÃƒÂ Ã‚Â¨Ã…â€œÃƒÂ Ã‚Â¨Ã‚Â¿ÃƒÂ Ã‚Â¨Ã‚Â¸ÃƒÂ Ã‚Â¨Ã…Â¸ÃƒÂ Ã‚Â¨Ã‚Â° ÃƒÂ Ã‚Â¨Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¨Ã‚Â°ÃƒÂ Ã‚Â©Ã¢â‚¬Â¹",
+        adminReg: "ÃƒÂ Ã‚Â¨Ã‚ÂÃƒÂ Ã‚Â¨Ã‚Â¡ÃƒÂ Ã‚Â¨Ã‚Â®ÃƒÂ Ã‚Â¨Ã‚Â¿ÃƒÂ Ã‚Â¨Ã‚Â¨ ÃƒÂ Ã‚Â¨Ã‚Â°ÃƒÂ Ã‚Â¨Ã…â€œÃƒÂ Ã‚Â¨Ã‚Â¿ÃƒÂ Ã‚Â¨Ã‚Â¸ÃƒÂ Ã‚Â¨Ã…Â¸ÃƒÂ Ã‚Â©Ã‚ÂÃƒÂ Ã‚Â¨Ã‚Â°ÃƒÂ Ã‚Â©Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¨Ã‚Â¸ÃƒÂ Ã‚Â¨Ã‚Â¼ÃƒÂ Ã‚Â¨Ã‚Â¨", registerAdmin: "ÃƒÂ Ã‚Â¨Ã‚ÂÃƒÂ Ã‚Â¨Ã‚Â¡ÃƒÂ Ã‚Â¨Ã‚Â®ÃƒÂ Ã‚Â¨Ã‚Â¿ÃƒÂ Ã‚Â¨Ã‚Â¨ ÃƒÂ Ã‚Â¨Ã‚ÂµÃƒÂ Ã‚Â¨Ã…â€œÃƒÂ Ã‚Â©Ã¢â‚¬Â¹ÃƒÂ Ã‚Â¨Ã¢â‚¬Å¡ ÃƒÂ Ã‚Â¨Ã‚Â°ÃƒÂ Ã‚Â¨Ã…â€œÃƒÂ Ã‚Â¨Ã‚Â¿ÃƒÂ Ã‚Â¨Ã‚Â¸ÃƒÂ Ã‚Â¨Ã…Â¸ÃƒÂ Ã‚Â¨Ã‚Â° ÃƒÂ Ã‚Â¨Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¨Ã‚Â°ÃƒÂ Ã‚Â©Ã¢â‚¬Â¹",
+        newToTarini: "Tarini 'ÃƒÂ Ã‚Â¨Ã‚Â¤ÃƒÂ Ã‚Â©Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¨Ã‚Â¨ÃƒÂ Ã‚Â¨Ã‚ÂµÃƒÂ Ã‚Â©Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¨Ã¢â‚¬Å¡ ÃƒÂ Ã‚Â¨Ã‚Â¹ÃƒÂ Ã‚Â©Ã¢â‚¬Â¹?", signUp: "ÃƒÂ Ã‚Â¨Ã‚Â¸ÃƒÂ Ã‚Â¨Ã‚Â¾ÃƒÂ Ã‚Â¨Ã‹â€ ÃƒÂ Ã‚Â¨Ã‚Â¨ ÃƒÂ Ã‚Â¨Ã¢â‚¬Â¦ÃƒÂ Ã‚Â©Ã‚Â±ÃƒÂ Ã‚Â¨Ã‚Âª ÃƒÂ Ã‚Â¨Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¨Ã‚Â°ÃƒÂ Ã‚Â©Ã¢â‚¬Â¹",
+        alreadyHaveAccount: "ÃƒÂ Ã‚Â¨Ã¢â‚¬Â¢ÃƒÂ Ã‚Â©Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¨Ã‚ÂªÃƒÂ Ã‚Â¨Ã‚Â¹ÃƒÂ Ã‚Â¨Ã‚Â¿ÃƒÂ Ã‚Â¨Ã‚Â²ÃƒÂ Ã‚Â¨Ã‚Â¾ÃƒÂ Ã‚Â¨Ã¢â‚¬Å¡ ÃƒÂ Ã‚Â¨Ã‚Â¹ÃƒÂ Ã‚Â©Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¨Ã¢â‚¬Â¢ÃƒÂ Ã‚Â©Ã¢â‚¬Â¹ÃƒÂ Ã‚Â¨Ã‹â€  ÃƒÂ Ã‚Â¨Ã¢â‚¬â€œÃƒÂ Ã‚Â¨Ã‚Â¾ÃƒÂ Ã‚Â¨Ã‚Â¤ÃƒÂ Ã‚Â¨Ã‚Â¾ ÃƒÂ Ã‚Â¨Ã‚Â¹ÃƒÂ Ã‚Â©Ã‹â€ ?", back: "ÃƒÂ Ã‚Â¨Ã‚ÂªÃƒÂ Ã‚Â¨Ã‚Â¿ÃƒÂ Ã‚Â©Ã‚Â±ÃƒÂ Ã‚Â¨Ã¢â‚¬ÂºÃƒÂ Ã‚Â©Ã¢â‚¬Â¡",
+        welcomeBack: "Tarini 'ÃƒÂ Ã‚Â¨Ã‚Â¤ÃƒÂ Ã‚Â©Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¨Ã‚Â¤ÃƒÂ Ã‚Â©Ã‚ÂÃƒÂ Ã‚Â¨Ã‚Â¹ÃƒÂ Ã‚Â¨Ã‚Â¾ÃƒÂ Ã‚Â¨Ã‚Â¡ÃƒÂ Ã‚Â©Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¨Ã‚ÂµÃƒÂ Ã‚Â¨Ã‚Â¾ÃƒÂ Ã‚Â¨Ã‚ÂªÃƒÂ Ã‚Â¨Ã‚Â¸ÃƒÂ Ã‚Â©Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¨Ã‚Â¦ÃƒÂ Ã‚Â¨Ã‚Â¾ ÃƒÂ Ã‚Â¨Ã‚Â¸ÃƒÂ Ã‚Â©Ã‚ÂÃƒÂ Ã‚Â¨Ã¢â‚¬Â ÃƒÂ Ã‚Â¨Ã¢â‚¬â€ÃƒÂ Ã‚Â¨Ã‚Â¤ ÃƒÂ Ã‚Â¨Ã‚Â¹ÃƒÂ Ã‚Â©Ã‹â€ ", tariniWelcomesYou: "ÃƒÂ¢Ã…â€œÃ‚Â¦ Tarini ÃƒÂ Ã‚Â¨Ã‚Â¤ÃƒÂ Ã‚Â©Ã‚ÂÃƒÂ Ã‚Â¨Ã‚Â¹ÃƒÂ Ã‚Â¨Ã‚Â¾ÃƒÂ Ã‚Â¨Ã‚Â¡ÃƒÂ Ã‚Â¨Ã‚Â¾ ÃƒÂ Ã‚Â¨Ã‚Â¸ÃƒÂ Ã‚Â©Ã‚ÂÃƒÂ Ã‚Â¨Ã¢â‚¬Â ÃƒÂ Ã‚Â¨Ã¢â‚¬â€ÃƒÂ Ã‚Â¨Ã‚Â¤ ÃƒÂ Ã‚Â¨Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¨Ã‚Â°ÃƒÂ Ã‚Â¨Ã‚Â¦ÃƒÂ Ã‚Â¨Ã‚Â¾ ÃƒÂ Ã‚Â¨Ã‚Â¹ÃƒÂ Ã‚Â©Ã‹â€ "
     },
     or: {
-        emailAddress: "ଇମେଲ୍ ଠିକଣା", emailPlaceholder: "name@example.com",
-        password: "ପାସୱାର୍ଡ", passwordPlaceholder: "ପାସୱାର୍ଡ",
-        forgotPassword: "ପାସୱାର୍ଡ ଭୁଲିଗଲେ କି?", signIn: "ସାଇନ୍ ଇନ୍ କରନ୍ତୁ",
-        or: "କିମ୍ବା", signInGoogle: "Google ସହିତ ସାଇନ୍ ଇନ୍ କରନ୍ତୁ",
-        chooseRole: "ଆପଣଙ୍କର ଭୂମିକା ବାଛନ୍ତୁ", chooseRoleSub: "ଆପଣଙ୍କୁ ସର୍ବୋତ୍ତମ ବର୍ଣ୍ଣନା କରୁଥିବା ଭୂମିକା ବାଛନ୍ତୁ",
-        womanReg: "ମହିଳା ପଞ୍ଜିକରଣ", fullName: "ପୁରା ନାମ", fullNamePlaceholder: "ଆପଣଙ୍କର ପୁରା ନାମ",
-        skills: "ଦକ୍ଷତା", skillsPlaceholder: "ଉଦାହରଣ ସ୍ୱରୂପ: ସିଲେଇ, ହସ୍ତଶିଳ୍ପ",
-        jobPref: "ଚାକିରି ପସନ୍ଦ", selectPref: "ପସନ୍ଦ ଚୟନ କରନ୍ତୁ", createAccount: "ଆକାଉଣ୍ଟ୍ ତିଆରି କରନ୍ତୁ",
-        companyReg: "କମ୍ପାନୀ ପଞ୍ଜିକରଣ", companyName: "କମ୍ପାନୀ ନାମ", industry: "ଶିଳ୍ପ",
-        address: "ଠିକଣା", addressPlaceholder: "ସହର, ରାଜ୍ୟ", registerCompany: "କମ୍ପାନୀ ପଞ୍ଜିକରଣ କରନ୍ତୁ",
-        adminReg: "ଆଡମିନ୍ ପଞ୍ଜିକରଣ", registerAdmin: "ଆଡମିନ୍ ଭାବରେ ପଞ୍ଜିକରଣ କରନ୍ତୁ",
-        newToTarini: "Tarini ରେ ନୂଆ କି?", signUp: "ସାଇନ୍ ଅପ୍ କରନ୍ତୁ",
-        alreadyHaveAccount: "ପୂର୍ବରୁ ଗୋଟିଏ ଆକାଉଣ୍ଟ୍ ଅଛି କି?", back: "ପଛକୁ",
-        welcomeBack: "Tarini କୁ ପୁଣି ସ୍ୱାଗତ", tariniWelcomesYou: "✦ Tarini ଆପଣଙ୍କୁ ସ୍ୱାଗତ କରୁଛି"
+        emailAddress: "ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¬Ã‚Â®ÃƒÂ Ã‚Â­Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¬Ã‚Â²ÃƒÂ Ã‚Â­Ã‚Â ÃƒÂ Ã‚Â¬Ã‚Â ÃƒÂ Ã‚Â¬Ã‚Â¿ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â£ÃƒÂ Ã‚Â¬Ã‚Â¾", emailPlaceholder: "name@example.com",
+        password: "ÃƒÂ Ã‚Â¬Ã‚ÂªÃƒÂ Ã‚Â¬Ã‚Â¾ÃƒÂ Ã‚Â¬Ã‚Â¸ÃƒÂ Ã‚Â­Ã‚Â±ÃƒÂ Ã‚Â¬Ã‚Â¾ÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚Â¡", passwordPlaceholder: "ÃƒÂ Ã‚Â¬Ã‚ÂªÃƒÂ Ã‚Â¬Ã‚Â¾ÃƒÂ Ã‚Â¬Ã‚Â¸ÃƒÂ Ã‚Â­Ã‚Â±ÃƒÂ Ã‚Â¬Ã‚Â¾ÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚Â¡",
+        forgotPassword: "ÃƒÂ Ã‚Â¬Ã‚ÂªÃƒÂ Ã‚Â¬Ã‚Â¾ÃƒÂ Ã‚Â¬Ã‚Â¸ÃƒÂ Ã‚Â­Ã‚Â±ÃƒÂ Ã‚Â¬Ã‚Â¾ÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚Â¡ ÃƒÂ Ã‚Â¬Ã‚Â­ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚Â²ÃƒÂ Ã‚Â¬Ã‚Â¿ÃƒÂ Ã‚Â¬Ã¢â‚¬â€ÃƒÂ Ã‚Â¬Ã‚Â²ÃƒÂ Ã‚Â­Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â¿?", signIn: "ÃƒÂ Ã‚Â¬Ã‚Â¸ÃƒÂ Ã‚Â¬Ã‚Â¾ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¬Ã‚Â¨ÃƒÂ Ã‚Â­Ã‚Â ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¬Ã‚Â¨ÃƒÂ Ã‚Â­Ã‚Â ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â¬Ã‚Â¨ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚Â¤ÃƒÂ Ã‚Â­Ã‚Â",
+        or: "ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â¿ÃƒÂ Ã‚Â¬Ã‚Â®ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚Â¬ÃƒÂ Ã‚Â¬Ã‚Â¾", signInGoogle: "Google ÃƒÂ Ã‚Â¬Ã‚Â¸ÃƒÂ Ã‚Â¬Ã‚Â¹ÃƒÂ Ã‚Â¬Ã‚Â¿ÃƒÂ Ã‚Â¬Ã‚Â¤ ÃƒÂ Ã‚Â¬Ã‚Â¸ÃƒÂ Ã‚Â¬Ã‚Â¾ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¬Ã‚Â¨ÃƒÂ Ã‚Â­Ã‚Â ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¬Ã‚Â¨ÃƒÂ Ã‚Â­Ã‚Â ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â¬Ã‚Â¨ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚Â¤ÃƒÂ Ã‚Â­Ã‚Â",
+        chooseRole: "ÃƒÂ Ã‚Â¬Ã¢â‚¬Â ÃƒÂ Ã‚Â¬Ã‚ÂªÃƒÂ Ã‚Â¬Ã‚Â£ÃƒÂ Ã‚Â¬Ã¢â€žÂ¢ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â° ÃƒÂ Ã‚Â¬Ã‚Â­ÃƒÂ Ã‚Â­Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¬Ã‚Â®ÃƒÂ Ã‚Â¬Ã‚Â¿ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â¾ ÃƒÂ Ã‚Â¬Ã‚Â¬ÃƒÂ Ã‚Â¬Ã‚Â¾ÃƒÂ Ã‚Â¬Ã¢â‚¬ÂºÃƒÂ Ã‚Â¬Ã‚Â¨ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚Â¤ÃƒÂ Ã‚Â­Ã‚Â", chooseRoleSub: "ÃƒÂ Ã‚Â¬Ã¢â‚¬Â ÃƒÂ Ã‚Â¬Ã‚ÂªÃƒÂ Ã‚Â¬Ã‚Â£ÃƒÂ Ã‚Â¬Ã¢â€žÂ¢ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â­Ã‚Â ÃƒÂ Ã‚Â¬Ã‚Â¸ÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚Â¬ÃƒÂ Ã‚Â­Ã¢â‚¬Â¹ÃƒÂ Ã‚Â¬Ã‚Â¤ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚Â¤ÃƒÂ Ã‚Â¬Ã‚Â® ÃƒÂ Ã‚Â¬Ã‚Â¬ÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚Â£ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚Â£ÃƒÂ Ã‚Â¬Ã‚Â¨ÃƒÂ Ã‚Â¬Ã‚Â¾ ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚Â¥ÃƒÂ Ã‚Â¬Ã‚Â¿ÃƒÂ Ã‚Â¬Ã‚Â¬ÃƒÂ Ã‚Â¬Ã‚Â¾ ÃƒÂ Ã‚Â¬Ã‚Â­ÃƒÂ Ã‚Â­Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¬Ã‚Â®ÃƒÂ Ã‚Â¬Ã‚Â¿ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â¾ ÃƒÂ Ã‚Â¬Ã‚Â¬ÃƒÂ Ã‚Â¬Ã‚Â¾ÃƒÂ Ã‚Â¬Ã¢â‚¬ÂºÃƒÂ Ã‚Â¬Ã‚Â¨ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚Â¤ÃƒÂ Ã‚Â­Ã‚Â",
+        womanReg: "ÃƒÂ Ã‚Â¬Ã‚Â®ÃƒÂ Ã‚Â¬Ã‚Â¹ÃƒÂ Ã‚Â¬Ã‚Â¿ÃƒÂ Ã‚Â¬Ã‚Â³ÃƒÂ Ã‚Â¬Ã‚Â¾ ÃƒÂ Ã‚Â¬Ã‚ÂªÃƒÂ Ã‚Â¬Ã…Â¾ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã…â€œÃƒÂ Ã‚Â¬Ã‚Â¿ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â¬Ã‚Â£", fullName: "ÃƒÂ Ã‚Â¬Ã‚ÂªÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â¬Ã‚Â¾ ÃƒÂ Ã‚Â¬Ã‚Â¨ÃƒÂ Ã‚Â¬Ã‚Â¾ÃƒÂ Ã‚Â¬Ã‚Â®", fullNamePlaceholder: "ÃƒÂ Ã‚Â¬Ã¢â‚¬Â ÃƒÂ Ã‚Â¬Ã‚ÂªÃƒÂ Ã‚Â¬Ã‚Â£ÃƒÂ Ã‚Â¬Ã¢â€žÂ¢ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â° ÃƒÂ Ã‚Â¬Ã‚ÂªÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â¬Ã‚Â¾ ÃƒÂ Ã‚Â¬Ã‚Â¨ÃƒÂ Ã‚Â¬Ã‚Â¾ÃƒÂ Ã‚Â¬Ã‚Â®",
+        skills: "ÃƒÂ Ã‚Â¬Ã‚Â¦ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚Â·ÃƒÂ Ã‚Â¬Ã‚Â¤ÃƒÂ Ã‚Â¬Ã‚Â¾", skillsPlaceholder: "ÃƒÂ Ã‚Â¬Ã¢â‚¬Â°ÃƒÂ Ã‚Â¬Ã‚Â¦ÃƒÂ Ã‚Â¬Ã‚Â¾ÃƒÂ Ã‚Â¬Ã‚Â¹ÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â¬Ã‚Â£ ÃƒÂ Ã‚Â¬Ã‚Â¸ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â­Ã‚Â±ÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â­Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¬Ã‚Âª: ÃƒÂ Ã‚Â¬Ã‚Â¸ÃƒÂ Ã‚Â¬Ã‚Â¿ÃƒÂ Ã‚Â¬Ã‚Â²ÃƒÂ Ã‚Â­Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¡, ÃƒÂ Ã‚Â¬Ã‚Â¹ÃƒÂ Ã‚Â¬Ã‚Â¸ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚Â¤ÃƒÂ Ã‚Â¬Ã‚Â¶ÃƒÂ Ã‚Â¬Ã‚Â¿ÃƒÂ Ã‚Â¬Ã‚Â³ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚Âª",
+        jobPref: "ÃƒÂ Ã‚Â¬Ã…Â¡ÃƒÂ Ã‚Â¬Ã‚Â¾ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â¿ÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â¬Ã‚Â¿ ÃƒÂ Ã‚Â¬Ã‚ÂªÃƒÂ Ã‚Â¬Ã‚Â¸ÃƒÂ Ã‚Â¬Ã‚Â¨ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚Â¦", selectPref: "ÃƒÂ Ã‚Â¬Ã‚ÂªÃƒÂ Ã‚Â¬Ã‚Â¸ÃƒÂ Ã‚Â¬Ã‚Â¨ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚Â¦ ÃƒÂ Ã‚Â¬Ã…Â¡ÃƒÂ Ã‚Â­Ã…Â¸ÃƒÂ Ã‚Â¬Ã‚Â¨ ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â¬Ã‚Â¨ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚Â¤ÃƒÂ Ã‚Â­Ã‚Â", createAccount: "ÃƒÂ Ã‚Â¬Ã¢â‚¬Â ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â¾ÃƒÂ Ã‚Â¬Ã¢â‚¬Â°ÃƒÂ Ã‚Â¬Ã‚Â£ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã…Â¸ÃƒÂ Ã‚Â­Ã‚Â ÃƒÂ Ã‚Â¬Ã‚Â¤ÃƒÂ Ã‚Â¬Ã‚Â¿ÃƒÂ Ã‚Â¬Ã¢â‚¬Â ÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â¬Ã‚Â¿ ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â¬Ã‚Â¨ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚Â¤ÃƒÂ Ã‚Â­Ã‚Â",
+        companyReg: "ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â®ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚ÂªÃƒÂ Ã‚Â¬Ã‚Â¾ÃƒÂ Ã‚Â¬Ã‚Â¨ÃƒÂ Ã‚Â­Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¬Ã‚ÂªÃƒÂ Ã‚Â¬Ã…Â¾ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã…â€œÃƒÂ Ã‚Â¬Ã‚Â¿ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â¬Ã‚Â£", companyName: "ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â®ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚ÂªÃƒÂ Ã‚Â¬Ã‚Â¾ÃƒÂ Ã‚Â¬Ã‚Â¨ÃƒÂ Ã‚Â­Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¬Ã‚Â¨ÃƒÂ Ã‚Â¬Ã‚Â¾ÃƒÂ Ã‚Â¬Ã‚Â®", industry: "ÃƒÂ Ã‚Â¬Ã‚Â¶ÃƒÂ Ã‚Â¬Ã‚Â¿ÃƒÂ Ã‚Â¬Ã‚Â³ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚Âª",
+        address: "ÃƒÂ Ã‚Â¬Ã‚Â ÃƒÂ Ã‚Â¬Ã‚Â¿ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â£ÃƒÂ Ã‚Â¬Ã‚Â¾", addressPlaceholder: "ÃƒÂ Ã‚Â¬Ã‚Â¸ÃƒÂ Ã‚Â¬Ã‚Â¹ÃƒÂ Ã‚Â¬Ã‚Â°, ÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â¬Ã‚Â¾ÃƒÂ Ã‚Â¬Ã…â€œÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â­Ã…Â¸", registerCompany: "ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â®ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚ÂªÃƒÂ Ã‚Â¬Ã‚Â¾ÃƒÂ Ã‚Â¬Ã‚Â¨ÃƒÂ Ã‚Â­Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¬Ã‚ÂªÃƒÂ Ã‚Â¬Ã…Â¾ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã…â€œÃƒÂ Ã‚Â¬Ã‚Â¿ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â¬Ã‚Â£ ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â¬Ã‚Â¨ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚Â¤ÃƒÂ Ã‚Â­Ã‚Â",
+        adminReg: "ÃƒÂ Ã‚Â¬Ã¢â‚¬Â ÃƒÂ Ã‚Â¬Ã‚Â¡ÃƒÂ Ã‚Â¬Ã‚Â®ÃƒÂ Ã‚Â¬Ã‚Â¿ÃƒÂ Ã‚Â¬Ã‚Â¨ÃƒÂ Ã‚Â­Ã‚Â ÃƒÂ Ã‚Â¬Ã‚ÂªÃƒÂ Ã‚Â¬Ã…Â¾ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã…â€œÃƒÂ Ã‚Â¬Ã‚Â¿ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â¬Ã‚Â£", registerAdmin: "ÃƒÂ Ã‚Â¬Ã¢â‚¬Â ÃƒÂ Ã‚Â¬Ã‚Â¡ÃƒÂ Ã‚Â¬Ã‚Â®ÃƒÂ Ã‚Â¬Ã‚Â¿ÃƒÂ Ã‚Â¬Ã‚Â¨ÃƒÂ Ã‚Â­Ã‚Â ÃƒÂ Ã‚Â¬Ã‚Â­ÃƒÂ Ã‚Â¬Ã‚Â¾ÃƒÂ Ã‚Â¬Ã‚Â¬ÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â­Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¬Ã‚ÂªÃƒÂ Ã‚Â¬Ã…Â¾ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã…â€œÃƒÂ Ã‚Â¬Ã‚Â¿ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â¬Ã‚Â£ ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â¬Ã‚Â¨ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚Â¤ÃƒÂ Ã‚Â­Ã‚Â",
+        newToTarini: "Tarini ÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â­Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¬Ã‚Â¨ÃƒÂ Ã‚Â­Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¬Ã¢â‚¬Â  ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â¿?", signUp: "ÃƒÂ Ã‚Â¬Ã‚Â¸ÃƒÂ Ã‚Â¬Ã‚Â¾ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¬Ã‚Â¨ÃƒÂ Ã‚Â­Ã‚Â ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¦ÃƒÂ Ã‚Â¬Ã‚ÂªÃƒÂ Ã‚Â­Ã‚Â ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â¬Ã‚Â¨ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚Â¤ÃƒÂ Ã‚Â­Ã‚Â",
+        alreadyHaveAccount: "ÃƒÂ Ã‚Â¬Ã‚ÂªÃƒÂ Ã‚Â­Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚Â¬ÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â­Ã‚Â ÃƒÂ Ã‚Â¬Ã¢â‚¬â€ÃƒÂ Ã‚Â­Ã¢â‚¬Â¹ÃƒÂ Ã‚Â¬Ã…Â¸ÃƒÂ Ã‚Â¬Ã‚Â¿ÃƒÂ Ã‚Â¬Ã‚Â ÃƒÂ Ã‚Â¬Ã¢â‚¬Â ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â¾ÃƒÂ Ã‚Â¬Ã¢â‚¬Â°ÃƒÂ Ã‚Â¬Ã‚Â£ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã…Â¸ÃƒÂ Ã‚Â­Ã‚Â ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¦ÃƒÂ Ã‚Â¬Ã¢â‚¬ÂºÃƒÂ Ã‚Â¬Ã‚Â¿ ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â¿?", back: "ÃƒÂ Ã‚Â¬Ã‚ÂªÃƒÂ Ã‚Â¬Ã¢â‚¬ÂºÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â­Ã‚Â",
+        welcomeBack: "Tarini ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â­Ã‚Â ÃƒÂ Ã‚Â¬Ã‚ÂªÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã‚Â£ÃƒÂ Ã‚Â¬Ã‚Â¿ ÃƒÂ Ã‚Â¬Ã‚Â¸ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â­Ã‚Â±ÃƒÂ Ã‚Â¬Ã‚Â¾ÃƒÂ Ã‚Â¬Ã¢â‚¬â€ÃƒÂ Ã‚Â¬Ã‚Â¤", tariniWelcomesYou: "ÃƒÂ¢Ã…â€œÃ‚Â¦ Tarini ÃƒÂ Ã‚Â¬Ã¢â‚¬Â ÃƒÂ Ã‚Â¬Ã‚ÂªÃƒÂ Ã‚Â¬Ã‚Â£ÃƒÂ Ã‚Â¬Ã¢â€žÂ¢ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â­Ã‚Â ÃƒÂ Ã‚Â¬Ã‚Â¸ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â­Ã‚Â±ÃƒÂ Ã‚Â¬Ã‚Â¾ÃƒÂ Ã‚Â¬Ã¢â‚¬â€ÃƒÂ Ã‚Â¬Ã‚Â¤ ÃƒÂ Ã‚Â¬Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¬Ã‚Â°ÃƒÂ Ã‚Â­Ã‚ÂÃƒÂ Ã‚Â¬Ã¢â‚¬ÂºÃƒÂ Ã‚Â¬Ã‚Â¿"
     },
     ur: {
-        emailAddress: "ای میل ایڈریس", emailPlaceholder: "name@example.com",
-        password: "پاس ورڈ", passwordPlaceholder: "پاس ورڈ",
-        forgotPassword: "پاس ورڈ بھول گئے؟", signIn: "سائن ان کریں",
-        or: "یا", signInGoogle: "Google کے ساتھ سائن ان کریں",
-        chooseRole: "اپنا کردار منتخب کریں", chooseRoleSub: "وہ کردار منتخب کریں جو آپ کی بہترین وضاحت کرتا ہو",
-        womanReg: "خواتین کی رجسٹریشن", fullName: "پورا نام", fullNamePlaceholder: "آپ کا پورا نام",
-        skills: "مہارتیں", skillsPlaceholder: "مثلاً سلائی، دستکاری",
-        jobPref: "ملازمت کی ترجیح", selectPref: "ترجیح منتخب کریں", createAccount: "اکاؤنٹ بنائیں",
-        companyReg: "کمپنی کی رجسٹریشن", companyName: "کمپنی کا نام", industry: "صنعت",
-        address: "پتہ", addressPlaceholder: "شہر، ریاست", registerCompany: "کمپنی رجسٹر کریں",
-        adminReg: "ایڈمن رجسٹریشن", registerAdmin: "ایڈمن کے طور پر رجسٹر کریں",
-        newToTarini: "Tarini میں نئے ہیں؟", signUp: "سائن اپ کریں",
-        alreadyHaveAccount: "کیا پہلے سے اکاؤنٹ ہے؟", back: "پیچھے",
-        welcomeBack: "Tarini میں واپسی پر خوش آمدید", tariniWelcomesYou: "✦ Tarini آپ کو خوش آمدید کہتا ہے"
+        emailAddress: "ÃƒËœÃ‚Â§Ãƒâ€ºÃ…â€™ Ãƒâ„¢Ã¢â‚¬Â¦Ãƒâ€ºÃ…â€™Ãƒâ„¢Ã¢â‚¬Å¾ ÃƒËœÃ‚Â§Ãƒâ€ºÃ…â€™ÃƒÅ¡Ã‹â€ ÃƒËœÃ‚Â±Ãƒâ€ºÃ…â€™ÃƒËœÃ‚Â³", emailPlaceholder: "name@example.com",
+        password: "Ãƒâ„¢Ã‚Â¾ÃƒËœÃ‚Â§ÃƒËœÃ‚Â³ Ãƒâ„¢Ã‹â€ ÃƒËœÃ‚Â±ÃƒÅ¡Ã‹â€ ", passwordPlaceholder: "Ãƒâ„¢Ã‚Â¾ÃƒËœÃ‚Â§ÃƒËœÃ‚Â³ Ãƒâ„¢Ã‹â€ ÃƒËœÃ‚Â±ÃƒÅ¡Ã‹â€ ",
+        forgotPassword: "Ãƒâ„¢Ã‚Â¾ÃƒËœÃ‚Â§ÃƒËœÃ‚Â³ Ãƒâ„¢Ã‹â€ ÃƒËœÃ‚Â±ÃƒÅ¡Ã‹â€  ÃƒËœÃ‚Â¨ÃƒÅ¡Ã‚Â¾Ãƒâ„¢Ã‹â€ Ãƒâ„¢Ã¢â‚¬Å¾ ÃƒÅ¡Ã‚Â¯ÃƒËœÃ‚Â¦Ãƒâ€ºÃ¢â‚¬â„¢ÃƒËœÃ…Â¸", signIn: "ÃƒËœÃ‚Â³ÃƒËœÃ‚Â§ÃƒËœÃ‚Â¦Ãƒâ„¢Ã¢â‚¬Â  ÃƒËœÃ‚Â§Ãƒâ„¢Ã¢â‚¬Â  ÃƒÅ¡Ã‚Â©ÃƒËœÃ‚Â±Ãƒâ€ºÃ…â€™ÃƒÅ¡Ã‚Âº",
+        or: "Ãƒâ€ºÃ…â€™ÃƒËœÃ‚Â§", signInGoogle: "Google ÃƒÅ¡Ã‚Â©Ãƒâ€ºÃ¢â‚¬â„¢ ÃƒËœÃ‚Â³ÃƒËœÃ‚Â§ÃƒËœÃ‚ÂªÃƒÅ¡Ã‚Â¾ ÃƒËœÃ‚Â³ÃƒËœÃ‚Â§ÃƒËœÃ‚Â¦Ãƒâ„¢Ã¢â‚¬Â  ÃƒËœÃ‚Â§Ãƒâ„¢Ã¢â‚¬Â  ÃƒÅ¡Ã‚Â©ÃƒËœÃ‚Â±Ãƒâ€ºÃ…â€™ÃƒÅ¡Ã‚Âº",
+        chooseRole: "ÃƒËœÃ‚Â§Ãƒâ„¢Ã‚Â¾Ãƒâ„¢Ã¢â‚¬Â ÃƒËœÃ‚Â§ ÃƒÅ¡Ã‚Â©ÃƒËœÃ‚Â±ÃƒËœÃ‚Â¯ÃƒËœÃ‚Â§ÃƒËœÃ‚Â± Ãƒâ„¢Ã¢â‚¬Â¦Ãƒâ„¢Ã¢â‚¬Â ÃƒËœÃ‚ÂªÃƒËœÃ‚Â®ÃƒËœÃ‚Â¨ ÃƒÅ¡Ã‚Â©ÃƒËœÃ‚Â±Ãƒâ€ºÃ…â€™ÃƒÅ¡Ã‚Âº", chooseRoleSub: "Ãƒâ„¢Ã‹â€ Ãƒâ€ºÃ‚Â ÃƒÅ¡Ã‚Â©ÃƒËœÃ‚Â±ÃƒËœÃ‚Â¯ÃƒËœÃ‚Â§ÃƒËœÃ‚Â± Ãƒâ„¢Ã¢â‚¬Â¦Ãƒâ„¢Ã¢â‚¬Â ÃƒËœÃ‚ÂªÃƒËœÃ‚Â®ÃƒËœÃ‚Â¨ ÃƒÅ¡Ã‚Â©ÃƒËœÃ‚Â±Ãƒâ€ºÃ…â€™ÃƒÅ¡Ã‚Âº ÃƒËœÃ‚Â¬Ãƒâ„¢Ã‹â€  ÃƒËœÃ‚Â¢Ãƒâ„¢Ã‚Â¾ ÃƒÅ¡Ã‚Â©Ãƒâ€ºÃ…â€™ ÃƒËœÃ‚Â¨Ãƒâ€ºÃ‚ÂÃƒËœÃ‚ÂªÃƒËœÃ‚Â±Ãƒâ€ºÃ…â€™Ãƒâ„¢Ã¢â‚¬Â  Ãƒâ„¢Ã‹â€ ÃƒËœÃ‚Â¶ÃƒËœÃ‚Â§ÃƒËœÃ‚Â­ÃƒËœÃ‚Âª ÃƒÅ¡Ã‚Â©ÃƒËœÃ‚Â±ÃƒËœÃ‚ÂªÃƒËœÃ‚Â§ Ãƒâ€ºÃ‚ÂÃƒâ„¢Ã‹â€ ",
+        womanReg: "ÃƒËœÃ‚Â®Ãƒâ„¢Ã‹â€ ÃƒËœÃ‚Â§ÃƒËœÃ‚ÂªÃƒâ€ºÃ…â€™Ãƒâ„¢Ã¢â‚¬Â  ÃƒÅ¡Ã‚Â©Ãƒâ€ºÃ…â€™ ÃƒËœÃ‚Â±ÃƒËœÃ‚Â¬ÃƒËœÃ‚Â³Ãƒâ„¢Ã‚Â¹ÃƒËœÃ‚Â±Ãƒâ€ºÃ…â€™ÃƒËœÃ‚Â´Ãƒâ„¢Ã¢â‚¬Â ", fullName: "Ãƒâ„¢Ã‚Â¾Ãƒâ„¢Ã‹â€ ÃƒËœÃ‚Â±ÃƒËœÃ‚Â§ Ãƒâ„¢Ã¢â‚¬Â ÃƒËœÃ‚Â§Ãƒâ„¢Ã¢â‚¬Â¦", fullNamePlaceholder: "ÃƒËœÃ‚Â¢Ãƒâ„¢Ã‚Â¾ ÃƒÅ¡Ã‚Â©ÃƒËœÃ‚Â§ Ãƒâ„¢Ã‚Â¾Ãƒâ„¢Ã‹â€ ÃƒËœÃ‚Â±ÃƒËœÃ‚Â§ Ãƒâ„¢Ã¢â‚¬Â ÃƒËœÃ‚Â§Ãƒâ„¢Ã¢â‚¬Â¦",
+        skills: "Ãƒâ„¢Ã¢â‚¬Â¦Ãƒâ€ºÃ‚ÂÃƒËœÃ‚Â§ÃƒËœÃ‚Â±ÃƒËœÃ‚ÂªÃƒâ€ºÃ…â€™ÃƒÅ¡Ã‚Âº", skillsPlaceholder: "Ãƒâ„¢Ã¢â‚¬Â¦ÃƒËœÃ‚Â«Ãƒâ„¢Ã¢â‚¬Å¾ÃƒËœÃ‚Â§Ãƒâ„¢Ã¢â‚¬Â¹ ÃƒËœÃ‚Â³Ãƒâ„¢Ã¢â‚¬Å¾ÃƒËœÃ‚Â§ÃƒËœÃ‚Â¦Ãƒâ€ºÃ…â€™ÃƒËœÃ…â€™ ÃƒËœÃ‚Â¯ÃƒËœÃ‚Â³ÃƒËœÃ‚ÂªÃƒÅ¡Ã‚Â©ÃƒËœÃ‚Â§ÃƒËœÃ‚Â±Ãƒâ€ºÃ…â€™",
+        jobPref: "Ãƒâ„¢Ã¢â‚¬Â¦Ãƒâ„¢Ã¢â‚¬Å¾ÃƒËœÃ‚Â§ÃƒËœÃ‚Â²Ãƒâ„¢Ã¢â‚¬Â¦ÃƒËœÃ‚Âª ÃƒÅ¡Ã‚Â©Ãƒâ€ºÃ…â€™ ÃƒËœÃ‚ÂªÃƒËœÃ‚Â±ÃƒËœÃ‚Â¬Ãƒâ€ºÃ…â€™ÃƒËœÃ‚Â­", selectPref: "ÃƒËœÃ‚ÂªÃƒËœÃ‚Â±ÃƒËœÃ‚Â¬Ãƒâ€ºÃ…â€™ÃƒËœÃ‚Â­ Ãƒâ„¢Ã¢â‚¬Â¦Ãƒâ„¢Ã¢â‚¬Â ÃƒËœÃ‚ÂªÃƒËœÃ‚Â®ÃƒËœÃ‚Â¨ ÃƒÅ¡Ã‚Â©ÃƒËœÃ‚Â±Ãƒâ€ºÃ…â€™ÃƒÅ¡Ã‚Âº", createAccount: "ÃƒËœÃ‚Â§ÃƒÅ¡Ã‚Â©ÃƒËœÃ‚Â§ÃƒËœÃ‚Â¤Ãƒâ„¢Ã¢â‚¬Â Ãƒâ„¢Ã‚Â¹ ÃƒËœÃ‚Â¨Ãƒâ„¢Ã¢â‚¬Â ÃƒËœÃ‚Â§ÃƒËœÃ‚Â¦Ãƒâ€ºÃ…â€™ÃƒÅ¡Ã‚Âº",
+        companyReg: "ÃƒÅ¡Ã‚Â©Ãƒâ„¢Ã¢â‚¬Â¦Ãƒâ„¢Ã‚Â¾Ãƒâ„¢Ã¢â‚¬Â Ãƒâ€ºÃ…â€™ ÃƒÅ¡Ã‚Â©Ãƒâ€ºÃ…â€™ ÃƒËœÃ‚Â±ÃƒËœÃ‚Â¬ÃƒËœÃ‚Â³Ãƒâ„¢Ã‚Â¹ÃƒËœÃ‚Â±Ãƒâ€ºÃ…â€™ÃƒËœÃ‚Â´Ãƒâ„¢Ã¢â‚¬Â ", companyName: "ÃƒÅ¡Ã‚Â©Ãƒâ„¢Ã¢â‚¬Â¦Ãƒâ„¢Ã‚Â¾Ãƒâ„¢Ã¢â‚¬Â Ãƒâ€ºÃ…â€™ ÃƒÅ¡Ã‚Â©ÃƒËœÃ‚Â§ Ãƒâ„¢Ã¢â‚¬Â ÃƒËœÃ‚Â§Ãƒâ„¢Ã¢â‚¬Â¦", industry: "ÃƒËœÃ‚ÂµÃƒâ„¢Ã¢â‚¬Â ÃƒËœÃ‚Â¹ÃƒËœÃ‚Âª",
+        address: "Ãƒâ„¢Ã‚Â¾ÃƒËœÃ‚ÂªÃƒâ€ºÃ‚Â", addressPlaceholder: "ÃƒËœÃ‚Â´Ãƒâ€ºÃ‚ÂÃƒËœÃ‚Â±ÃƒËœÃ…â€™ ÃƒËœÃ‚Â±Ãƒâ€ºÃ…â€™ÃƒËœÃ‚Â§ÃƒËœÃ‚Â³ÃƒËœÃ‚Âª", registerCompany: "ÃƒÅ¡Ã‚Â©Ãƒâ„¢Ã¢â‚¬Â¦Ãƒâ„¢Ã‚Â¾Ãƒâ„¢Ã¢â‚¬Â Ãƒâ€ºÃ…â€™ ÃƒËœÃ‚Â±ÃƒËœÃ‚Â¬ÃƒËœÃ‚Â³Ãƒâ„¢Ã‚Â¹ÃƒËœÃ‚Â± ÃƒÅ¡Ã‚Â©ÃƒËœÃ‚Â±Ãƒâ€ºÃ…â€™ÃƒÅ¡Ã‚Âº",
+        adminReg: "ÃƒËœÃ‚Â§Ãƒâ€ºÃ…â€™ÃƒÅ¡Ã‹â€ Ãƒâ„¢Ã¢â‚¬Â¦Ãƒâ„¢Ã¢â‚¬Â  ÃƒËœÃ‚Â±ÃƒËœÃ‚Â¬ÃƒËœÃ‚Â³Ãƒâ„¢Ã‚Â¹ÃƒËœÃ‚Â±Ãƒâ€ºÃ…â€™ÃƒËœÃ‚Â´Ãƒâ„¢Ã¢â‚¬Â ", registerAdmin: "ÃƒËœÃ‚Â§Ãƒâ€ºÃ…â€™ÃƒÅ¡Ã‹â€ Ãƒâ„¢Ã¢â‚¬Â¦Ãƒâ„¢Ã¢â‚¬Â  ÃƒÅ¡Ã‚Â©Ãƒâ€ºÃ¢â‚¬â„¢ ÃƒËœÃ‚Â·Ãƒâ„¢Ã‹â€ ÃƒËœÃ‚Â± Ãƒâ„¢Ã‚Â¾ÃƒËœÃ‚Â± ÃƒËœÃ‚Â±ÃƒËœÃ‚Â¬ÃƒËœÃ‚Â³Ãƒâ„¢Ã‚Â¹ÃƒËœÃ‚Â± ÃƒÅ¡Ã‚Â©ÃƒËœÃ‚Â±Ãƒâ€ºÃ…â€™ÃƒÅ¡Ã‚Âº",
+        newToTarini: "Tarini Ãƒâ„¢Ã¢â‚¬Â¦Ãƒâ€ºÃ…â€™ÃƒÅ¡Ã‚Âº Ãƒâ„¢Ã¢â‚¬Â ÃƒËœÃ‚Â¦Ãƒâ€ºÃ¢â‚¬â„¢ Ãƒâ€ºÃ‚ÂÃƒâ€ºÃ…â€™ÃƒÅ¡Ã‚ÂºÃƒËœÃ…Â¸", signUp: "ÃƒËœÃ‚Â³ÃƒËœÃ‚Â§ÃƒËœÃ‚Â¦Ãƒâ„¢Ã¢â‚¬Â  ÃƒËœÃ‚Â§Ãƒâ„¢Ã‚Â¾ ÃƒÅ¡Ã‚Â©ÃƒËœÃ‚Â±Ãƒâ€ºÃ…â€™ÃƒÅ¡Ã‚Âº",
+        alreadyHaveAccount: "ÃƒÅ¡Ã‚Â©Ãƒâ€ºÃ…â€™ÃƒËœÃ‚Â§ Ãƒâ„¢Ã‚Â¾Ãƒâ€ºÃ‚ÂÃƒâ„¢Ã¢â‚¬Å¾Ãƒâ€ºÃ¢â‚¬â„¢ ÃƒËœÃ‚Â³Ãƒâ€ºÃ¢â‚¬â„¢ ÃƒËœÃ‚Â§ÃƒÅ¡Ã‚Â©ÃƒËœÃ‚Â§ÃƒËœÃ‚Â¤Ãƒâ„¢Ã¢â‚¬Â Ãƒâ„¢Ã‚Â¹ Ãƒâ€ºÃ‚ÂÃƒâ€ºÃ¢â‚¬â„¢ÃƒËœÃ…Â¸", back: "Ãƒâ„¢Ã‚Â¾Ãƒâ€ºÃ…â€™ÃƒÅ¡Ã¢â‚¬Â ÃƒÅ¡Ã‚Â¾Ãƒâ€ºÃ¢â‚¬â„¢",
+        welcomeBack: "Tarini Ãƒâ„¢Ã¢â‚¬Â¦Ãƒâ€ºÃ…â€™ÃƒÅ¡Ã‚Âº Ãƒâ„¢Ã‹â€ ÃƒËœÃ‚Â§Ãƒâ„¢Ã‚Â¾ÃƒËœÃ‚Â³Ãƒâ€ºÃ…â€™ Ãƒâ„¢Ã‚Â¾ÃƒËœÃ‚Â± ÃƒËœÃ‚Â®Ãƒâ„¢Ã‹â€ ÃƒËœÃ‚Â´ ÃƒËœÃ‚Â¢Ãƒâ„¢Ã¢â‚¬Â¦ÃƒËœÃ‚Â¯Ãƒâ€ºÃ…â€™ÃƒËœÃ‚Â¯", tariniWelcomesYou: "ÃƒÂ¢Ã…â€œÃ‚Â¦ Tarini ÃƒËœÃ‚Â¢Ãƒâ„¢Ã‚Â¾ ÃƒÅ¡Ã‚Â©Ãƒâ„¢Ã‹â€  ÃƒËœÃ‚Â®Ãƒâ„¢Ã‹â€ ÃƒËœÃ‚Â´ ÃƒËœÃ‚Â¢Ãƒâ„¢Ã¢â‚¬Â¦ÃƒËœÃ‚Â¯Ãƒâ€ºÃ…â€™ÃƒËœÃ‚Â¯ ÃƒÅ¡Ã‚Â©Ãƒâ€ºÃ‚ÂÃƒËœÃ‚ÂªÃƒËœÃ‚Â§ Ãƒâ€ºÃ‚ÂÃƒâ€ºÃ¢â‚¬â„¢"
     },
     as: {
-        emailAddress: "ইমেইল ঠিকনা", emailPlaceholder: "name@example.com",
-        password: "পাছৱৰ্ড", passwordPlaceholder: "পাছৱৰ্ড",
-        forgotPassword: "পাছৱৰ্ড পাহৰিলে নেকি?", signIn: "ছাইন ইন কৰক",
-        or: "বা", signInGoogle: "Google ৰ সৈতে ছাইন ইন কৰক",
-        chooseRole: "আপোনাৰ ভূমিকা বাছক", chooseRoleSub: "আপোনাক সৰ্বোত্তম বৰ্ণনা কৰা ভূমিকা বাছক",
-        womanReg: "মহিলা পঞ্জীয়ন", fullName: "সম্পূৰ্ণ নাম", fullNamePlaceholder: "আপোনাৰ সম্পূৰ্ণ নাম",
-        skills: "দখল", skillsPlaceholder: "উদাহৰণস্বৰূপ: চিলাই, হস্তশিল্প",
-        jobPref: "কৰ্মৰ পছন্দ", selectPref: "পছন্দ বাছক", createAccount: "একাউণ্ট বনাওক",
-        companyReg: "কোম্পানী পঞ্জীয়ন", companyName: "কোম্পানীৰ নাম", industry: "উদ্যোগ",
-        address: "ঠিকনা", addressPlaceholder: "চহৰ, ৰাজ্য", registerCompany: "কোম্পানী পঞ্জীয়ন কৰক",
-        adminReg: "এডমিন পঞ্জীয়ন", registerAdmin: "এডমিন হিচাপে পঞ্জীয়ন কৰক",
-        newToTarini: "Tarini ত নতুন নেকি?", signUp: "ছাইন আপ কৰক",
-        alreadyHaveAccount: "ইতিমধ্যে এটা একাউণ্ট আছে নেকি?", back: "পিছলৈ",
-        welcomeBack: "Tarini লৈ পুনৰ স্বাগতম", tariniWelcomesYou: "✦ Tarini য়ে আপোনাক স্বাগতম জনাইছে"
+        emailAddress: "ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¦Ã‚Â®ÃƒÂ Ã‚Â§Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¦Ã‚Â² ÃƒÂ Ã‚Â¦Ã‚Â ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¾", emailPlaceholder: "name@example.com",
+        password: "ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬ÂºÃƒÂ Ã‚Â§Ã‚Â±ÃƒÂ Ã‚Â§Ã‚Â°ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¡", passwordPlaceholder: "ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬ÂºÃƒÂ Ã‚Â§Ã‚Â±ÃƒÂ Ã‚Â§Ã‚Â°ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¡",
+        forgotPassword: "ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬ÂºÃƒÂ Ã‚Â§Ã‚Â±ÃƒÂ Ã‚Â§Ã‚Â°ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¡ ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â¹ÃƒÂ Ã‚Â§Ã‚Â°ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã‚Â²ÃƒÂ Ã‚Â§Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â§Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¦Ã‚Â¿?", signIn: "ÃƒÂ Ã‚Â¦Ã¢â‚¬ÂºÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¦Ã‚Â¨ ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¦Ã‚Â¨ ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â§Ã‚Â°ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢",
+        or: "ÃƒÂ Ã‚Â¦Ã‚Â¬ÃƒÂ Ã‚Â¦Ã‚Â¾", signInGoogle: "Google ÃƒÂ Ã‚Â§Ã‚Â° ÃƒÂ Ã‚Â¦Ã‚Â¸ÃƒÂ Ã‚Â§Ã‹â€ ÃƒÂ Ã‚Â¦Ã‚Â¤ÃƒÂ Ã‚Â§Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¦Ã¢â‚¬ÂºÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¦Ã‚Â¨ ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¦Ã‚Â¨ ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â§Ã‚Â°ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢",
+        chooseRole: "ÃƒÂ Ã‚Â¦Ã¢â‚¬Â ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â§Ã¢â‚¬Â¹ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â§Ã‚Â° ÃƒÂ Ã‚Â¦Ã‚Â­ÃƒÂ Ã‚Â§Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¦Ã‚Â®ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¦Ã‚Â¾ ÃƒÂ Ã‚Â¦Ã‚Â¬ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬ÂºÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢", chooseRoleSub: "ÃƒÂ Ã‚Â¦Ã¢â‚¬Â ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â§Ã¢â‚¬Â¹ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ ÃƒÂ Ã‚Â¦Ã‚Â¸ÃƒÂ Ã‚Â§Ã‚Â°ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¬ÃƒÂ Ã‚Â§Ã¢â‚¬Â¹ÃƒÂ Ã‚Â¦Ã‚Â¤ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¤ÃƒÂ Ã‚Â¦Ã‚Â® ÃƒÂ Ã‚Â¦Ã‚Â¬ÃƒÂ Ã‚Â§Ã‚Â°ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â£ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¾ ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â§Ã‚Â°ÃƒÂ Ã‚Â¦Ã‚Â¾ ÃƒÂ Ã‚Â¦Ã‚Â­ÃƒÂ Ã‚Â§Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¦Ã‚Â®ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¦Ã‚Â¾ ÃƒÂ Ã‚Â¦Ã‚Â¬ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬ÂºÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢",
+        womanReg: "ÃƒÂ Ã‚Â¦Ã‚Â®ÃƒÂ Ã‚Â¦Ã‚Â¹ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã‚Â²ÃƒÂ Ã‚Â¦Ã‚Â¾ ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â¦Ã…Â¾ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã…â€œÃƒÂ Ã‚Â§Ã¢â€šÂ¬ÃƒÂ Ã‚Â¦Ã‚Â¯ÃƒÂ Ã‚Â¦Ã‚Â¼ÃƒÂ Ã‚Â¦Ã‚Â¨", fullName: "ÃƒÂ Ã‚Â¦Ã‚Â¸ÃƒÂ Ã‚Â¦Ã‚Â®ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â§Ã¢â‚¬Å¡ÃƒÂ Ã‚Â§Ã‚Â°ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â£ ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â®", fullNamePlaceholder: "ÃƒÂ Ã‚Â¦Ã¢â‚¬Â ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â§Ã¢â‚¬Â¹ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â§Ã‚Â° ÃƒÂ Ã‚Â¦Ã‚Â¸ÃƒÂ Ã‚Â¦Ã‚Â®ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â§Ã¢â‚¬Å¡ÃƒÂ Ã‚Â§Ã‚Â°ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â£ ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â®",
+        skills: "ÃƒÂ Ã‚Â¦Ã‚Â¦ÃƒÂ Ã‚Â¦Ã¢â‚¬â€œÃƒÂ Ã‚Â¦Ã‚Â²", skillsPlaceholder: "ÃƒÂ Ã‚Â¦Ã¢â‚¬Â°ÃƒÂ Ã‚Â¦Ã‚Â¦ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â¹ÃƒÂ Ã‚Â§Ã‚Â°ÃƒÂ Ã‚Â¦Ã‚Â£ÃƒÂ Ã‚Â¦Ã‚Â¸ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¬ÃƒÂ Ã‚Â§Ã‚Â°ÃƒÂ Ã‚Â§Ã¢â‚¬Å¡ÃƒÂ Ã‚Â¦Ã‚Âª: ÃƒÂ Ã‚Â¦Ã…Â¡ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã‚Â²ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¡, ÃƒÂ Ã‚Â¦Ã‚Â¹ÃƒÂ Ã‚Â¦Ã‚Â¸ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¤ÃƒÂ Ã‚Â¦Ã‚Â¶ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã‚Â²ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Âª",
+        jobPref: "ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â§Ã‚Â°ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â®ÃƒÂ Ã‚Â§Ã‚Â° ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â¦Ã¢â‚¬ÂºÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¦", selectPref: "ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â¦Ã¢â‚¬ÂºÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¦ ÃƒÂ Ã‚Â¦Ã‚Â¬ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬ÂºÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢", createAccount: "ÃƒÂ Ã‚Â¦Ã‚ÂÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬Â°ÃƒÂ Ã‚Â¦Ã‚Â£ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã…Â¸ ÃƒÂ Ã‚Â¦Ã‚Â¬ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬Å“ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢",
+        companyReg: "ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â§Ã¢â‚¬Â¹ÃƒÂ Ã‚Â¦Ã‚Â®ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â§Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â¦Ã…Â¾ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã…â€œÃƒÂ Ã‚Â§Ã¢â€šÂ¬ÃƒÂ Ã‚Â¦Ã‚Â¯ÃƒÂ Ã‚Â¦Ã‚Â¼ÃƒÂ Ã‚Â¦Ã‚Â¨", companyName: "ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â§Ã¢â‚¬Â¹ÃƒÂ Ã‚Â¦Ã‚Â®ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â§Ã¢â€šÂ¬ÃƒÂ Ã‚Â§Ã‚Â° ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â®", industry: "ÃƒÂ Ã‚Â¦Ã¢â‚¬Â°ÃƒÂ Ã‚Â¦Ã‚Â¦ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¯ÃƒÂ Ã‚Â§Ã¢â‚¬Â¹ÃƒÂ Ã‚Â¦Ã¢â‚¬â€",
+        address: "ÃƒÂ Ã‚Â¦Ã‚Â ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¾", addressPlaceholder: "ÃƒÂ Ã‚Â¦Ã…Â¡ÃƒÂ Ã‚Â¦Ã‚Â¹ÃƒÂ Ã‚Â§Ã‚Â°, ÃƒÂ Ã‚Â§Ã‚Â°ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã…â€œÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¯", registerCompany: "ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â§Ã¢â‚¬Â¹ÃƒÂ Ã‚Â¦Ã‚Â®ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â§Ã¢â€šÂ¬ ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â¦Ã…Â¾ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã…â€œÃƒÂ Ã‚Â§Ã¢â€šÂ¬ÃƒÂ Ã‚Â¦Ã‚Â¯ÃƒÂ Ã‚Â¦Ã‚Â¼ÃƒÂ Ã‚Â¦Ã‚Â¨ ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â§Ã‚Â°ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢",
+        adminReg: "ÃƒÂ Ã‚Â¦Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¡ÃƒÂ Ã‚Â¦Ã‚Â®ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã‚Â¨ ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â¦Ã…Â¾ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã…â€œÃƒÂ Ã‚Â§Ã¢â€šÂ¬ÃƒÂ Ã‚Â¦Ã‚Â¯ÃƒÂ Ã‚Â¦Ã‚Â¼ÃƒÂ Ã‚Â¦Ã‚Â¨", registerAdmin: "ÃƒÂ Ã‚Â¦Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¡ÃƒÂ Ã‚Â¦Ã‚Â®ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã‚Â¨ ÃƒÂ Ã‚Â¦Ã‚Â¹ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã…Â¡ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â§Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â¦Ã…Â¾ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã…â€œÃƒÂ Ã‚Â§Ã¢â€šÂ¬ÃƒÂ Ã‚Â¦Ã‚Â¯ÃƒÂ Ã‚Â¦Ã‚Â¼ÃƒÂ Ã‚Â¦Ã‚Â¨ ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â§Ã‚Â°ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢",
+        newToTarini: "Tarini ÃƒÂ Ã‚Â¦Ã‚Â¤ ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¤ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¨ ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â§Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¦Ã‚Â¿?", signUp: "ÃƒÂ Ã‚Â¦Ã¢â‚¬ÂºÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¦Ã‚Â¨ ÃƒÂ Ã‚Â¦Ã¢â‚¬Â ÃƒÂ Ã‚Â¦Ã‚Âª ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â§Ã‚Â°ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢",
+        alreadyHaveAccount: "ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¦Ã‚Â¤ÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã‚Â®ÃƒÂ Ã‚Â¦Ã‚Â§ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¯ÃƒÂ Ã‚Â§Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¦Ã‚ÂÃƒÂ Ã‚Â¦Ã…Â¸ÃƒÂ Ã‚Â¦Ã‚Â¾ ÃƒÂ Ã‚Â¦Ã‚ÂÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬Â°ÃƒÂ Ã‚Â¦Ã‚Â£ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã…Â¸ ÃƒÂ Ã‚Â¦Ã¢â‚¬Â ÃƒÂ Ã‚Â¦Ã¢â‚¬ÂºÃƒÂ Ã‚Â§Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â§Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ÃƒÂ Ã‚Â¦Ã‚Â¿?", back: "ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â¦Ã‚Â¿ÃƒÂ Ã‚Â¦Ã¢â‚¬ÂºÃƒÂ Ã‚Â¦Ã‚Â²ÃƒÂ Ã‚Â§Ã‹â€ ",
+        welcomeBack: "Tarini ÃƒÂ Ã‚Â¦Ã‚Â²ÃƒÂ Ã‚Â§Ã‹â€  ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â§Ã‚Â° ÃƒÂ Ã‚Â¦Ã‚Â¸ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¬ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬â€ÃƒÂ Ã‚Â¦Ã‚Â¤ÃƒÂ Ã‚Â¦Ã‚Â®", tariniWelcomesYou: "ÃƒÂ¢Ã…â€œÃ‚Â¦ Tarini ÃƒÂ Ã‚Â¦Ã‚Â¯ÃƒÂ Ã‚Â¦Ã‚Â¼ÃƒÂ Ã‚Â§Ã¢â‚¬Â¡ ÃƒÂ Ã‚Â¦Ã¢â‚¬Â ÃƒÂ Ã‚Â¦Ã‚ÂªÃƒÂ Ã‚Â§Ã¢â‚¬Â¹ÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¢ ÃƒÂ Ã‚Â¦Ã‚Â¸ÃƒÂ Ã‚Â§Ã‚ÂÃƒÂ Ã‚Â¦Ã‚Â¬ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬â€ÃƒÂ Ã‚Â¦Ã‚Â¤ÃƒÂ Ã‚Â¦Ã‚Â® ÃƒÂ Ã‚Â¦Ã…â€œÃƒÂ Ã‚Â¦Ã‚Â¨ÃƒÂ Ã‚Â¦Ã‚Â¾ÃƒÂ Ã‚Â¦Ã¢â‚¬Â¡ÃƒÂ Ã‚Â¦Ã¢â‚¬ÂºÃƒÂ Ã‚Â§Ã¢â‚¬Â¡"
     }
 };
 
@@ -1398,20 +1545,20 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ============================================================
-// FIND JOBS PAGE — data, filters, AI match, top companies
+// FIND JOBS PAGE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â data, filters, AI match, top companies
 // ============================================================
 
 const _allJobs = [
-    { id:1, title:'Tailoring Instructor', company:'Craft India', location:'Mumbai', locType:'On-site', type:'Part-time', exp:'Mid-level', industry:'Education', salaryNum:12000, salary:'₹12,000/mo', grad:'linear-gradient(135deg,#4d41df,#675df9)' },
-    { id:2, title:'Data Entry Operator', company:'TechSeva', location:'Remote', locType:'Remote', type:'Full-time', exp:'Fresher', industry:'Technology', salaryNum:15000, salary:'₹15,000/mo', grad:'linear-gradient(135deg,#5c51a0,#c8bfff)' },
-    { id:3, title:'Beauty Consultant', company:'GlowUp Studio', location:'Delhi', locType:'On-site', type:'Freelance', exp:'Fresher', industry:'Retail', salaryNum:8000, salary:'₹8,000/mo', grad:'linear-gradient(135deg,#875041,#feb5a2)' },
-    { id:4, title:'Junior Web Developer', company:'CodeNest', location:'Hybrid', locType:'Hybrid', type:'Full-time', exp:'Fresher', industry:'Technology', salaryNum:22000, salary:'₹22,000/mo', grad:'linear-gradient(135deg,#2d6a4f,#74c69d)' },
-    { id:5, title:'Healthcare Assistant', company:'MediCare Plus', location:'Bangalore', locType:'On-site', type:'Full-time', exp:'Mid-level', industry:'Healthcare', salaryNum:18000, salary:'₹18,000/mo', grad:'linear-gradient(135deg,#c77dff,#7b2d8b)' },
-    { id:6, title:'Content Writer', company:'WordCraft', location:'Remote', locType:'Remote', type:'Freelance', exp:'Fresher', industry:'Technology', salaryNum:9000, salary:'₹9,000/mo', grad:'linear-gradient(135deg,#4d41df,#875041)' },
-    { id:7, title:'Retail Store Manager', company:'FashionHub', location:'Chennai', locType:'On-site', type:'Full-time', exp:'Senior', industry:'Retail', salaryNum:35000, salary:'₹35,000/mo', grad:'linear-gradient(135deg,#875041,#5c51a0)' },
-    { id:8, title:'UI/UX Design Intern', company:'PixelWorks', location:'Hybrid', locType:'Hybrid', type:'Internship', exp:'Fresher', industry:'Technology', salaryNum:7000, salary:'₹7,000/mo', grad:'linear-gradient(135deg,#675df9,#c8bfff)' },
-    { id:9, title:'Primary School Teacher', company:'BrightMinds School', location:'Pune', locType:'On-site', type:'Full-time', exp:'Mid-level', industry:'Education', salaryNum:20000, salary:'₹20,000/mo', grad:'linear-gradient(135deg,#2d6a4f,#4d41df)' },
-    { id:10, title:'Senior Data Analyst', company:'InsightCo', location:'Remote', locType:'Remote', type:'Full-time', exp:'Senior', industry:'Technology', salaryNum:55000, salary:'₹55,000/mo', grad:'linear-gradient(135deg,#4d41df,#2d6a4f)' },
+    { id:1, title:'Tailoring Instructor', company:'Craft India', location:'Mumbai', locType:'On-site', type:'Part-time', exp:'Mid-level', industry:'Education', salaryNum:12000, salary:'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹12,000/mo', grad:'linear-gradient(135deg,#4d41df,#675df9)' },
+    { id:2, title:'Data Entry Operator', company:'TechSeva', location:'Remote', locType:'Remote', type:'Full-time', exp:'Fresher', industry:'Technology', salaryNum:15000, salary:'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹15,000/mo', grad:'linear-gradient(135deg,#5c51a0,#c8bfff)' },
+    { id:3, title:'Beauty Consultant', company:'GlowUp Studio', location:'Delhi', locType:'On-site', type:'Freelance', exp:'Fresher', industry:'Retail', salaryNum:8000, salary:'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹8,000/mo', grad:'linear-gradient(135deg,#875041,#feb5a2)' },
+    { id:4, title:'Junior Web Developer', company:'CodeNest', location:'Hybrid', locType:'Hybrid', type:'Full-time', exp:'Fresher', industry:'Technology', salaryNum:22000, salary:'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹22,000/mo', grad:'linear-gradient(135deg,#2d6a4f,#74c69d)' },
+    { id:5, title:'Healthcare Assistant', company:'MediCare Plus', location:'Bangalore', locType:'On-site', type:'Full-time', exp:'Mid-level', industry:'Healthcare', salaryNum:18000, salary:'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹18,000/mo', grad:'linear-gradient(135deg,#c77dff,#7b2d8b)' },
+    { id:6, title:'Content Writer', company:'WordCraft', location:'Remote', locType:'Remote', type:'Freelance', exp:'Fresher', industry:'Technology', salaryNum:9000, salary:'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹9,000/mo', grad:'linear-gradient(135deg,#4d41df,#875041)' },
+    { id:7, title:'Retail Store Manager', company:'FashionHub', location:'Chennai', locType:'On-site', type:'Full-time', exp:'Senior', industry:'Retail', salaryNum:35000, salary:'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹35,000/mo', grad:'linear-gradient(135deg,#875041,#5c51a0)' },
+    { id:8, title:'UI/UX Design Intern', company:'PixelWorks', location:'Hybrid', locType:'Hybrid', type:'Internship', exp:'Fresher', industry:'Technology', salaryNum:7000, salary:'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹7,000/mo', grad:'linear-gradient(135deg,#675df9,#c8bfff)' },
+    { id:9, title:'Primary School Teacher', company:'BrightMinds School', location:'Pune', locType:'On-site', type:'Full-time', exp:'Mid-level', industry:'Education', salaryNum:20000, salary:'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹20,000/mo', grad:'linear-gradient(135deg,#2d6a4f,#4d41df)' },
+    { id:10, title:'Senior Data Analyst', company:'InsightCo', location:'Remote', locType:'Remote', type:'Full-time', exp:'Senior', industry:'Technology', salaryNum:55000, salary:'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹55,000/mo', grad:'linear-gradient(135deg,#4d41df,#2d6a4f)' },
 ];
 
 const _topCompanies = [
@@ -1720,7 +1867,7 @@ function openJobDetail(jobId) {
     if (applyBtn) { applyBtn.disabled = false; applyBtn.style.opacity = '1'; applyBtn.onclick = function(){ openJobApplyForm(); }; applyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-variation-settings:\'FILL\' 1">send</span> Apply Now'; }
 
     // Bookmark state
-    const apps = JSON.parse(localStorage.getItem('tarini_applications') || '[]');
+    const apps = JSON.parse(localStorage.getItem(_appsKey()) || '[]');
     const alreadyApplied = apps.some(a => a.jobId === jobId);
     if (alreadyApplied) {
         if (applyBtn) { applyBtn.disabled = true; applyBtn.style.opacity = '0.7'; applyBtn.onclick = null; applyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-variation-settings:\'FILL\' 1">check_circle</span> Already Applied'; }
@@ -1739,7 +1886,7 @@ function submitJobApplication() {
 
     setTimeout(() => {
         // Save to applications
-        const apps = JSON.parse(localStorage.getItem('tarini_applications') || '[]');
+        const apps = JSON.parse(localStorage.getItem(_appsKey()) || '[]');
         const alreadyApplied = apps.some(a => a.jobId === job.id);
         if (!alreadyApplied) {
             apps.unshift({
@@ -1753,7 +1900,9 @@ function submitJobApplication() {
                 appliedAt: new Date().toISOString(),
                 status: 'Applied',
             });
-            localStorage.setItem('tarini_applications', JSON.stringify(apps));
+            localStorage.setItem(_appsKey(), JSON.stringify(apps));
+            earnCoins(20, `Applied to ${job.title}`);
+            checkAndAwardBadges();
         }
 
         // Add notification
@@ -1813,7 +1962,7 @@ function openJobApplyForm() {
 
     // Job summary card
     el('apply-job-title').textContent = job.title;
-    el('apply-job-company').textContent = job.company + ' · ' + job.location;
+    el('apply-job-company').textContent = job.company + ' Ãƒâ€šÃ‚Â· ' + job.location;
     el('apply-job-type').textContent = job.type;
     el('apply-form-subtitle').textContent = job.company;
     const avatar = el('apply-job-avatar');
@@ -1868,7 +2017,7 @@ function finalSubmitApplication() {
         return;
     }
     if (!/^\d{10,13}$/.test(phone)) {
-        if (errEl) { errEl.textContent = 'Enter a valid phone number (10–13 digits).'; errEl.classList.remove('hidden'); }
+        if (errEl) { errEl.textContent = 'Enter a valid phone number (10ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“13 digits).'; errEl.classList.remove('hidden'); }
         return;
     }
     if (!/^\d{6}$/.test(pincode)) {
@@ -1883,7 +2032,7 @@ function finalSubmitApplication() {
     const user = auth.currentUser;
 
     const doSave = (resumeName) => {
-        const apps = JSON.parse(localStorage.getItem('tarini_applications') || '[]');
+        const apps = JSON.parse(localStorage.getItem(_appsKey()) || '[]');
         const alreadyApplied = apps.some(a => a.jobId === job.id);
         if (!alreadyApplied) {
             apps.unshift({
@@ -1901,7 +2050,9 @@ function finalSubmitApplication() {
                 status:     'Applied',
                 applicant: { name, email, phone, address: `${street}, ${city}, ${state} - ${pincode}`, education: edu, experience: exp, skills, notes, resumeName: resumeName || '' },
             });
-            localStorage.setItem('tarini_applications', JSON.stringify(apps));
+            localStorage.setItem(_appsKey(), JSON.stringify(apps));
+            earnCoins(20, `Applied to ${job.title}`);
+            checkAndAwardBadges();
         }
 
         addNotification('application', `Applied to ${job.title}`, `Your application to ${job.company} has been submitted successfully.`);
@@ -1940,7 +2091,7 @@ function loadApplicationsScreen() {
     const container = document.getElementById('applications-list-container');
     if (!container) return;
 
-    const apps = JSON.parse(localStorage.getItem('tarini_applications') || '[]');
+    const apps = JSON.parse(localStorage.getItem(_appsKey()) || '[]');
 
     if (apps.length === 0) {
         container.innerHTML = `
@@ -2004,7 +2155,7 @@ function loadApplicationsScreen() {
 window.loadApplicationsScreen = loadApplicationsScreen;
 
 // ============================================================
-// BACK NAVIGATION — My Applications
+// BACK NAVIGATION ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â My Applications
 // ============================================================
 
 function goBackFromApplications() {
@@ -2048,31 +2199,37 @@ const _origNavigateTo = navigateTo;
 // ============================================================
 
 const _skillCategories = [
-    { name:'Design',        icon:'palette',          color:'#5c51a0', bg:'rgba(92,81,160,0.12)',   grad:'linear-gradient(135deg,#5c51a0,#c8bfff)' },
-    { name:'Development',   icon:'code',             color:'#4d41df', bg:'rgba(77,65,223,0.12)',   grad:'linear-gradient(135deg,#4d41df,#675df9)' },
-    { name:'Marketing',     icon:'campaign',         color:'#875041', bg:'rgba(135,80,65,0.12)',   grad:'linear-gradient(135deg,#875041,#feb5a2)' },
-    { name:'Finance',       icon:'payments',         color:'#276749', bg:'rgba(45,106,79,0.12)',   grad:'linear-gradient(135deg,#276749,#74c69d)' },
-    { name:'Communication', icon:'forum',            color:'#675df9', bg:'rgba(103,93,249,0.12)',  grad:'linear-gradient(135deg,#675df9,#c4c0ff)' },
-    { name:'Business',      icon:'business_center',  color:'#c77dff', bg:'rgba(199,125,255,0.12)', grad:'linear-gradient(135deg,#c77dff,#e5deff)' },
-    { name:'Health',        icon:'health_and_safety',color:'#e63946', bg:'rgba(230,57,70,0.10)',   grad:'linear-gradient(135deg,#e63946,#ffb3b8)' },
-    { name:'Leadership',    icon:'military_tech',    color:'#4d41df', bg:'rgba(77,65,223,0.12)',   grad:'linear-gradient(135deg,#4d41df,#5c51a0)' },
+    { name:'Design',        icon:'palette',           color:'#5c51a0', bg:'rgba(92,81,160,0.12)',   grad:'linear-gradient(135deg,#5c51a0,#c8bfff)' },
+    { name:'Development',   icon:'code',              color:'#4d41df', bg:'rgba(77,65,223,0.12)',   grad:'linear-gradient(135deg,#4d41df,#675df9)' },
+    { name:'Marketing',     icon:'campaign',          color:'#875041', bg:'rgba(135,80,65,0.12)',   grad:'linear-gradient(135deg,#875041,#feb5a2)' },
+    { name:'Finance',       icon:'payments',          color:'#276749', bg:'rgba(45,106,79,0.12)',   grad:'linear-gradient(135deg,#276749,#74c69d)' },
+    { name:'Communication', icon:'forum',             color:'#675df9', bg:'rgba(103,93,249,0.12)',  grad:'linear-gradient(135deg,#675df9,#c4c0ff)' },
+    { name:'Business',      icon:'business_center',   color:'#c77dff', bg:'rgba(199,125,255,0.12)', grad:'linear-gradient(135deg,#c77dff,#e5deff)' },
+    { name:'Basics',        icon:'lightbulb',         color:'#e63946', bg:'rgba(230,57,70,0.10)',   grad:'linear-gradient(135deg,#e63946,#ffb3b8)' },
+    { name:'Smartphone',    icon:'smartphone',        color:'#4d41df', bg:'rgba(77,65,223,0.12)',   grad:'linear-gradient(135deg,#4d41df,#5c51a0)' },
 ];
-
 const _allCourses = [
-    { id:1,  title:'Figma for Beginners',           instructor:'DesignCraft',    category:'Design',        level:'Beginner',     durLabel:'1.5h',  durKey:'short',  type:'Free', rating:4.8, enrolled:3200, desc:'Learn UI design fundamentals using Figma — from wireframes to polished prototypes.' },
-    { id:2,  title:'React.js Essentials',           instructor:'CodeNest',       category:'Development',   level:'Intermediate', durLabel:'4h',    durKey:'medium', type:'Free', rating:4.7, enrolled:5100, desc:'Build modern web apps with React hooks, components, and state management.' },
-    { id:3,  title:'Digital Marketing Masterclass', instructor:'GrowthLab',      category:'Marketing',     level:'Beginner',     durLabel:'3h',    durKey:'medium', type:'Paid', rating:4.6, enrolled:2800, desc:'Master SEO, social media, email campaigns, and paid ads from scratch.' },
-    { id:4,  title:'Personal Finance Basics',       instructor:'MoneyWise',      category:'Finance',       level:'Beginner',     durLabel:'1h',    durKey:'short',  type:'Free', rating:4.9, enrolled:7400, desc:'Understand budgeting, savings, investments, and financial planning for everyday life.' },
-    { id:5,  title:'Public Speaking Confidence',    instructor:'SpeakUp India',  category:'Communication', level:'Beginner',     durLabel:'2h',    durKey:'short',  type:'Free', rating:4.5, enrolled:1900, desc:'Overcome stage fear and communicate with clarity, confidence, and impact.' },
-    { id:6,  title:'Business Plan Writing',         instructor:'StartupSchool',  category:'Business',      level:'Intermediate', durLabel:'2.5h',  durKey:'medium', type:'Paid', rating:4.7, enrolled:1500, desc:'Write a compelling business plan that attracts investors and guides your startup.' },
-    { id:7,  title:'Advanced CSS & Animations',     instructor:'PixelWorks',     category:'Development',   level:'Advanced',     durLabel:'6h',    durKey:'long',   type:'Paid', rating:4.6, enrolled:2100, desc:'Deep-dive into CSS Grid, Flexbox, custom animations, and responsive design patterns.' },
-    { id:8,  title:'Stock Market for Women',        instructor:'InvestHer',      category:'Finance',       level:'Beginner',     durLabel:'3h',    durKey:'medium', type:'Paid', rating:4.8, enrolled:3300, desc:'Demystify the stock market — learn how to invest smartly and build long-term wealth.' },
-    { id:9,  title:'Brand Identity Design',         instructor:'DesignCraft',    category:'Design',        level:'Intermediate', durLabel:'5h',    durKey:'long',   type:'Paid', rating:4.7, enrolled:1800, desc:'Create powerful brand identities — logos, colour palettes, typography, and style guides.' },
-    { id:10, title:'Python for Data Analysis',      instructor:'DataSeva',       category:'Development',   level:'Intermediate', durLabel:'8h',    durKey:'long',   type:'Free', rating:4.9, enrolled:6200, desc:'Use Python, Pandas, and Matplotlib to analyse real-world datasets and visualise insights.' },
-    { id:11, title:'Effective Email Writing',       instructor:'SpeakUp India',  category:'Communication', level:'Beginner',     durLabel:'45min', durKey:'short',  type:'Free', rating:4.4, enrolled:980,  desc:'Write professional emails that get responses — structure, tone, and etiquette covered.' },
-    { id:12, title:'Entrepreneurship 101',          instructor:'StartupSchool',  category:'Business',      level:'Beginner',     durLabel:'4h',    durKey:'medium', type:'Free', rating:4.6, enrolled:4100, desc:'From idea to execution — learn the mindset, tools, and steps to launch your own venture.' },
+    { id:1,  ytId:'dU1xS07N-FA', title:'Figma for Beginners',              instructor:'DesignCraft',   category:'Design',        level:'Beginner',     durLabel:'1.5h',  durKey:'short',  type:'Free', rating:4.8, enrolled:3200, desc:'Learn UI design fundamentals using Figma from wireframes to polished prototypes.' },
+    { id:2,  ytId:'w7ejDZ8SWv8', title:'React.js Essentials',              instructor:'CodeNest',      category:'Development',   level:'Intermediate', durLabel:'4h',    durKey:'medium', type:'Free', rating:4.7, enrolled:5100, desc:'Build modern web apps with React hooks, components, and state management.' },
+    { id:3,  ytId:'nU-IIXBWlS4', title:'Digital Marketing Masterclass',    instructor:'GrowthLab',     category:'Marketing',     level:'Beginner',     durLabel:'3h',    durKey:'medium', type:'Paid', rating:4.6, enrolled:2800, desc:'Master SEO, social media, email campaigns, and paid ads from scratch.' },
+    { id:4,  ytId:'HQzoZfc3GwQ', title:'Personal Finance Basics',          instructor:'MoneyWise',     category:'Finance',       level:'Beginner',     durLabel:'1h',    durKey:'short',  type:'Free', rating:4.9, enrolled:7400, desc:'Understand budgeting, savings, investments, and financial planning for everyday life.' },
+    { id:5,  ytId:'tShavGuo0_E', title:'Public Speaking Confidence',       instructor:'SpeakUp India', category:'Communication', level:'Beginner',     durLabel:'2h',    durKey:'short',  type:'Free', rating:4.5, enrolled:1900, desc:'Overcome stage fear and communicate with clarity, confidence, and impact.' },
+    { id:6,  ytId:'Fqch5OrUPvA', title:'Business Plan Writing',            instructor:'StartupSchool', category:'Business',      level:'Intermediate', durLabel:'2.5h',  durKey:'medium', type:'Paid', rating:4.7, enrolled:1500, desc:'Write a compelling business plan that attracts investors and guides your startup.' },
+    { id:7,  ytId:'1Rs2ND1ryYc', title:'Advanced CSS and Animations',      instructor:'PixelWorks',    category:'Development',   level:'Advanced',     durLabel:'6h',    durKey:'long',   type:'Paid', rating:4.6, enrolled:2100, desc:'Deep-dive into CSS Grid, Flexbox, custom animations, and responsive design patterns.' },
+    { id:8,  ytId:'p7HKvqRI_Bo', title:'Stock Market for Women',           instructor:'InvestHer',     category:'Finance',       level:'Beginner',     durLabel:'3h',    durKey:'medium', type:'Paid', rating:4.8, enrolled:3300, desc:'Demystify the stock market and learn how to invest smartly and build long-term wealth.' },
+    { id:9,  ytId:'0JCUH5daCCE', title:'Brand Identity Design',            instructor:'DesignCraft',   category:'Design',        level:'Intermediate', durLabel:'5h',    durKey:'long',   type:'Paid', rating:4.7, enrolled:1800, desc:'Create powerful brand identities with logos, colour palettes, typography, and style guides.' },
+    { id:10, ytId:'r-uWLhO2v9U', title:'Python for Data Analysis',         instructor:'DataSeva',      category:'Development',   level:'Intermediate', durLabel:'8h',    durKey:'long',   type:'Free', rating:4.9, enrolled:6200, desc:'Use Python, Pandas, and Matplotlib to analyse real-world datasets and visualise insights.' },
+    { id:11, ytId:'sPW9r5NDLSE', title:'Effective Email Writing',          instructor:'SpeakUp India', category:'Communication', level:'Beginner',     durLabel:'45min', durKey:'short',  type:'Free', rating:4.4, enrolled:980,  desc:'Write professional emails that get responses - structure, tone, and etiquette covered.' },
+    { id:12, ytId:'ZpL0oGFBsDg', title:'Entrepreneurship 101',             instructor:'StartupSchool', category:'Business',      level:'Beginner',     durLabel:'4h',    durKey:'medium', type:'Free', rating:4.6, enrolled:4100, desc:'From idea to execution - learn the mindset, tools, and steps to launch your own venture.' },
+    { id:13, ytId:'Ks-_Mh1QhMc', title:'How to Use a Smartphone',         instructor:'TechSaathi',    category:'Smartphone',    level:'Beginner',     durLabel:'30min', durKey:'short',  type:'Free', rating:4.9, enrolled:8200, desc:'Simple step-by-step guide to using a smartphone - calls, messages, apps, and internet.' },
+    { id:14, ytId:'mP_ZMmgFHPY', title:'Internet Basics for Beginners',   instructor:'TechSaathi',    category:'Basics',        level:'Beginner',     durLabel:'25min', durKey:'short',  type:'Free', rating:4.8, enrolled:6100, desc:'Learn what the internet is, how to browse safely, and use Google and WhatsApp.' },
+    { id:15, ytId:'VvCytJvd4H0', title:'Basic Computer Skills',            instructor:'DigiLearn',     category:'Basics',        level:'Beginner',     durLabel:'40min', durKey:'short',  type:'Free', rating:4.7, enrolled:5400, desc:'Learn to use a computer from scratch - typing, files, and basic applications.' },
+    { id:16, ytId:'eIho2S0ZahI', title:'How to Start a Small Business',    instructor:'StartupSchool', category:'Basics',        level:'Beginner',     durLabel:'35min', durKey:'short',  type:'Free', rating:4.8, enrolled:4900, desc:'Simple guide to starting your own small business with little money and big ideas.' },
+    { id:17, ytId:'9bZkp7q19f0', title:'Simple Communication Skills',      instructor:'SpeakUp India', category:'Basics',        level:'Beginner',     durLabel:'20min', durKey:'short',  type:'Free', rating:4.6, enrolled:3800, desc:'Learn to speak clearly and confidently in everyday situations at home and work.' },
+    { id:18, ytId:'kqtD5dpn9C8', title:'WhatsApp and Video Calls Guide',   instructor:'TechSaathi',    category:'Smartphone',    level:'Beginner',     durLabel:'20min', durKey:'short',  type:'Free', rating:4.9, enrolled:7100, desc:'Learn to use WhatsApp, make video calls, and share photos with family and friends.' },
+    { id:19, ytId:'2ePf9rue1Ao', title:'Save Money Every Day',             instructor:'MoneyWise',     category:'Finance',       level:'Beginner',     durLabel:'18min', durKey:'short',  type:'Free', rating:4.7, enrolled:5200, desc:'Easy tips to save money from your daily income and build a small emergency fund.' },
+    { id:20, ytId:'dQw4w9WgXcQ', title:'Basic Sewing and Tailoring',       instructor:'CraftIndia',    category:'Basics',        level:'Beginner',     durLabel:'45min', durKey:'short',  type:'Free', rating:4.8, enrolled:4300, desc:'Learn basic hand stitching and simple tailoring skills to make and repair clothes.' },
 ];
-
 const _skillFilters = { cat: new Set(), level: new Set(), dur: new Set(), type: new Set() };
 
 function toggleSkillFilters() {
@@ -2125,7 +2282,6 @@ function _renderCourseCards(courses) {
     const empty     = document.getElementById('skill-empty-state');
     const countEl   = document.getElementById('skill-courses-count');
     if (!container) return;
-
     if (courses.length === 0) {
         container.innerHTML = '';
         if (empty)   empty.classList.remove('hidden');
@@ -2133,70 +2289,56 @@ function _renderCourseCards(courses) {
         return;
     }
     if (empty)   empty.classList.add('hidden');
-    if (countEl) countEl.textContent = `${courses.length} course${courses.length !== 1 ? 's' : ''}`;
-
-    const levelColor = l => l === 'Beginner'     ? 'background:rgba(45,106,79,0.10);color:#276749'
-                          : l === 'Intermediate' ? 'background:rgba(77,65,223,0.10);color:#4d41df'
-                          :                        'background:rgba(135,80,65,0.10);color:#875041';
-    const typeColor  = t => t === 'Free'         ? 'background:rgba(45,106,79,0.10);color:#276749'
-                          :                        'background:rgba(92,81,160,0.10);color:#5c51a0';
-    const stars = r => {
-        const full = Math.floor(r);
-        return Array.from({length:5}, (_,i) =>
-            `<span class="material-symbols-outlined" style="font-size:13px;color:${i < full ? '#f59e0b' : '#d1d5db'};font-variation-settings:'FILL' 1">star</span>`
-        ).join('');
-    };
-
-    container.innerHTML = courses.map(c => `
-        <div style="background:#fff;border-radius:20px;padding:16px;border:1px solid #eae6f3;box-shadow:0 2px 12px -4px rgba(77,65,223,0.08);transition:transform 0.15s,box-shadow 0.15s"
-            onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px -4px rgba(77,65,223,0.14)'"
-            onmouseleave="this.style.transform='';this.style.boxShadow='0 2px 12px -4px rgba(77,65,223,0.08)'"
-            ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform=''">
-            <div style="display:flex;align-items:flex-start;gap:12px">
-                <!-- Course icon avatar -->
-                <div style="width:48px;height:48px;border-radius:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:${(_skillCategories.find(x=>x.name===c.category)||{bg:'rgba(77,65,223,0.12)'}).bg}">
-                    <span class="material-symbols-outlined" style="font-size:22px;color:${(_skillCategories.find(x=>x.name===c.category)||{color:'#4d41df'}).color};font-variation-settings:'FILL' 1">${(_skillCategories.find(x=>x.name===c.category)||{icon:'school'}).icon}</span>
-                </div>
-                <div style="flex:1;min-width:0">
-                    <p style="font-size:14px;font-weight:700;color:#1b1b24;line-height:1.3">${c.title}</p>
-                    <p style="font-size:12px;color:#777587;margin-top:2px">${c.instructor} &bull; ${c.category}</p>
-                    <p style="font-size:12px;color:#464555;margin-top:5px;line-height:1.5">${c.desc}</p>
-                    <!-- Meta row -->
-                    <div style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap">
-                        <span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;${levelColor(c.level)}">${c.level}</span>
-                        <span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;${typeColor(c.type)}">${c.type}</span>
-                        <span style="display:flex;align-items:center;gap:3px;font-size:11px;color:#777587">
-                            <span class="material-symbols-outlined" style="font-size:13px;color:#9e9bb8;font-variation-settings:'FILL' 1">schedule</span>${c.durLabel}
-                        </span>
-                    </div>
-                    <!-- Rating + enrolled -->
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
-                        <div style="display:flex;align-items:center;gap:4px">
-                            ${stars(c.rating)}
-                            <span style="font-size:12px;font-weight:700;color:#1b1b24;margin-left:2px">${c.rating}</span>
-                            <span style="font-size:11px;color:#9e9bb8">(${c.enrolled.toLocaleString('en-IN')})</span>
-                        </div>
-                        <button onclick="enrollCourse(${c.id})" style="height:34px;padding:0 16px;border-radius:10px;border:none;background:linear-gradient(135deg,#4d41df,#5c51a0);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;transition:opacity 0.15s" onmouseenter="this.style.opacity='0.88'" onmouseleave="this.style.opacity='1'">Enroll</button>
-                    </div>
-                </div>
-            </div>
-        </div>`).join('');
+    if (countEl) countEl.textContent = courses.length + ' course' + (courses.length !== 1 ? 's' : '');
+    _renderCourseCardsInto(container, courses);
 }
+
+function openCourseVideo(courseId) {
+    const course = _allCourses.find(c => c.id === courseId);
+    if (!course) return;
+    const modal   = document.getElementById('course-video-modal');
+    const iframe  = document.getElementById('course-video-iframe');
+    const titleEl = document.getElementById('course-video-title');
+    const metaEl  = document.getElementById('course-video-meta');
+    if (!modal || !iframe) return;
+    if (titleEl) titleEl.textContent = course.title;
+    if (metaEl)  metaEl.textContent  = course.instructor + ' \u2022 ' + course.category + ' \u2022 ' + course.durLabel;
+    iframe.src = 'https://www.youtube.com/embed/' + course.ytId + '?autoplay=1&rel=0&modestbranding=1';
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    enrollCourse(courseId);
+}
+window.openCourseVideo = openCourseVideo;
+
+function closeCourseVideo() {
+    const modal  = document.getElementById('course-video-modal');
+    const iframe = document.getElementById('course-video-iframe');
+    if (iframe) iframe.src = '';
+    if (modal)  modal.classList.add('hidden');
+    document.body.style.overflow = '';
+}
+window.closeCourseVideo = closeCourseVideo;
 
 function enrollCourse(courseId) {
     const course = _allCourses.find(c => c.id === courseId);
     if (!course) return;
-    showToast(`Enrolled in "${course.title}" ✓`);
-    addNotification('system', `Enrolled: ${course.title}`, `You have successfully enrolled in ${course.title} by ${course.instructor}.`);
+    const key = _enrolledKey();
+    const list = JSON.parse(localStorage.getItem(key) || '[]');
+    if (list.includes(courseId)) return;
+    list.push(courseId);
+    localStorage.setItem(key, JSON.stringify(list));
+    showToast('Enrolled in "' + course.title + '" \u2713');
+    addNotification('system', 'Enrolled: ' + course.title, 'You have successfully enrolled in ' + course.title + ' by ' + course.instructor + '.');
+    earnCoins(15, 'Enrolled in ' + course.title);
+    checkAndAwardBadges();
 }
 window.enrollCourse = enrollCourse;
 
 function _renderSkillCategories() {
     const container = document.getElementById('skill-categories-container');
     if (!container) return;
-    // Show first 6 in the horizontal scroll
     container.innerHTML = _skillCategories.slice(0, 6).map(c => `
-        <div onclick="filterBySkillCategory('${c.name}')"
+        <div onclick="openSkillCategory('${c.name}')"
             style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;width:68px">
             <div style="width:60px;height:60px;border-radius:50%;background:${c.bg};display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px -4px rgba(77,65,223,0.15);transition:transform 0.15s,box-shadow 0.15s"
                 onmouseenter="this.style.transform='scale(1.08)';this.style.boxShadow='0 8px 20px -4px rgba(77,65,223,0.22)'"
@@ -2208,8 +2350,34 @@ function _renderSkillCategories() {
         </div>`).join('');
 }
 
+function openSkillCategory(name) {
+    const cat = _skillCategories.find(c => c.name === name);
+    const courses = _allCourses.filter(c => c.category === name);
+    // Update category page header
+    const titleEl = document.getElementById('skill-cat-page-title');
+    const iconEl  = document.getElementById('skill-cat-page-icon');
+    const countEl = document.getElementById('skill-cat-page-count');
+    if (titleEl) titleEl.textContent = name;
+    if (iconEl && cat) {
+        iconEl.style.background = cat.bg;
+        iconEl.querySelector('span').style.color = cat.color;
+        iconEl.querySelector('span').textContent = cat.icon;
+    }
+    if (countEl) countEl.textContent = courses.length + ' course' + (courses.length !== 1 ? 's' : '');
+    // Render filtered cards into category page container
+    const container = document.getElementById('skill-cat-courses-container');
+    if (container) {
+        if (courses.length === 0) {
+            container.innerHTML = '<div style="text-align:center;padding:48px 0"><span class="material-symbols-outlined text-outline-variant" style="font-size:48px">search_off</span><p class="text-on-surface-variant font-semibold mt-2">No courses in this category yet</p></div>';
+        } else {
+            _renderCourseCardsInto(container, courses);
+        }
+    }
+    navigateTo('skill-categories');
+}
+window.openSkillCategory = openSkillCategory;
+
 function filterBySkillCategory(name) {
-    // Clear other cat filters, set this one
     _skillFilters.cat.clear();
     _skillFilters.cat.add(name);
     document.querySelectorAll('.skill-chip[data-sf="cat"]').forEach(b => {
@@ -2219,7 +2387,6 @@ function filterBySkillCategory(name) {
         b.style.fontWeight = on ? '700' : '';
     });
     applySkillFilters();
-    // Scroll to courses section
     document.getElementById('skill-courses-container')?.scrollIntoView({ behavior:'smooth', block:'start' });
 }
 window.filterBySkillCategory = filterBySkillCategory;
@@ -2227,8 +2394,10 @@ window.filterBySkillCategory = filterBySkillCategory;
 function openAllCategories() {
     const grid = document.getElementById('all-categories-grid');
     if (grid) {
-        grid.innerHTML = _skillCategories.map(c => `
-            <div onclick="navigateTo('skills');setTimeout(()=>filterBySkillCategory('${c.name}'),200)"
+        grid.innerHTML = _skillCategories.map(c => {
+            const count = _allCourses.filter(x => x.category === c.name).length;
+            return `
+            <div onclick="openSkillCategory('${c.name}')"
                 style="display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;padding:12px 4px;border-radius:16px;transition:background 0.15s"
                 onmouseenter="this.style.background='rgba(77,65,223,0.05)'"
                 onmouseleave="this.style.background=''">
@@ -2236,12 +2405,96 @@ function openAllCategories() {
                     <span class="material-symbols-outlined" style="font-size:28px;color:${c.color};font-variation-settings:'FILL' 1">${c.icon}</span>
                 </div>
                 <p style="font-size:12px;font-weight:600;color:#1b1b24;text-align:center;line-height:1.3">${c.name}</p>
-                <p style="font-size:10px;color:#9e9bb8">${_allCourses.filter(x=>x.category===c.name).length} courses</p>
-            </div>`).join('');
+                <p style="font-size:10px;color:#9e9bb8">${count} course${count !== 1 ? 's' : ''}</p>
+            </div>`;
+        }).join('');
     }
+    // Show all-categories grid on the skill-categories screen (not a category detail)
+    const titleEl = document.getElementById('skill-cat-page-title');
+    const iconEl  = document.getElementById('skill-cat-page-icon');
+    const countEl = document.getElementById('skill-cat-page-count');
+    const container = document.getElementById('skill-cat-courses-container');
+    if (titleEl) titleEl.textContent = 'All Categories';
+    if (iconEl)  iconEl.style.display = 'none';
+    if (countEl) countEl.textContent = '';
+    if (container) container.innerHTML = '';
+    document.getElementById('all-categories-grid').style.display = 'grid';
+    document.getElementById('skill-cat-courses-container').style.display = 'none';
     navigateTo('skill-categories');
 }
 window.openAllCategories = openAllCategories;
+
+// Shared helper: render course cards into any container element
+function _renderCourseCardsInto(container, courses) {
+    const levelColor = l => l === 'Beginner'     ? 'background:rgba(45,106,79,0.10);color:#276749'
+                          : l === 'Intermediate' ? 'background:rgba(77,65,223,0.10);color:#4d41df'
+                          :                        'background:rgba(135,80,65,0.10);color:#875041';
+    const typeColor  = t => t === 'Free' ? 'background:rgba(45,106,79,0.10);color:#276749'
+                          :                'background:rgba(92,81,160,0.10);color:#5c51a0';
+    const stars = r => {
+        const full = Math.floor(r);
+        return Array.from({length:5}, (_,i) =>
+            `<span class="material-symbols-outlined" style="font-size:13px;color:${i < full ? '#f59e0b' : '#d1d5db'};font-variation-settings:'FILL' 1">star</span>`
+        ).join('');
+    };
+    container.innerHTML = courses.map(c => {
+        const catMeta = _skillCategories.find(x => x.name === c.category) || { bg:'rgba(77,65,223,0.12)', color:'#4d41df', icon:'school' };
+        const enrolled = JSON.parse(localStorage.getItem(_enrolledKey()) || '[]').includes(c.id);
+        // Try hqdefault first, fall back to mqdefault via onerror
+        const thumbHq = 'https://img.youtube.com/vi/' + c.ytId + '/hqdefault.jpg';
+        const thumbMq = 'https://img.youtube.com/vi/' + c.ytId + '/mqdefault.jpg';
+        return `
+        <div style="background:#fff;border-radius:20px;overflow:hidden;border:1px solid #eae6f3;box-shadow:0 2px 12px -4px rgba(77,65,223,0.08);transition:transform 0.15s,box-shadow 0.15s"
+            onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px -4px rgba(77,65,223,0.14)'"
+            onmouseleave="this.style.transform='';this.style.boxShadow='0 2px 12px -4px rgba(77,65,223,0.08)'"
+            ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform=''">
+            <div onclick="openCourseVideo(${c.id})" style="position:relative;width:100%;height:160px;cursor:pointer;overflow:hidden;background:${catMeta.bg}">
+                <img src="${thumbHq}" alt="${c.title}"
+                    style="width:100%;height:100%;object-fit:cover;display:block"
+                    onerror="this.src='${thumbMq}';this.onerror=function(){this.style.display='none';this.nextElementSibling.style.display='flex'}"/>
+                <div style="display:none;width:100%;height:100%;background:${catMeta.bg};align-items:center;justify-content:center;position:absolute;inset:0">
+                    <span class="material-symbols-outlined" style="font-size:40px;color:${catMeta.color};font-variation-settings:'FILL' 1">${catMeta.icon}</span>
+                </div>
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.22);transition:background 0.2s"
+                    onmouseenter="this.style.background='rgba(0,0,0,0.38)'" onmouseleave="this.style.background='rgba(0,0,0,0.22)'">
+                    <div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.95);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,0,0,0.28);transition:transform 0.15s"
+                        onmouseenter="this.style.transform='scale(1.1)'" onmouseleave="this.style.transform=''">
+                        <span class="material-symbols-outlined" style="font-size:26px;color:#4d41df;font-variation-settings:'FILL' 1;margin-left:3px">play_arrow</span>
+                    </div>
+                </div>
+                <span style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.72);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px">${c.durLabel}</span>
+                ${enrolled ? '<span style="position:absolute;top:8px;left:8px;background:rgba(45,106,79,0.90);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px">Enrolled</span>' : ''}
+            </div>
+            <div style="padding:14px 16px 16px">
+                <div style="display:flex;align-items:flex-start;gap:10px">
+                    <div style="width:36px;height:36px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:${catMeta.bg}">
+                        <span class="material-symbols-outlined" style="font-size:18px;color:${catMeta.color};font-variation-settings:'FILL' 1">${catMeta.icon}</span>
+                    </div>
+                    <div style="flex:1;min-width:0">
+                        <p style="font-size:14px;font-weight:700;color:#1b1b24;line-height:1.3">${c.title}</p>
+                        <p style="font-size:12px;color:#777587;margin-top:2px">${c.instructor} &bull; ${c.category}</p>
+                    </div>
+                </div>
+                <p style="font-size:12px;color:#464555;margin-top:8px;line-height:1.5">${c.desc}</p>
+                <div style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap">
+                    <span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;${levelColor(c.level)}">${c.level}</span>
+                    <span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;${typeColor(c.type)}">${c.type}</span>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
+                    <div style="display:flex;align-items:center;gap:4px">
+                        ${stars(c.rating)}
+                        <span style="font-size:12px;font-weight:700;color:#1b1b24;margin-left:2px">${c.rating}</span>
+                        <span style="font-size:11px;color:#9e9bb8">(${c.enrolled.toLocaleString('en-IN')})</span>
+                    </div>
+                    <button onclick="openCourseVideo(${c.id})" style="height:34px;padding:0 14px;border-radius:10px;border:none;background:linear-gradient(135deg,#4d41df,#5c51a0);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;display:flex;align-items:center;gap:5px;transition:opacity 0.15s" onmouseenter="this.style.opacity='0.88'" onmouseleave="this.style.opacity='1'">
+                        <span class="material-symbols-outlined" style="font-size:14px;font-variation-settings:'FILL' 1">play_circle</span>Watch
+                    </button>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+window._renderCourseCardsInto = _renderCourseCardsInto;
 
 function initSkillsPage() {
     _renderSkillCategories();
@@ -2271,7 +2524,7 @@ const _marketProducts = [
     { id:'m4', image:'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=400&q=80', name:'Madhubani Art Print',        seller:'ArtByPriya',     sellerType:'user',    category:'Art',         price:1200, stock:5,  rating:4.6, desc:'Original Madhubani art print on handmade paper.' },
     { id:'m5', image:'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&q=80', name:'Handwoven Jute Bag',         seller:'GreenWeave',     sellerType:'company', category:'Handicrafts', price:450,  stock:20, rating:4.5, desc:'Eco-friendly jute bag, perfect for daily use.' },
     { id:'m6', image:'https://images.unsplash.com/photo-1607006344380-b6775a0824a7?w=400&q=80', name:'Rose & Sandalwood Soap',     seller:'NaturalGlow',    sellerType:'user',    category:'Beauty',      price:150,  stock:40, rating:4.8, desc:'Handmade cold-process soap with natural ingredients.' },
-    { id:'m7', image:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80', name:'Macramé Wall Hanging',       seller:'KnotArt Studio', sellerType:'company', category:'Home Decor',  price:2200, stock:8,  rating:4.7, desc:'Handcrafted macramé wall hanging, boho style.' },
+    { id:'m7', image:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80', name:'MacramÃƒÆ’Ã‚Â© Wall Hanging',       seller:'KnotArt Studio', sellerType:'company', category:'Home Decor',  price:2200, stock:8,  rating:4.7, desc:'Handcrafted macramÃƒÆ’Ã‚Â© wall hanging, boho style.' },
     { id:'m8', image:'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=400&q=80', name:'Handmade Greeting Cards',    seller:'PaperLove',      sellerType:'user',    category:'Stationery',  price:80,   stock:100,rating:4.4, desc:'Set of 5 handmade greeting cards for all occasions.' },
     { id:'m9', image:'https://images.unsplash.com/photo-1611085583191-a3b181a88401?w=400&q=80', name:'Silk Thread Bangles',        seller:'Meena Crafts',   sellerType:'user',    category:'Jewellery',   price:250,  stock:25, rating:4.6, desc:'Colourful silk thread bangles, set of 6.' },
     { id:'m10',name:'Handloom Cotton Saree',      seller:'WeaversHub',     sellerType:'company', category:'Clothing',    price:3500, stock:15, rating:4.9, desc:'Pure handloom cotton saree with natural dyes.' },
@@ -2520,7 +2773,7 @@ function addToCart(productId) {
     else { cart.push({ id: p.id, name: p.name, price: p.price, image: p.image, seller: p.seller || '', qty: 1, stock: p.stock || 99 }); }
     _saveCart(cart);
     _updateCartBadge();
-    showToast(`"${p.name}" added to cart ✓`);
+    showToast(`"${p.name}" added to cart ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“`);
 }
 window.addToCart = addToCart;
 
@@ -2571,7 +2824,7 @@ function renderCart() {
     if (barEl)   barEl.classList.remove('hidden');
 
     const grandTotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
-    if (totalEl) totalEl.textContent = '₹' + grandTotal.toLocaleString('en-IN');
+    if (totalEl) totalEl.textContent = 'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹' + grandTotal.toLocaleString('en-IN');
 
     listEl.innerHTML = cart.map(item => `
         <div style="background:#fff;border-radius:18px;padding:14px;border:1px solid #eae6f3;box-shadow:0 2px 10px -4px rgba(77,65,223,0.08);display:flex;align-items:center;gap:12px">
@@ -2583,9 +2836,9 @@ function renderCart() {
             <div style="flex:1;min-width:0">
                 <p style="font-size:13px;font-weight:700;color:#1b1b24;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${item.name}</p>
                 <p style="font-size:11px;color:#777587;margin-top:1px">${item.seller}</p>
-                <p style="font-size:14px;font-weight:800;color:#4d41df;margin-top:4px">₹${(item.price * item.qty).toLocaleString('en-IN')}</p>
+                <p style="font-size:14px;font-weight:800;color:#4d41df;margin-top:4px">ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹${(item.price * item.qty).toLocaleString('en-IN')}</p>
                 <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
-                    <button onclick="updateCartQty('${item.id}',-1)" style="width:28px;height:28px;border-radius:8px;border:1px solid #eae6f3;background:#f6f2ff;color:#4d41df;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
+                    <button onclick="updateCartQty('${item.id}',-1)" style="width:28px;height:28px;border-radius:8px;border:1px solid #eae6f3;background:#f6f2ff;color:#4d41df;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center">ÃƒÂ¢Ã‹â€ Ã¢â‚¬â„¢</button>
                     <span style="font-size:14px;font-weight:700;color:#1b1b24;min-width:20px;text-align:center">${item.qty}</span>
                     <button onclick="updateCartQty('${item.id}',1)" style="width:28px;height:28px;border-radius:8px;border:1px solid #eae6f3;background:#f6f2ff;color:#4d41df;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
                     <button onclick="removeFromCart('${item.id}')" style="margin-left:auto;width:28px;height:28px;border-radius:8px;border:none;background:rgba(186,26,26,0.08);color:#ba1a1a;cursor:pointer;display:flex;align-items:center;justify-content:center">
@@ -2601,9 +2854,9 @@ function proceedToCheckout() {
     const cart = _getCart();
     if (cart.length === 0) return;
     const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
-    cart.forEach(item => addNotification('order', `Order: ${item.name}`, `Your order for ${item.name} (×${item.qty}) has been placed.`));
+    cart.forEach(item => addNotification('order', `Order: ${item.name}`, `Your order for ${item.name} (ÃƒÆ’Ã¢â‚¬â€${item.qty}) has been placed.`));
     clearCart();
-    showToast(`Order placed! Total: ₹${total.toLocaleString('en-IN')} ✓`);
+    showToast(`Order placed! Total: ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹${total.toLocaleString('en-IN')} ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“`);
     navigateTo('shop');
 }
 window.proceedToCheckout = proceedToCheckout;
@@ -2650,7 +2903,7 @@ function initMyShop() {
                     <p style="font-size:13px;font-weight:700;color:#1b1b24;line-height:1.3;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</p>
                     <span style="flex-shrink:0;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;${statusStyle}">${statusLabel}</span>
                 </div>
-                <p style="font-size:14px;font-weight:800;color:#4d41df;margin-top:3px">₹${Number(p.price).toLocaleString('en-IN')}</p>
+                <p style="font-size:14px;font-weight:800;color:#4d41df;margin-top:3px">ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹${Number(p.price).toLocaleString('en-IN')}</p>
                 <p style="font-size:11px;color:#777587;margin-top:1px">Stock: ${p.stock} &bull; ${p.category || 'Uncategorised'}</p>
                 <div style="display:flex;gap:8px;margin-top:8px">
                     <button onclick="openPostProduct(${p.id})" style="height:28px;padding:0 12px;border-radius:8px;border:1px solid rgba(77,65,223,0.25);background:rgba(77,65,223,0.06);color:#4d41df;font-size:11px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;display:flex;align-items:center;gap:4px">
@@ -2674,5 +2927,496 @@ function deleteMyShopProduct(productId) {
 }
 window.deleteMyShopProduct = deleteMyShopProduct;
 
-// ── Initialise cart badge on page load ──
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Initialise cart badge on page load ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 document.addEventListener('DOMContentLoaded', () => { _updateCartBadge(); });
+
+// ============================================================
+// REWARDS ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â TARINI COINS, TASKS & BADGES
+// ============================================================
+
+const _REWARDS_KEY = () => { const u = auth.currentUser; return u ? `tarini_rewards_${u.uid}` : 'tarini_rewards_guest'; };
+
+function _getRewards() {
+    return JSON.parse(localStorage.getItem(_REWARDS_KEY()) || JSON.stringify({
+        coins: 0, streak: 0, lastLogin: null, activity: [], earnedBadges: []
+    }));
+}
+function _saveRewards(r) { localStorage.setItem(_REWARDS_KEY(), JSON.stringify(r)); }
+
+// Earn coins and log activity
+function earnCoins(amount, reason) {
+    const r = _getRewards();
+    r.coins += amount;
+    r.activity.unshift({ amount, reason, time: new Date().toISOString() });
+    r.activity = r.activity.slice(0, 20);
+    _saveRewards(r);
+    _animateCoinEarn(amount);
+}
+window.earnCoins = earnCoins;
+
+function _animateCoinEarn(amount) {
+    const el = document.getElementById('rewards-total-points');
+    if (!el) return;
+    // Flash animation
+    el.style.transition = 'transform 0.2s ease, color 0.2s ease';
+    el.style.transform = 'scale(1.3)';
+    el.style.color = '#f59e0b';
+    setTimeout(() => { el.style.transform = 'scale(1)'; el.style.color = ''; }, 400);
+    // Floating +N toast
+    const toast = document.createElement('div');
+    toast.textContent = `+${amount} ÃƒÂ°Ã…Â¸Ã‚ÂªÃ¢â€žÂ¢`;
+    toast.style.cssText = 'position:fixed;top:80px;right:20px;background:linear-gradient(135deg,#4d41df,#675df9);color:#fff;font-size:14px;font-weight:800;padding:8px 16px;border-radius:999px;z-index:9999;animation:coinFloat 1.8s ease-out forwards;pointer-events:none;box-shadow:0 4px 16px rgba(77,65,223,0.4)';
+    if (!document.getElementById('coin-float-style')) {
+        const s = document.createElement('style');
+        s.id = 'coin-float-style';
+        s.textContent = '@keyframes coinFloat{0%{opacity:1;transform:translateY(0) scale(1)}60%{opacity:1;transform:translateY(-40px) scale(1.1)}100%{opacity:0;transform:translateY(-70px) scale(0.8)}}';
+        document.head.appendChild(s);
+    }
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 1900);
+}
+
+// Daily login streak
+function _checkDailyLogin() {
+    const r = _getRewards();
+    const today = new Date().toDateString();
+    if (r.lastLogin === today) return;
+    const yesterday = new Date(Date.now() - 86400000).toDateString();
+    r.streak = (r.lastLogin === yesterday) ? (r.streak || 0) + 1 : 1;
+    r.lastLogin = today;
+    _saveRewards(r);
+    earnCoins(10, 'Daily login bonus');
+    checkAndAwardBadges();
+}
+
+// Badge definitions
+const _allBadges = [
+    { id: 'first_login',    icon: 'waving_hand',        color: '#4d41df', bg: 'rgba(77,65,223,0.12)',   name: 'Welcome!',          desc: 'Joined Tarini',                  condition: r => true },
+    { id: 'profile_star',   icon: 'person_check',       color: '#276749', bg: 'rgba(45,106,79,0.12)',   name: 'Profile \u0938\u094d\u091f\u093e\u0930',  desc: 'Completed your profile',         condition: r => computeProfileProgress() >= 100 },
+    { id: 'first_apply',    icon: 'send',               color: '#875041', bg: 'rgba(135,80,65,0.12)',   name: 'First Apply',       desc: 'Applied to your first job',      condition: () => (JSON.parse(localStorage.getItem(_appsKey())||'[]')).length >= 1 },
+    { id: 'rising_talent',  icon: 'trending_up',        color: '#675df9', bg: 'rgba(103,93,249,0.12)',  name: 'Rising Talent',     desc: 'Applied to 3+ jobs',             condition: () => (JSON.parse(localStorage.getItem(_appsKey())||'[]')).length >= 3 },
+    { id: 'skill_learner',  icon: 'school',             color: '#5c51a0', bg: 'rgba(92,81,160,0.12)',   name: 'Skill Learner',     desc: 'Enrolled in a course',           condition: r => r.activity.some(a => a.reason.startsWith('Enrolled in')) },
+    { id: 'seller_debut',   icon: 'storefront',         color: '#c77dff', bg: 'rgba(199,125,255,0.12)', name: 'Seller Debut',      desc: 'Listed your first product',      condition: () => getShopProducts().length >= 1 },
+    { id: 'top_seller',     icon: 'workspace_premium',  color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  name: 'Top Seller',        desc: 'Listed 5+ products',             condition: () => getShopProducts().length >= 5 },
+    { id: 'streak_3',       icon: 'local_fire_department', color: '#e63946', bg: 'rgba(230,57,70,0.10)', name: 'On Fire!',         desc: '3-day login streak',             condition: r => (r.streak || 0) >= 3 },
+    { id: 'streak_7',       icon: 'bolt',               color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  name: 'Consistent User',   desc: '7-day login streak',             condition: r => (r.streak || 0) >= 7 },
+    { id: 'coin_100',       icon: 'monetization_on',    color: '#276749', bg: 'rgba(45,106,79,0.12)',   name: 'Coin Collector',    desc: 'Earned 100+ Tarini Coins',       condition: r => r.coins >= 100 },
+    { id: 'coin_500',       icon: 'diamond',            color: '#4d41df', bg: 'rgba(77,65,223,0.12)',   name: 'Coin Champion',     desc: 'Earned 500+ Tarini Coins',       condition: r => r.coins >= 500 },
+    { id: 'design_pro',     icon: 'palette',            color: '#5c51a0', bg: 'rgba(92,81,160,0.12)',   name: 'Design Pro',        desc: 'Enrolled in a Design course',    condition: r => r.activity.some(a => a.reason.toLowerCase().includes('figma') || a.reason.toLowerCase().includes('brand')) },
+];
+
+function checkAndAwardBadges() {
+    const r = _getRewards();
+    let newBadge = false;
+    _allBadges.forEach(b => {
+        if (!r.earnedBadges.includes(b.id) && b.condition(r)) {
+            r.earnedBadges.push(b.id);
+            newBadge = true;
+            _showBadgeUnlockToast(b);
+        }
+    });
+    if (newBadge) _saveRewards(r);
+}
+window.checkAndAwardBadges = checkAndAwardBadges;
+
+function _showBadgeUnlockToast(badge) {
+    const el = document.createElement('div');
+    el.style.cssText = 'position:fixed;bottom:120px;left:50%;transform:translateX(-50%);background:#fff;border:2px solid rgba(77,65,223,0.25);border-radius:20px;padding:12px 20px;display:flex;align-items:center;gap:12px;z-index:9999;box-shadow:0 8px 32px rgba(77,65,223,0.20);animation:fadeIn 0.3s ease-out;min-width:260px;max-width:320px';
+    el.innerHTML = `<div style="width:40px;height:40px;border-radius:12px;background:${badge.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><span class="material-symbols-outlined" style="font-size:22px;color:${badge.color};font-variation-settings:'FILL' 1">${badge.icon}</span></div><div><p style="font-size:12px;font-weight:700;color:#4d41df">ÃƒÂ°Ã…Â¸Ã‚ÂÃ¢â‚¬Â¦ Badge Unlocked!</p><p style="font-size:13px;font-weight:700;color:#1b1b24">${badge.name}</p><p style="font-size:11px;color:#777587">${badge.desc}</p></div>`;
+    document.body.appendChild(el);
+    setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.4s'; setTimeout(() => el.remove(), 400); }, 3000);
+}
+
+// Task definitions (evaluated fresh each call)
+function _getDailyTasks() {
+    const r = _getRewards();
+    const today = new Date().toDateString();
+    const apps = JSON.parse(localStorage.getItem(_appsKey()) || '[]');
+    const todayApps = apps.filter(a => new Date(a.appliedAt).toDateString() === today);
+    const profilePct = computeProfileProgress();
+    return [
+        { id: 'daily_login',    icon: 'login',          color: '#4d41df', coins: 10, label: 'Daily Login',          desc: 'Open the app today',              done: r.lastLogin === today },
+        { id: 'complete_profile', icon: 'person_check', color: '#276749', coins: 50, label: 'Complete Profile',     desc: 'Fill all profile fields',         done: profilePct >= 100 },
+        { id: 'apply_job',      icon: 'send',           color: '#875041', coins: 20, label: 'Apply to a Job',       desc: 'Submit a job application',        done: todayApps.length >= 1 },
+        { id: 'enroll_course',  icon: 'school',         color: '#5c51a0', coins: 15, label: 'Enroll in a Course',   desc: 'Join any Skill Hub course',       done: r.activity.some(a => a.reason.startsWith('Enrolled in') && new Date(a.time).toDateString() === today) },
+        { id: 'list_product',   icon: 'storefront',     color: '#c77dff', coins: 25, label: 'List a Product',       desc: 'Add a product to your shop',      done: r.activity.some(a => a.reason === 'Listed a new product' && new Date(a.time).toDateString() === today) },
+    ];
+}
+
+function initRewardsScreen() {
+    _checkDailyLogin();
+    checkAndAwardBadges();
+    const r = _getRewards();
+
+    // Update header stats
+    const coinsEl = document.getElementById('rewards-total-points');
+    const badgeEl = document.getElementById('rewards-badge-count');
+    const streakEl = document.getElementById('rewards-streak');
+    if (coinsEl) coinsEl.textContent = r.coins;
+    if (badgeEl) badgeEl.textContent = r.earnedBadges.length;
+    if (streakEl) streakEl.textContent = r.streak || 0;
+
+    _renderTasks();
+    _renderActivity(r);
+    _renderBadges(r);
+}
+window.initRewardsScreen = initRewardsScreen;
+
+function _renderTasks() {
+    const container = document.getElementById('rewards-tasks-container');
+    const label = document.getElementById('tasks-done-label');
+    if (!container) return;
+    const tasks = _getDailyTasks();
+    const done = tasks.filter(t => t.done).length;
+    if (label) label.textContent = `${done}/${tasks.length} done`;
+
+    container.innerHTML = tasks.map(t => `
+        <div style="display:flex;align-items:center;gap:12px;background:#fff;border-radius:16px;padding:12px 14px;border:1px solid ${t.done ? 'rgba(45,106,79,0.20)' : '#eae6f3'};box-shadow:0 2px 8px -4px rgba(77,65,223,0.08);transition:all 0.2s;${t.done ? 'opacity:0.75' : ''}">
+            <div style="width:40px;height:40px;border-radius:12px;background:${t.done ? 'rgba(45,106,79,0.12)' : `rgba(${t.color === '#4d41df' ? '77,65,223' : t.color === '#276749' ? '45,106,79' : t.color === '#875041' ? '135,80,65' : t.color === '#5c51a0' ? '92,81,160' : '199,125,255'},0.12)`};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <span class="material-symbols-outlined" style="font-size:20px;color:${t.done ? '#276749' : t.color};font-variation-settings:'FILL' 1">${t.done ? 'check_circle' : t.icon}</span>
+            </div>
+            <div style="flex:1;min-width:0">
+                <p style="font-size:13px;font-weight:700;color:${t.done ? '#276749' : '#1b1b24'};${t.done ? 'text-decoration:line-through' : ''}">${t.label}</p>
+                <p style="font-size:11px;color:#777587;margin-top:1px">${t.desc}</p>
+            </div>
+            <div style="display:flex;align-items:center;gap:3px;flex-shrink:0">
+                <span class="material-symbols-outlined" style="font-size:14px;color:#f59e0b;font-variation-settings:'FILL' 1">monetization_on</span>
+                <span style="font-size:12px;font-weight:700;color:#1b1b24">+${t.coins}</span>
+            </div>
+        </div>`).join('');
+}
+
+function _renderActivity(r) {
+    const container = document.getElementById('rewards-activity-container');
+    if (!container) return;
+    if (!r.activity.length) {
+        container.innerHTML = `<div style="text-align:center;padding:24px 0;color:#9e9bb8;font-size:13px">No activity yet. Start earning coins!</div>`;
+        return;
+    }
+    container.innerHTML = r.activity.slice(0, 6).map(a => `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fff;border-radius:14px;border:1px solid #eae6f3">
+            <div style="width:32px;height:32px;border-radius:10px;background:rgba(77,65,223,0.10);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <span class="material-symbols-outlined" style="font-size:16px;color:#4d41df;font-variation-settings:'FILL' 1">monetization_on</span>
+            </div>
+            <p style="flex:1;font-size:12px;color:#464555;line-height:1.4">${a.reason}</p>
+            <span style="font-size:12px;font-weight:800;color:#276749;flex-shrink:0">+${a.amount}</span>
+        </div>`).join('');
+}
+
+function _renderBadges(r) {
+    const container = document.getElementById('rewards-list-container');
+    const label = document.getElementById('badges-earned-label');
+    if (!container) return;
+    if (label) label.textContent = `${r.earnedBadges.length} earned`;
+
+    container.innerHTML = _allBadges.map(b => {
+        const earned = r.earnedBadges.includes(b.id);
+        return `
+        <div style="background:#fff;border-radius:18px;padding:14px 10px;border:${earned ? `2px solid ${b.color}30` : '1px solid #eae6f3'};box-shadow:${earned ? `0 4px 16px -4px ${b.color}30` : '0 2px 8px -4px rgba(77,65,223,0.06)'};text-align:center;transition:transform 0.15s;${earned ? '' : 'opacity:0.45;filter:grayscale(0.6)'}"
+            onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
+            <div style="width:48px;height:48px;border-radius:14px;background:${earned ? b.bg : 'rgba(119,117,135,0.08)'};display:flex;align-items:center;justify-content:center;margin:0 auto 8px;position:relative">
+                <span class="material-symbols-outlined" style="font-size:24px;color:${earned ? b.color : '#9e9bb8'};font-variation-settings:'FILL' 1">${b.icon}</span>
+                ${earned ? `<span style="position:absolute;-top:4px;-right:4px;width:14px;height:14px;background:#276749;border-radius:50%;display:flex;align-items:center;justify-content:center;top:-4px;right:-4px"><span class="material-symbols-outlined" style="font-size:10px;color:#fff;font-variation-settings:'FILL' 1">check</span></span>` : ''}
+            </div>
+            <p style="font-size:11px;font-weight:700;color:${earned ? '#1b1b24' : '#9e9bb8'};line-height:1.3">${b.name}</p>
+            <p style="font-size:10px;color:#9e9bb8;margin-top:2px;line-height:1.3">${b.desc}</p>
+        </div>`;
+    }).join('');
+}
+
+
+// ============================================================
+// COMPANY DASHBOARD
+// ============================================================
+
+const _companyScreens = ['company-dashboard', 'company-post-job', 'company-applications', 'company-messages', 'company-profile'];
+
+function isCompanyUser() {
+    const d = getProfileData();
+    return d.role === 'company';
+}
+
+function companyNavTo(screenId) {
+    // Hide all screens
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const target = document.getElementById(`screen-${screenId}`);
+    if (!target) return;
+    target.classList.add('active');
+
+    // Show/hide navbars
+    const bottomNav = document.getElementById('bottom-nav');
+    const companyNav = document.getElementById('company-bottom-nav');
+    const globalHeader = document.getElementById('global-header');
+    if (bottomNav) bottomNav.classList.add('hidden');
+    if (companyNav) companyNav.classList.remove('hidden');
+    if (globalHeader) globalHeader.classList.remove('hidden');
+
+    // Update active state on company nav
+    document.querySelectorAll('.co-nav-item').forEach(item => {
+        item.classList.remove('text-indigo-600', 'scale-110');
+        item.classList.add('text-slate-400');
+        const icon = item.querySelector('.co-nav-icon');
+        if (icon) icon.style.fontVariationSettings = "'FILL' 0";
+        if (item.getAttribute('data-co-target') === screenId) {
+            item.classList.remove('text-slate-400');
+            item.classList.add('text-indigo-600', 'scale-110');
+            if (icon) icon.style.fontVariationSettings = "'FILL' 1";
+        }
+    });
+
+    if (screenId === 'company-dashboard') loadCompanyDashboard();
+    if (screenId === 'company-profile') loadCompanyProfile();
+    if (screenId === 'company-applications') loadCompanyApplications();
+
+    history.pushState({ screen: screenId }, '', window.location.pathname);
+}
+window.companyNavTo = companyNavTo;
+
+function loadCompanyDashboard() {
+    const d = getProfileData();
+    const user = auth.currentUser;
+    const name = d.name || (user && user.displayName) || 'Company';
+
+    const nameEl = document.getElementById('company-dashboard-name');
+    if (nameEl) nameEl.textContent = 'Welcome, ' + name;
+
+    // Fetch stats from Firestore applications collection
+    if (!user) return;
+    const companyId = name.toLowerCase().replace(/\s+/g, '_');
+
+    // Active jobs: count jobs posted by this company
+    db.collection('jobs').where('companyId', '==', user.uid).get()
+        .then(snap => {
+            const el = document.getElementById('co-stat-jobs');
+            if (el) el.textContent = snap.size;
+        })
+        .catch(() => {});
+
+    // Total applications received for this company's jobs
+    db.collection('applications').where('companyId', '==', companyId).get()
+        .then(snap => {
+            const apps = snap.docs.map(d => d.data());
+            const el = document.getElementById('co-stat-apps');
+            if (el) el.textContent = apps.length;
+
+            const shortlisted = apps.filter(a => a.status === 'Shortlisted').length;
+            const hired = apps.filter(a => a.status === 'Hired').length;
+            const slEl = document.getElementById('co-stat-shortlisted');
+            const hiEl = document.getElementById('co-stat-hired');
+            if (slEl) slEl.textContent = shortlisted;
+            if (hiEl) hiEl.textContent = hired;
+        })
+        .catch(() => {
+            // Fallback: read from localStorage applications
+            const apps = JSON.parse(localStorage.getItem(_appsKey()) || '[]');
+            const myApps = apps.filter(a => a.companyId === companyId);
+            const el = document.getElementById('co-stat-apps');
+            if (el) el.textContent = myApps.length;
+            const slEl = document.getElementById('co-stat-shortlisted');
+            const hiEl = document.getElementById('co-stat-hired');
+            if (slEl) slEl.textContent = myApps.filter(a => a.status === 'Shortlisted').length;
+            if (hiEl) hiEl.textContent = myApps.filter(a => a.status === 'Hired').length;
+        });
+
+    // Active jobs fallback from localStorage
+    const allApps = JSON.parse(localStorage.getItem(_appsKey()) || '[]');
+    const uniqueJobs = new Set(allApps.filter(a => a.companyId === companyId).map(a => a.jobId));
+    const jobsEl = document.getElementById('co-stat-jobs');
+    if (jobsEl && jobsEl.textContent === '0') jobsEl.textContent = uniqueJobs.size;
+}
+
+function loadCompanyProfile() {
+    const d = getProfileData();
+    const user = auth.currentUser;
+    const name = d.name || (user && user.displayName) || 'Company';
+    const nameEl = document.getElementById('co-profile-name');
+    const indEl = document.getElementById('co-profile-industry');
+    const addrEl = document.getElementById('co-profile-address');
+    if (nameEl) nameEl.textContent = name;
+    if (indEl) indEl.textContent = d.industry || 'Industry not set';
+    if (addrEl) addrEl.textContent = d.address || 'Address not set';
+}
+
+function loadCompanyApplications() {
+    const d = getProfileData();
+    const user = auth.currentUser;
+    const name = d.name || (user && user.displayName) || '';
+    const companyId = name.toLowerCase().replace(/\s+/g, '_');
+    const container = document.getElementById('co-applications-list');
+    if (!container) return;
+
+    const apps = JSON.parse(localStorage.getItem(_appsKey()) || '[]')
+        .filter(a => a.companyId === companyId);
+
+    if (apps.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-16">
+                <div class="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center mx-auto mb-4">
+                    <span class="material-symbols-outlined text-secondary" style="font-size:32px;font-variation-settings:'FILL' 1">assignment</span>
+                </div>
+                <p class="font-bold text-on-surface text-[15px]">No applications yet</p>
+                <p class="text-[13px] text-on-surface-variant mt-1">Applications from candidates will appear here.</p>
+            </div>`;
+        return;
+    }
+
+    const statusStyle = s => s === 'Applied' ? 'background:rgba(77,65,223,0.10);color:#4d41df'
+        : s === 'Shortlisted' ? 'background:rgba(92,81,160,0.10);color:#5c51a0'
+        : s === 'Hired' ? 'background:rgba(45,106,79,0.10);color:#276749'
+        : 'background:rgba(135,80,65,0.10);color:#875041';
+
+    container.innerHTML = apps.map(app => {
+        const date = new Date(app.appliedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        return `
+        <div style="background:#fff;border-radius:18px;padding:16px;border:1px solid #eae6f3;box-shadow:0 2px 12px -4px rgba(77,65,223,0.08)">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+                <div>
+                    <p style="font-size:14px;font-weight:700;color:#1b1b24">${app.applicant ? app.applicant.name : 'Applicant'}</p>
+                    <p style="font-size:12px;color:#777587;margin-top:2px">${app.title} &bull; ${app.location}</p>
+                    <p style="font-size:11px;color:#9e9bb8;margin-top:4px">Applied ${date}</p>
+                </div>
+                <span style="flex-shrink:0;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;${statusStyle(app.status)}">${app.status}</span>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// Override onAuthStateChanged to handle company role redirect
+const _origAuthStateChanged = auth.onAuthStateChanged.bind(auth);
+auth.onAuthStateChanged((user) => {
+    if (user) {
+        const d = getProfileData();
+        if (d.role === 'company') {
+            // Hide user bottom nav, show company nav
+            const bottomNav = document.getElementById('bottom-nav');
+            const companyNav = document.getElementById('company-bottom-nav');
+            const globalHeader = document.getElementById('global-header');
+            if (bottomNav) bottomNav.classList.add('hidden');
+            if (companyNav) companyNav.classList.remove('hidden');
+            if (globalHeader) globalHeader.classList.remove('hidden');
+
+            const loginScreen = document.getElementById('screen-login');
+            if (loginScreen && loginScreen.classList.contains('active')) {
+                companyNavTo('company-dashboard');
+            }
+        }
+    }
+});
+
+// Patch handleRegister to redirect company users to company dashboard
+const _origHandleRegister = window.handleRegister;
+window.handleRegister = async function(role) {
+    await _origHandleRegister(role);
+    if (role === 'company') {
+        setTimeout(() => {
+            const d = getProfileData();
+            if (d.role === 'company') companyNavTo('company-dashboard');
+        }, 300);
+    }
+};
+
+// Patch handleLogin to redirect company users
+const _origHandleLogin = window.handleLogin;
+window.handleLogin = async function() {
+    await _origHandleLogin();
+    setTimeout(() => {
+        const d = getProfileData();
+        if (d.role === 'company') companyNavTo('company-dashboard');
+    }, 500);
+};
+
+// ============================================================
+// COMPANY PROFILE DATA — separate localStorage key from women users
+// ============================================================
+
+function getCompanyData() {
+    return JSON.parse(localStorage.getItem('companyProfileData') || '{}');
+}
+
+function saveCompanyData(data) {
+    localStorage.setItem('companyProfileData', JSON.stringify(data));
+}
+
+// Override the stub loadCompanyProfile with a full implementation
+loadCompanyProfile = function() {
+    const d = getCompanyData();
+    const user = auth.currentUser;
+    if (!d.name && user && user.displayName) { d.name = user.displayName; saveCompanyData(d); }
+    const name = d.name || (user && user.displayName) || 'Company';
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set('co-profile-name', name);
+    set('co-profile-industry', d.industry || 'Industry not set');
+    set('co-profile-location', d.location || 'Location not set');
+    set('co-profile-website', d.website || 'Website not set');
+    set('co-profile-desc', d.description || 'No description added yet.');
+    set('co-profile-email', d.email || '-');
+    set('co-profile-phone', d.phone || '-');
+    set('co-profile-address', d.address || '-');
+    const img = document.getElementById('co-logo-img');
+    const icon = document.getElementById('co-logo-icon');
+    if (img && icon) {
+        if (d.logo) { img.src = d.logo; img.classList.remove('hidden'); icon.classList.add('hidden'); }
+        else { img.classList.add('hidden'); icon.classList.remove('hidden'); }
+    }
+};
+
+function openEditCompanyProfile() {
+    const d = getCompanyData();
+    const user = auth.currentUser;
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+    set('ecp-name', d.name || (user && user.displayName) || '');
+    set('ecp-industry', d.industry || '');
+    set('ecp-desc', d.description || '');
+    set('ecp-location', d.location || '');
+    set('ecp-website', d.website || '');
+    set('ecp-email', d.email || (user && user.email) || '');
+    set('ecp-phone', d.phone || '');
+    companyNavTo('edit-company-profile');
+}
+window.openEditCompanyProfile = openEditCompanyProfile;
+
+function saveCompanyProfile() {
+    const d = getCompanyData();
+    const get = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+    d.name        = get('ecp-name');
+    d.industry    = get('ecp-industry');
+    d.description = get('ecp-desc');
+    d.location    = get('ecp-location');
+    d.website     = get('ecp-website');
+    d.email       = get('ecp-email');
+    d.phone       = get('ecp-phone');
+    saveCompanyData(d);
+    companyNavTo('company-profile');
+}
+window.saveCompanyProfile = saveCompanyProfile;
+
+function handleCompanyLogoChange(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        const d = getCompanyData();
+        d.logo = e.target.result;
+        saveCompanyData(d);
+        loadCompanyProfile();
+    };
+    reader.readAsDataURL(file);
+}
+window.handleCompanyLogoChange = handleCompanyLogoChange;
+
+// Seed company data on first login for company users
+(function patchCompanyAuthObserver() {
+    const _origOnAuth = auth.onAuthStateChanged.bind(auth);
+    _origOnAuth((user) => {
+        if (user) {
+            const d = getProfileData();
+            if (d.role === 'company') {
+                const cd = getCompanyData();
+                if (!cd.name && user.displayName) {
+                    cd.name = user.displayName;
+                    saveCompanyData(cd);
+                }
+            }
+        }
+    });
+})();
