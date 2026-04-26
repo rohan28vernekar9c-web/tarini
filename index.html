@@ -2305,9 +2305,9 @@
                     <div class="absolute top-0 right-0 w-40 h-40 rounded-full pointer-events-none"
                         style="background:radial-gradient(circle,rgba(92,81,160,0.15) 0%,transparent 70%);transform:translate(30%,-30%)"></div>
                     <div class="relative z-10">
-                        <p class="text-[11px] font-semibold tracking-[0.12em] uppercase mb-1" style="color:#5c51a0">Company Dashboard ✦</p>
-                        <h2 class="font-['Plus_Jakarta_Sans'] text-[26px] font-extrabold tracking-tight text-on-surface leading-tight" id="company-dashboard-name">Company</h2>
-                        <p class="text-[13px] font-normal text-on-surface-variant mt-1 leading-relaxed">Manage your jobs and track applications بسهولة ✨</p>
+                        <p class="text-[11px] font-semibold tracking-[0.12em] uppercase mb-1" style="color:#5c51a0">Company Dashboard</p>
+                        <h2 class="font-['Plus_Jakarta_Sans'] text-[26px] font-extrabold tracking-tight text-on-surface leading-tight" id="company-dashboard-name">Welcome</h2>
+                        <p class="text-[13px] font-normal text-on-surface-variant mt-1 leading-relaxed" id="company-dashboard-subtitle">Manage your jobs and track applicants</p>
                     </div>
                 </section>
 
@@ -2414,23 +2414,136 @@
             </main>
         </div>
 
-        <!-- SCREEN: COMPANY POST JOB (placeholder) -->
+        <!-- SCREEN: COMPANY POST JOB -->
         <div id="screen-company-post-job" class="screen">
             <main class="max-w-2xl mx-auto px-5 py-md pb-32">
                 <div class="flex items-center gap-3 mb-5">
                     <button onclick="companyNavTo('company-dashboard')" class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center active:scale-90 transition-all">
                         <span class="material-symbols-outlined">arrow_back</span>
                     </button>
-                    <h2 class="font-['Plus_Jakarta_Sans'] text-[20px] font-bold text-on-surface">Post a Job</h2>
+                    <h2 class="font-['Plus_Jakarta_Sans'] text-[20px] font-bold text-on-surface">Jobs</h2>
                 </div>
-                <div class="text-center py-16">
-                    <div class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                        <span class="material-symbols-outlined text-primary" style="font-size:32px;font-variation-settings:'FILL' 1">work</span>
+                <!-- SUCCESS TOAST -->
+                <div id="post-job-success-toast" class="hidden fixed top-6 left-1/2 -translate-x-1/2 z-[999] flex items-center gap-3 px-5 py-3 rounded-2xl shadow-xl" style="background:linear-gradient(135deg,#4d41df,#5c51a0);min-width:260px;max-width:90vw">
+                    <span class="material-symbols-outlined text-white" style="font-size:20px;font-variation-settings:'FILL' 1">check_circle</span>
+                    <p id="post-job-toast-msg" class="text-white font-bold text-[14px]">Job Posted Successfully!</p>
+                </div>
+                <!-- POST A JOB QUICK-ACCESS CARD -->
+                <div class="rounded-[22px] p-5 mb-6 flex items-center justify-between" style="background:linear-gradient(135deg,#4d41df 0%,#5c51a0 100%);box-shadow:0 8px 24px -6px rgba(77,65,223,0.35)">
+                    <div>
+                        <p class="text-white font-extrabold text-[17px] font-['Plus_Jakarta_Sans']">Post a New Job</p>
+                        <p class="text-white/70 text-[12px] mt-0.5">Attract the right talent today</p>
                     </div>
-                    <p class="font-bold text-on-surface text-[15px]">Post a Job</p>
-                    <p class="text-[13px] text-on-surface-variant mt-1">Job posting form coming soon.</p>
+                    <button onclick="openPostJobForm()" class="flex items-center gap-2 px-4 h-10 rounded-xl bg-white font-bold text-[13px] active:scale-95 transition-all" style="color:#4d41df">
+                        <span class="material-symbols-outlined" style="font-size:18px;font-variation-settings:'FILL' 1">add_circle</span>
+                        Post Job
+                    </button>
                 </div>
+                <!-- POSTED JOBS LIST -->
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="font-['Plus_Jakarta_Sans'] text-[16px] font-bold text-on-surface">Posted Jobs</h3>
+                    <span id="pj-jobs-count" class="text-[12px] font-semibold text-on-surface-variant"></span>
+                </div>
+                <div id="pj-jobs-list" class="space-y-3"></div>
             </main>
+        </div>
+        <!-- JOB FORM MODAL (Post + Edit) -->
+        <div id="job-form-modal" class="hidden fixed inset-0 z-[400]" style="background:rgba(0,0,0,0.45);backdrop-filter:blur(4px)" onclick="_modalBgClick(event)">
+            <div id="job-form-sheet" class="absolute bottom-0 left-0 right-0 max-w-2xl mx-auto rounded-t-[28px] bg-white overflow-y-auto" style="max-height:92vh">
+                <div class="sticky top-0 bg-white z-10 flex items-center justify-between px-5 pt-5 pb-3 border-b border-surface-container-high">
+                    <h3 id="job-form-title" class="font-['Plus_Jakarta_Sans'] text-[18px] font-bold text-on-surface">Post a Job</h3>
+                    <button onclick="closePostJobForm()" class="w-9 h-9 rounded-full bg-surface-container flex items-center justify-center active:scale-90 transition-all">
+                        <span class="material-symbols-outlined text-on-surface-variant" style="font-size:20px">close</span>
+                    </button>
+                </div>
+                <div class="px-5 py-4 space-y-4">
+                    <input type="hidden" id="pj-edit-id"/>
+                    <div class="space-y-1">
+                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">JOB TITLE *</label>
+                        <input type="text" id="pj-title" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-5 transition-all" placeholder="e.g. Software Engineer"/>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">COMPANY NAME</label>
+                        <input type="text" id="pj-company" readonly class="w-full h-14 bg-surface-container-low border-transparent rounded-xl px-5 text-on-surface-variant cursor-not-allowed"/>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">JOB DESCRIPTION *</label>
+                        <textarea id="pj-description" rows="4" class="w-full bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-5 py-3 transition-all resize-none" placeholder="Describe the role and responsibilities..."></textarea>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="space-y-1">
+                            <label class="font-label-caps text-label-caps text-on-surface-variant px-1">JOB TYPE *</label>
+                            <select id="pj-type" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-4 transition-all">
+                                <option value="">Select</option>
+                                <option>Full-time</option><option>Part-time</option><option>Internship</option><option>Freelance</option>
+                            </select>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="font-label-caps text-label-caps text-on-surface-variant px-1">WORK MODE *</label>
+                            <select id="pj-workmode" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-4 transition-all">
+                                <option value="">Select</option>
+                                <option>Remote</option><option>On-site</option><option>Hybrid</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">LOCATION *</label>
+                        <input type="text" id="pj-location" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-5 transition-all" placeholder="City, State, Country"/>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">SALARY RANGE</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <input type="number" id="pj-salary-min" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-5 transition-all" placeholder="Min (&#8377;)"/>
+                            <input type="number" id="pj-salary-max" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-5 transition-all" placeholder="Max (&#8377;)"/>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="space-y-1">
+                            <label class="font-label-caps text-label-caps text-on-surface-variant px-1">EXPERIENCE *</label>
+                            <select id="pj-experience" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-4 transition-all">
+                                <option value="">Select</option>
+                                <option>Fresher</option><option>1-2 years</option><option>3-5 years</option><option>5+ years</option>
+                            </select>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="font-label-caps text-label-caps text-on-surface-variant px-1">OPENINGS *</label>
+                            <input type="number" id="pj-openings" min="1" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-5 transition-all" placeholder="e.g. 3"/>
+                        </div>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">SKILLS REQUIRED *</label>
+                        <input type="text" id="pj-skills" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-5 transition-all" placeholder="e.g. React, Node.js, Communication"/>
+                        <p class="text-[11px] text-on-surface-variant px-1">Separate with commas</p>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">APPLICATION DEADLINE</label>
+                        <input type="date" id="pj-deadline" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-5 transition-all"/>
+                    </div>
+                    <div id="pj-status-row" class="hidden space-y-1">
+                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">JOB STATUS</label>
+                        <select id="pj-status" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-4 transition-all">
+                            <option value="active">Active</option>
+                            <option value="closed">Closed</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-6 px-1">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="pj-urgent" class="w-4 h-4 accent-primary rounded"/>
+                            <span class="text-[13px] font-semibold text-on-surface">Urgent Hiring</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="pj-remote-friendly" class="w-4 h-4 accent-primary rounded"/>
+                            <span class="text-[13px] font-semibold text-on-surface">Remote Friendly</span>
+                        </label>
+                    </div>
+                    <div id="pj-error" class="hidden text-[13px] font-semibold text-red-500 px-1"></div>
+                    <button id="pj-submit-btn" onclick="submitPostJob()" class="w-full h-14 rounded-xl text-white font-bold text-[15px] active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2 mb-2" style="background:linear-gradient(135deg,#5c51a0,#4d41df)">
+                        <span class="material-symbols-outlined" style="font-size:20px;font-variation-settings:'FILL' 1">work</span>
+                        <span id="pj-submit-label">Post Job</span>
+                    </button>
+                </div>
+            </div>
+        </div>
         </div>
 
         <!-- SCREEN: COMPANY APPLICATIONS (placeholder) -->

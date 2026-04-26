@@ -3173,24 +3173,23 @@ function companyNavTo(screenId) {
 window.companyNavTo = companyNavTo;
 
 function loadCompanyDashboard() {
-    const d = getProfileData();
+    const d = getCompanyData();
     const user = auth.currentUser;
     const name = d.name || (user && user.displayName) || 'Company';
 
     const nameEl = document.getElementById('company-dashboard-name');
     if (nameEl) nameEl.textContent = 'Welcome, ' + name;
 
+    const subtitleEl = document.getElementById('company-dashboard-subtitle');
+    if (subtitleEl) subtitleEl.textContent = 'Manage your jobs and track applicants';
+
     // Fetch stats from Firestore applications collection
     if (!user) return;
     const companyId = name.toLowerCase().replace(/\s+/g, '_');
 
-    // Active jobs: count jobs posted by this company
-    db.collection('jobs').where('companyId', '==', user.uid).get()
-        .then(snap => {
-            const el = document.getElementById('co-stat-jobs');
-            if (el) el.textContent = snap.size;
-        })
-        .catch(() => {});
+    // Active jobs: count only active jobs posted by this company
+    // (updateActiveJobsCounter handles localStorage + Firestore with animation)
+    updateActiveJobsCounter();
 
     // Total applications received for this company's jobs
     db.collection('applications').where('companyId', '==', companyId).get()
@@ -3207,7 +3206,6 @@ function loadCompanyDashboard() {
             if (hiEl) hiEl.textContent = hired;
         })
         .catch(() => {
-            // Fallback: read from localStorage applications
             const apps = JSON.parse(localStorage.getItem(_appsKey()) || '[]');
             const myApps = apps.filter(a => a.companyId === companyId);
             const el = document.getElementById('co-stat-apps');
@@ -3217,12 +3215,6 @@ function loadCompanyDashboard() {
             if (slEl) slEl.textContent = myApps.filter(a => a.status === 'Shortlisted').length;
             if (hiEl) hiEl.textContent = myApps.filter(a => a.status === 'Hired').length;
         });
-
-    // Active jobs fallback from localStorage
-    const allApps = JSON.parse(localStorage.getItem(_appsKey()) || '[]');
-    const uniqueJobs = new Set(allApps.filter(a => a.companyId === companyId).map(a => a.jobId));
-    const jobsEl = document.getElementById('co-stat-jobs');
-    if (jobsEl && jobsEl.textContent === '0') jobsEl.textContent = uniqueJobs.size;
 }
 
 function loadCompanyProfile() {
@@ -3329,12 +3321,25 @@ window.handleLogin = async function() {
 // COMPANY PROFILE DATA — separate localStorage key from women users
 // ============================================================
 
+function _companyDataKey() {
+    const u = auth.currentUser;
+    return u ? `companyProfileData_${u.uid}` : 'companyProfileData_guest';
+}
+
 function getCompanyData() {
-    return JSON.parse(localStorage.getItem('companyProfileData') || '{}');
+    const key = _companyDataKey();
+    const data = JSON.parse(localStorage.getItem(key) || '{}');
+    // Seed from auth if name is missing
+    const u = auth.currentUser;
+    if (!data.name && u && u.displayName) {
+        data.name = u.displayName;
+        localStorage.setItem(key, JSON.stringify(data));
+    }
+    return data;
 }
 
 function saveCompanyData(data) {
-    localStorage.setItem('companyProfileData', JSON.stringify(data));
+    localStorage.setItem(_companyDataKey(), JSON.stringify(data));
 }
 
 // Override the stub loadCompanyProfile with a full implementation
@@ -3419,4 +3424,325 @@ window.handleCompanyLogoChange = handleCompanyLogoChange;
             }
         }
     });
+})();
+
+// ============================================================
+// POST A JOB — Company Side (full implementation)
+// ============================================================
+
+function _companyJobsKey() {
+    const u = auth.currentUser;
+    return u ? `companyJobs_${u.uid}` : 'companyJobs_guest';
+}
+function getCompanyJobs() {
+    return JSON.parse(localStorage.getItem(_companyJobsKey()) || '[]');
+}
+function saveCompanyJobs(jobs) {
+    localStorage.setItem(_companyJobsKey(), JSON.stringify(jobs));
+}
+
+// ---- Form modal open/close ----
+function openPostJobForm() {
+    const d = getCompanyData();
+    const user = auth.currentUser;
+    const name = d.name || (user && user.displayName) || '';
+
+    document.getElementById('pj-edit-id').value = '';
+    document.getElementById('pj-company').value = name;
+    ['pj-title','pj-description','pj-type','pj-workmode','pj-location',
+     'pj-salary-min','pj-salary-max','pj-experience','pj-openings','pj-skills','pj-deadline']
+        .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    document.getElementById('pj-urgent').checked = false;
+    document.getElementById('pj-remote-friendly').checked = false;
+    document.getElementById('pj-status-row').classList.add('hidden');
+    document.getElementById('pj-error').classList.add('hidden');
+    document.getElementById('job-form-title').textContent = 'Post a Job';
+    document.getElementById('pj-submit-label').textContent = 'Post Job';
+    const btn = document.getElementById('pj-submit-btn');
+    btn.disabled = false; btn.style.opacity = '1';
+
+    const modal = document.getElementById('job-form-modal');
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+window.openPostJobForm = openPostJobForm;
+
+function closePostJobForm() {
+    document.getElementById('job-form-modal').classList.add('hidden');
+    document.body.style.overflow = '';
+}
+window.closePostJobForm = closePostJobForm;
+
+function _modalBgClick(e) {
+    if (e.target === document.getElementById('job-form-modal')) closePostJobForm();
+}
+window._modalBgClick = _modalBgClick;
+
+// ---- Open form pre-filled for editing ----
+function openEditJobForm(jobId) {
+    const jobs = getCompanyJobs();
+    const job = jobs.find(j => j.id === jobId);
+    if (!job) return;
+
+    document.getElementById('pj-edit-id').value = jobId;
+    document.getElementById('pj-company').value = job.company || '';
+    document.getElementById('pj-title').value = job.title || '';
+    document.getElementById('pj-description').value = job.description || '';
+    document.getElementById('pj-type').value = job.type || '';
+    document.getElementById('pj-workmode').value = job.workmode || '';
+    document.getElementById('pj-location').value = job.location || '';
+    document.getElementById('pj-salary-min').value = job.salaryMin || '';
+    document.getElementById('pj-salary-max').value = job.salaryMax || '';
+    document.getElementById('pj-experience').value = job.experience || '';
+    document.getElementById('pj-openings').value = job.openings || '';
+    document.getElementById('pj-skills').value = job.skills || '';
+    document.getElementById('pj-deadline').value = job.deadline || '';
+    document.getElementById('pj-urgent').checked = !!job.urgent;
+    document.getElementById('pj-remote-friendly').checked = !!job.remoteFriendly;
+    document.getElementById('pj-status').value = job.status || 'active';
+    document.getElementById('pj-status-row').classList.remove('hidden');
+    document.getElementById('pj-error').classList.add('hidden');
+    document.getElementById('job-form-title').textContent = 'Edit Job';
+    document.getElementById('pj-submit-label').textContent = 'Save Changes';
+    const btn = document.getElementById('pj-submit-btn');
+    btn.disabled = false; btn.style.opacity = '1';
+
+    document.getElementById('job-form-modal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+window.openEditJobForm = openEditJobForm;
+
+// ---- Submit (post new or save edit) ----
+function submitPostJob() {
+    const get = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+    const getCheck = id => { const el = document.getElementById(id); return el ? el.checked : false; };
+
+    const editId    = get('pj-edit-id');
+    const title     = get('pj-title');
+    const company   = get('pj-company');
+    const description = get('pj-description');
+    const type      = get('pj-type');
+    const workmode  = get('pj-workmode');
+    const location  = get('pj-location');
+    const salaryMin = get('pj-salary-min');
+    const salaryMax = get('pj-salary-max');
+    const experience = get('pj-experience');
+    const openings  = get('pj-openings');
+    const skills    = get('pj-skills');
+    const deadline  = get('pj-deadline');
+    const urgent    = getCheck('pj-urgent');
+    const remoteFriendly = getCheck('pj-remote-friendly');
+    const status    = editId ? (get('pj-status') || 'active') : 'active';
+
+    const errEl = document.getElementById('pj-error');
+    const btn   = document.getElementById('pj-submit-btn');
+
+    if (!title || !description || !type || !workmode || !location || !experience || !openings || !skills) {
+        errEl.textContent = 'Please fill in all required fields.';
+        errEl.classList.remove('hidden');
+        return;
+    }
+    errEl.classList.add('hidden');
+    btn.disabled = true; btn.style.opacity = '0.75';
+    btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px;animation:spin 0.8s linear infinite">progress_activity</span>&nbsp;' + (editId ? 'Saving...' : 'Posting...');
+
+    const salary = salaryMin && salaryMax
+        ? '\u20b9' + Number(salaryMin).toLocaleString('en-IN') + '\u2013\u20b9' + Number(salaryMax).toLocaleString('en-IN') + '/mo'
+        : salaryMin ? '\u20b9' + Number(salaryMin).toLocaleString('en-IN') + '/mo'
+        : salaryMax ? 'Up to \u20b9' + Number(salaryMax).toLocaleString('en-IN') + '/mo'
+        : 'Negotiable';
+
+    const user = auth.currentUser;
+    let jobs = getCompanyJobs();
+    let isEdit = false;
+
+    if (editId) {
+        // Update existing
+        isEdit = true;
+        jobs = jobs.map(j => j.id === Number(editId)
+            ? { ...j, title, description, type, workmode, location,
+                salaryMin: salaryMin ? Number(salaryMin) : null,
+                salaryMax: salaryMax ? Number(salaryMax) : null,
+                salary, experience, openings: Number(openings), skills,
+                deadline: deadline || null, urgent, remoteFriendly, status }
+            : j);
+    } else {
+        // New job
+        const newJob = {
+            id: Date.now(), title, company, description, type, workmode, location,
+            salaryMin: salaryMin ? Number(salaryMin) : null,
+            salaryMax: salaryMax ? Number(salaryMax) : null,
+            salary, experience, openings: Number(openings), skills,
+            deadline: deadline || null, urgent, remoteFriendly,
+            companyId: user ? user.uid : 'guest',
+            status: 'active',
+            postedAt: new Date().toISOString(),
+        };
+        jobs.unshift(newJob);
+    }
+    saveCompanyJobs(jobs);
+
+    // Firestore sync
+    if (user && !isEdit) {
+        const fsData = { title, company, description, type, workmode, location,
+            salaryMin: salaryMin ? Number(salaryMin) : null,
+            salaryMax: salaryMax ? Number(salaryMax) : null,
+            salary, experience, openings: Number(openings), skills,
+            deadline: deadline || null, urgent, remoteFriendly,
+            companyId: user.uid, status: 'active',
+            postedAt: firebase.firestore.FieldValue.serverTimestamp() };
+        db.collection('jobs').add(fsData).catch(() => {});
+    }
+
+    setTimeout(() => {
+        btn.disabled = false; btn.style.opacity = '1';
+        btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:20px;font-variation-settings:\'FILL\' 1">work</span>&nbsp;<span id="pj-submit-label">' + (isEdit ? 'Save Changes' : 'Post Job') + '</span>';
+
+        closePostJobForm();
+        renderPostedJobsList();
+        updateActiveJobsCounter();
+
+        const toastMsg = document.getElementById('post-job-toast-msg');
+        if (toastMsg) toastMsg.textContent = isEdit ? 'Job Updated Successfully!' : 'Job Posted Successfully!';
+        const toast = document.getElementById('post-job-success-toast');
+        if (toast) { toast.classList.remove('hidden'); setTimeout(() => toast.classList.add('hidden'), 2500); }
+    }, 600);
+}
+window.submitPostJob = submitPostJob;
+
+// ---- Close a job (set status = closed) ----
+function closeJob(jobId) {
+    const jobs = getCompanyJobs().map(j => j.id === jobId ? { ...j, status: 'closed' } : j);
+    saveCompanyJobs(jobs);
+    renderPostedJobsList();
+    updateActiveJobsCounter();
+    showToast('Job marked as Closed');
+}
+window.closeJob = closeJob;
+
+// ---- Reopen a closed job ----
+function reopenJob(jobId) {
+    const jobs = getCompanyJobs().map(j => j.id === jobId ? { ...j, status: 'active' } : j);
+    saveCompanyJobs(jobs);
+    renderPostedJobsList();
+    updateActiveJobsCounter();
+    showToast('Job marked as Active');
+}
+window.reopenJob = reopenJob;
+
+// ---- Render the posted jobs list ----
+function renderPostedJobsList() {
+    const container = document.getElementById('pj-jobs-list');
+    const countEl   = document.getElementById('pj-jobs-count');
+    if (!container) return;
+
+    const jobs = getCompanyJobs();
+    if (countEl) countEl.textContent = jobs.length + ' job' + (jobs.length !== 1 ? 's' : '');
+
+    if (jobs.length === 0) {
+        container.innerHTML = `
+        <div style="text-align:center;padding:48px 0">
+            <div style="width:64px;height:64px;border-radius:50%;background:rgba(77,65,223,0.10);display:flex;align-items:center;justify-content:center;margin:0 auto 14px">
+                <span class="material-symbols-outlined" style="font-size:30px;color:#4d41df;font-variation-settings:'FILL' 1">work_outline</span>
+            </div>
+            <p style="font-size:15px;font-weight:700;color:#1b1b24">No jobs posted yet</p>
+            <p style="font-size:13px;color:#777587;margin-top:4px">Tap "Post Job" above to get started</p>
+        </div>`;
+        return;
+    }
+
+    container.innerHTML = jobs.map((job, idx) => {
+        const isActive = job.status === 'active';
+        const date = new Date(job.postedAt).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
+        const typeColor = job.type === 'Full-time' ? '#4d41df' : job.type === 'Part-time' ? '#875041' : job.type === 'Internship' ? '#5c51a0' : '#276749';
+        const typeBg   = job.type === 'Full-time' ? 'rgba(77,65,223,0.10)' : job.type === 'Part-time' ? 'rgba(135,80,65,0.10)' : job.type === 'Internship' ? 'rgba(92,81,160,0.10)' : 'rgba(45,106,79,0.10)';
+        const statusColor = isActive ? '#276749' : '#875041';
+        const statusBg    = isActive ? 'rgba(45,106,79,0.10)' : 'rgba(135,80,65,0.10)';
+        const animDelay   = idx * 60;
+        return `
+        <div style="background:#fff;border-radius:20px;padding:16px;border:1px solid #eae6f3;box-shadow:0 2px 12px -4px rgba(77,65,223,0.08);opacity:0;transform:translateY(10px);transition:opacity 0.3s ease ${animDelay}ms,transform 0.3s ease ${animDelay}ms" class="pj-job-card">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+                <div style="flex:1;min-width:0">
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                        <p style="font-size:15px;font-weight:700;color:#1b1b24;line-height:1.3">${job.title}</p>
+                        ${job.urgent ? '<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;background:rgba(230,57,70,0.10);color:#e63946">URGENT</span>' : ''}
+                    </div>
+                    <p style="font-size:12px;color:#777587;margin-top:3px">${job.company} &bull; ${job.location}</p>
+                </div>
+                <span style="flex-shrink:0;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;background:${statusBg};color:${statusColor}">${isActive ? 'Active' : 'Closed'}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:10px;flex-wrap:wrap">
+                <span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:${typeBg};color:${typeColor}">${job.type}</span>
+                <span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:rgba(77,65,223,0.07);color:#5c51a0">${job.workmode}</span>
+                <span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:rgba(56,161,105,0.08);color:#276749">${job.salary}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:4px;margin-top:8px">
+                <span class="material-symbols-outlined" style="font-size:13px;color:#9e9bb8">calendar_today</span>
+                <p style="font-size:11px;color:#9e9bb8">Posted ${date}</p>
+                ${job.deadline ? `<span style="font-size:11px;color:#9e9bb8;margin-left:6px">&bull; Deadline: ${new Date(job.deadline).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</span>` : ''}
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px">
+                <button onclick="openEditJobForm(${job.id})" style="flex:1;height:36px;border-radius:10px;border:1.5px solid #4d41df;background:transparent;color:#4d41df;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;transition:background 0.15s" onmouseenter="this.style.background='rgba(77,65,223,0.07)'" onmouseleave="this.style.background='transparent'">
+                    <span class="material-symbols-outlined" style="font-size:15px">edit</span>Edit
+                </button>
+                ${isActive
+                    ? `<button onclick="closeJob(${job.id})" style="flex:1;height:36px;border-radius:10px;border:1.5px solid #875041;background:transparent;color:#875041;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;transition:background 0.15s" onmouseenter="this.style.background='rgba(135,80,65,0.07)'" onmouseleave="this.style.background='transparent'"><span class="material-symbols-outlined" style="font-size:15px">lock</span>Close Job</button>`
+                    : `<button onclick="reopenJob(${job.id})" style="flex:1;height:36px;border-radius:10px;border:1.5px solid #276749;background:transparent;color:#276749;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;transition:background 0.15s" onmouseenter="this.style.background='rgba(45,106,79,0.07)'" onmouseleave="this.style.background='transparent'"><span class="material-symbols-outlined" style="font-size:15px">lock_open</span>Reopen</button>`
+                }
+            </div>
+        </div>`;
+    }).join('');
+
+    // Trigger entrance animation
+    requestAnimationFrame(() => {
+        container.querySelectorAll('.pj-job-card').forEach(card => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        });
+    });
+}
+window.renderPostedJobsList = renderPostedJobsList;
+
+// ============================================================
+// ACTIVE JOBS COUNTER — real-time sync
+// ============================================================
+
+function updateActiveJobsCounter() {
+    const el = document.getElementById('co-stat-jobs');
+    if (!el) return;
+    const localCount = getCompanyJobs().filter(j => j.status === 'active').length;
+    _animateCounter(el, localCount);
+    const user = auth.currentUser;
+    if (user) {
+        db.collection('jobs')
+            .where('companyId', '==', user.uid)
+            .where('status', '==', 'active')
+            .get()
+            .then(snap => { _animateCounter(el, Math.max(snap.size, localCount)); })
+            .catch(() => {});
+    }
+}
+window.updateActiveJobsCounter = updateActiveJobsCounter;
+
+function _animateCounter(el, newVal) {
+    const current = parseInt(el.textContent) || 0;
+    if (current === newVal) return;
+    el.style.transition = 'transform 0.25s ease, opacity 0.25s ease';
+    el.style.transform = 'scale(1.3)';
+    el.style.opacity = '0.5';
+    setTimeout(() => {
+        el.textContent = newVal;
+        el.style.transform = 'scale(1)';
+        el.style.opacity = '1';
+    }, 150);
+}
+
+// Patch companyNavTo to render jobs list and refresh counter
+(function() {
+    const _orig = window.companyNavTo;
+    window.companyNavTo = function(screenId) {
+        _orig(screenId);
+        if (screenId === 'company-post-job') renderPostedJobsList();
+        if (screenId === 'company-dashboard') updateActiveJobsCounter();
+    };
 })();
