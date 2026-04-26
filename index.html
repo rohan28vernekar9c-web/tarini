@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -829,7 +829,7 @@
                     <div class="absolute bottom-0 left-0 w-28 h-28 rounded-full pointer-events-none"
                         style="background:radial-gradient(circle,rgba(135,80,65,0.08) 0%,transparent 70%);transform:translate(-20%,20%)"></div>
                     <div class="relative z-10">
-                        <p class="text-[11px] font-semibold tracking-[0.12em] uppercase mb-1" style="color:#875041">Welcome back ?</p>
+                        <p class="text-[11px] font-semibold tracking-[0.12em] uppercase mb-1" style="color:#875041">Welcome back</p>
                         <h2 class="font-['Plus_Jakarta_Sans'] text-[26px] font-extrabold tracking-tight text-on-surface leading-tight" id="dashboard-user-name">User</h2>
                         <p class="text-[13px] font-normal text-on-surface-variant mt-1 leading-relaxed">Your professional journey is glowing today. ?</p>
                     </div>
@@ -1097,6 +1097,11 @@
                                 class="w-full pl-12 pr-4 py-4 bg-surface-container-low border-none rounded-2xl focus:ring-2 focus:ring-primary/20 text-body-md transition-all shadow-sm"
                                 placeholder="Search courses, skills..." />
                         </div>
+                        <select id="skill-lang-select" onchange="applySkillFilters()" class="h-14 px-3 rounded-2xl bg-surface-container-low border-none text-[13px] font-semibold text-primary shadow-sm focus:ring-2 focus:ring-primary/20 transition-all flex-shrink-0 cursor-pointer">
+                            <option value="">&#127760; All</option>
+                            <option value="en">&#127468;&#127463; English</option>
+                            <option value="hi">&#127470;&#127475; Hindi</option>
+                        </select>
                         <button onclick="toggleSkillFilters()" id="skill-filter-btn"
                             class="w-14 h-14 rounded-2xl bg-surface-container-low flex items-center justify-center shadow-sm active:scale-90 transition-all flex-shrink-0">
                             <span class="material-symbols-outlined text-primary">tune</span>
@@ -1137,6 +1142,13 @@
                                     <button onclick="toggleSkillFilter('type','Free')" data-sf="type" data-sv="Free" class="skill-chip px-3 py-1 rounded-full text-[12px] font-semibold bg-surface-container text-on-surface-variant active:scale-95 transition-all">Free</button>
                                     <button onclick="toggleSkillFilter('type','Paid')" data-sf="type" data-sv="Paid" class="skill-chip px-3 py-1 rounded-full text-[12px] font-semibold bg-surface-container text-on-surface-variant active:scale-95 transition-all">Paid</button>
                                 </div>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wide mb-1.5">Language</p>
+                            <div class="flex flex-wrap gap-1.5">
+                                <button onclick="toggleSkillFilter('lang','en')" data-sf="lang" data-sv="en" class="skill-chip px-3 py-1 rounded-full text-[12px] font-semibold bg-surface-container text-on-surface-variant active:scale-95 transition-all">&#127468;&#127463; English</button>
+                                <button onclick="toggleSkillFilter('lang','hi')" data-sf="lang" data-sv="hi" class="skill-chip px-3 py-1 rounded-full text-[12px] font-semibold bg-surface-container text-on-surface-variant active:scale-95 transition-all">&#127470;&#127475; Hindi</button>
                             </div>
                         </div>
                         <button onclick="clearSkillFilters()" class="text-[12px] font-semibold text-error flex items-center gap-1 active:scale-95 transition-all">
@@ -1706,7 +1718,7 @@
                         <div class="absolute -right-10 -top-10 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
                         <div class="absolute -left-6 -bottom-6 w-32 h-32 bg-white/5 rounded-full blur-2xl"></div>
                         <div class="relative z-10">
-                            <p class="text-[11px] font-bold tracking-[0.12em] uppercase text-white/60 mb-1">Your Rewards ?</p>
+                            <p class="text-[11px] font-bold tracking-[0.12em] uppercase text-white/60 mb-1">Your Rewards</p>
                             <h2 class="font-['Plus_Jakarta_Sans'] text-[24px] font-extrabold text-white leading-tight mb-3">Tarini Coins &amp; Badges</h2>
                             <div class="flex items-center gap-3">
                                 <!-- Coins -->

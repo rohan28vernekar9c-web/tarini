@@ -2081,28 +2081,37 @@ const _skillCategories = [
     { name:'Smartphone',    icon:'smartphone',        color:'#4d41df', bg:'rgba(77,65,223,0.12)',   grad:'linear-gradient(135deg,#4d41df,#5c51a0)' },
 ];
 const _allCourses = [
-    { id:1,  ytId:'dU1xS07N-FA', title:'Figma for Beginners',              instructor:'DesignCraft',   category:'Design',        level:'Beginner',     durLabel:'1.5h',  durKey:'short',  type:'Free', rating:4.8, enrolled:3200, desc:'Learn UI design fundamentals using Figma from wireframes to polished prototypes.' },
-    { id:2,  ytId:'w7ejDZ8SWv8', title:'React.js Essentials',              instructor:'CodeNest',      category:'Development',   level:'Intermediate', durLabel:'4h',    durKey:'medium', type:'Free', rating:4.7, enrolled:5100, desc:'Build modern web apps with React hooks, components, and state management.' },
-    { id:3,  ytId:'nU-IIXBWlS4', title:'Digital Marketing Masterclass',    instructor:'GrowthLab',     category:'Marketing',     level:'Beginner',     durLabel:'3h',    durKey:'medium', type:'Paid', rating:4.6, enrolled:2800, desc:'Master SEO, social media, email campaigns, and paid ads from scratch.' },
-    { id:4,  ytId:'HQzoZfc3GwQ', title:'Personal Finance Basics',          instructor:'MoneyWise',     category:'Finance',       level:'Beginner',     durLabel:'1h',    durKey:'short',  type:'Free', rating:4.9, enrolled:7400, desc:'Understand budgeting, savings, investments, and financial planning for everyday life.' },
-    { id:5,  ytId:'tShavGuo0_E', title:'Public Speaking Confidence',       instructor:'SpeakUp India', category:'Communication', level:'Beginner',     durLabel:'2h',    durKey:'short',  type:'Free', rating:4.5, enrolled:1900, desc:'Overcome stage fear and communicate with clarity, confidence, and impact.' },
-    { id:6,  ytId:'Fqch5OrUPvA', title:'Business Plan Writing',            instructor:'StartupSchool', category:'Business',      level:'Intermediate', durLabel:'2.5h',  durKey:'medium', type:'Paid', rating:4.7, enrolled:1500, desc:'Write a compelling business plan that attracts investors and guides your startup.' },
-    { id:7,  ytId:'1Rs2ND1ryYc', title:'Advanced CSS and Animations',      instructor:'PixelWorks',    category:'Development',   level:'Advanced',     durLabel:'6h',    durKey:'long',   type:'Paid', rating:4.6, enrolled:2100, desc:'Deep-dive into CSS Grid, Flexbox, custom animations, and responsive design patterns.' },
-    { id:8,  ytId:'p7HKvqRI_Bo', title:'Stock Market for Women',           instructor:'InvestHer',     category:'Finance',       level:'Beginner',     durLabel:'3h',    durKey:'medium', type:'Paid', rating:4.8, enrolled:3300, desc:'Demystify the stock market and learn how to invest smartly and build long-term wealth.' },
-    { id:9,  ytId:'0JCUH5daCCE', title:'Brand Identity Design',            instructor:'DesignCraft',   category:'Design',        level:'Intermediate', durLabel:'5h',    durKey:'long',   type:'Paid', rating:4.7, enrolled:1800, desc:'Create powerful brand identities with logos, colour palettes, typography, and style guides.' },
-    { id:10, ytId:'r-uWLhO2v9U', title:'Python for Data Analysis',         instructor:'DataSeva',      category:'Development',   level:'Intermediate', durLabel:'8h',    durKey:'long',   type:'Free', rating:4.9, enrolled:6200, desc:'Use Python, Pandas, and Matplotlib to analyse real-world datasets and visualise insights.' },
-    { id:11, ytId:'sPW9r5NDLSE', title:'Effective Email Writing',          instructor:'SpeakUp India', category:'Communication', level:'Beginner',     durLabel:'45min', durKey:'short',  type:'Free', rating:4.4, enrolled:980,  desc:'Write professional emails that get responses - structure, tone, and etiquette covered.' },
-    { id:12, ytId:'ZpL0oGFBsDg', title:'Entrepreneurship 101',             instructor:'StartupSchool', category:'Business',      level:'Beginner',     durLabel:'4h',    durKey:'medium', type:'Free', rating:4.6, enrolled:4100, desc:'From idea to execution - learn the mindset, tools, and steps to launch your own venture.' },
-    { id:13, ytId:'Ks-_Mh1QhMc', title:'How to Use a Smartphone',         instructor:'TechSaathi',    category:'Smartphone',    level:'Beginner',     durLabel:'30min', durKey:'short',  type:'Free', rating:4.9, enrolled:8200, desc:'Simple step-by-step guide to using a smartphone - calls, messages, apps, and internet.' },
-    { id:14, ytId:'mP_ZMmgFHPY', title:'Internet Basics for Beginners',   instructor:'TechSaathi',    category:'Basics',        level:'Beginner',     durLabel:'25min', durKey:'short',  type:'Free', rating:4.8, enrolled:6100, desc:'Learn what the internet is, how to browse safely, and use Google and WhatsApp.' },
-    { id:15, ytId:'VvCytJvd4H0', title:'Basic Computer Skills',            instructor:'DigiLearn',     category:'Basics',        level:'Beginner',     durLabel:'40min', durKey:'short',  type:'Free', rating:4.7, enrolled:5400, desc:'Learn to use a computer from scratch - typing, files, and basic applications.' },
-    { id:16, ytId:'eIho2S0ZahI', title:'How to Start a Small Business',    instructor:'StartupSchool', category:'Basics',        level:'Beginner',     durLabel:'35min', durKey:'short',  type:'Free', rating:4.8, enrolled:4900, desc:'Simple guide to starting your own small business with little money and big ideas.' },
-    { id:17, ytId:'9bZkp7q19f0', title:'Simple Communication Skills',      instructor:'SpeakUp India', category:'Basics',        level:'Beginner',     durLabel:'20min', durKey:'short',  type:'Free', rating:4.6, enrolled:3800, desc:'Learn to speak clearly and confidently in everyday situations at home and work.' },
-    { id:18, ytId:'kqtD5dpn9C8', title:'WhatsApp and Video Calls Guide',   instructor:'TechSaathi',    category:'Smartphone',    level:'Beginner',     durLabel:'20min', durKey:'short',  type:'Free', rating:4.9, enrolled:7100, desc:'Learn to use WhatsApp, make video calls, and share photos with family and friends.' },
-    { id:19, ytId:'2ePf9rue1Ao', title:'Save Money Every Day',             instructor:'MoneyWise',     category:'Finance',       level:'Beginner',     durLabel:'18min', durKey:'short',  type:'Free', rating:4.7, enrolled:5200, desc:'Easy tips to save money from your daily income and build a small emergency fund.' },
-    { id:20, ytId:'dQw4w9WgXcQ', title:'Basic Sewing and Tailoring',       instructor:'CraftIndia',    category:'Basics',        level:'Beginner',     durLabel:'45min', durKey:'short',  type:'Free', rating:4.8, enrolled:4300, desc:'Learn basic hand stitching and simple tailoring skills to make and repair clothes.' },
+    // â”€â”€ English courses â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    { id:1,  ytId:'dU1xS07N-FA', title:'Figma for Beginners',              instructor:'DesignCraft',    category:'Design',        level:'Beginner',     durLabel:'1.5h',  durKey:'short',  type:'Free', rating:4.8, enrolled:3200, lang:'en', tags:['figma','ui','design','wireframe'],          desc:'Learn UI design fundamentals using Figma from wireframes to polished prototypes.' },
+    { id:2,  ytId:'w7ejDZ8SWv8', title:'React.js Essentials',              instructor:'CodeNest',       category:'Development',   level:'Intermediate', durLabel:'4h',    durKey:'medium', type:'Free', rating:4.7, enrolled:5100, lang:'en', tags:['react','javascript','web','frontend'],      desc:'Build modern web apps with React hooks, components, and state management.' },
+    { id:3,  ytId:'nU-IIXBWlS4', title:'Digital Marketing Masterclass',    instructor:'GrowthLab',      category:'Marketing',     level:'Beginner',     durLabel:'3h',    durKey:'medium', type:'Paid', rating:4.6, enrolled:2800, lang:'en', tags:['marketing','seo','social media','ads'],     desc:'Master SEO, social media, email campaigns, and paid ads from scratch.' },
+    { id:4,  ytId:'HQzoZfc3GwQ', title:'Personal Finance Basics',          instructor:'MoneyWise',      category:'Finance',       level:'Beginner',     durLabel:'1h',    durKey:'short',  type:'Free', rating:4.9, enrolled:7400, lang:'en', tags:['finance','budget','savings','money'],       desc:'Understand budgeting, savings, investments, and financial planning for everyday life.' },
+    { id:5,  ytId:'tShavGuo0_E', title:'Public Speaking Confidence',       instructor:'SpeakUp India',  category:'Communication', level:'Beginner',     durLabel:'2h',    durKey:'short',  type:'Free', rating:4.5, enrolled:1900, lang:'en', tags:['speaking','confidence','communication'],    desc:'Overcome stage fear and communicate with clarity, confidence, and impact.' },
+    { id:6,  ytId:'Fqch5OrUPvA', title:'Business Plan Writing',            instructor:'StartupSchool',  category:'Business',      level:'Intermediate', durLabel:'2.5h',  durKey:'medium', type:'Paid', rating:4.7, enrolled:1500, lang:'en', tags:['business','plan','startup','entrepreneur'], desc:'Write a compelling business plan that attracts investors and guides your startup.' },
+    { id:7,  ytId:'1Rs2ND1ryYc', title:'Advanced CSS and Animations',      instructor:'PixelWorks',     category:'Development',   level:'Advanced',     durLabel:'6h',    durKey:'long',   type:'Paid', rating:4.6, enrolled:2100, lang:'en', tags:['css','animation','web','frontend'],         desc:'Deep-dive into CSS Grid, Flexbox, custom animations, and responsive design patterns.' },
+    { id:8,  ytId:'p7HKvqRI_Bo', title:'Stock Market for Women',           instructor:'InvestHer',      category:'Finance',       level:'Beginner',     durLabel:'3h',    durKey:'medium', type:'Paid', rating:4.8, enrolled:3300, lang:'en', tags:['stocks','invest','finance','wealth'],       desc:'Demystify the stock market and learn how to invest smartly and build long-term wealth.' },
+    { id:9,  ytId:'0JCUH5daCCE', title:'Brand Identity Design',            instructor:'DesignCraft',    category:'Design',        level:'Intermediate', durLabel:'5h',    durKey:'long',   type:'Paid', rating:4.7, enrolled:1800, lang:'en', tags:['brand','logo','design','identity'],         desc:'Create powerful brand identities with logos, colour palettes, typography, and style guides.' },
+    { id:10, ytId:'r-uWLhO2v9U', title:'Python for Data Analysis',         instructor:'DataSeva',       category:'Development',   level:'Intermediate', durLabel:'8h',    durKey:'long',   type:'Free', rating:4.9, enrolled:6200, lang:'en', tags:['python','data','analysis','pandas'],        desc:'Use Python, Pandas, and Matplotlib to analyse real-world datasets and visualise insights.' },
+    { id:11, ytId:'sPW9r5NDLSE', title:'Effective Email Writing',          instructor:'SpeakUp India',  category:'Communication', level:'Beginner',     durLabel:'45min', durKey:'short',  type:'Free', rating:4.4, enrolled:980,  lang:'en', tags:['email','writing','communication','office'],  desc:'Write professional emails that get responses - structure, tone, and etiquette covered.' },
+    { id:12, ytId:'ZpL0oGFBsDg', title:'Entrepreneurship 101',             instructor:'StartupSchool',  category:'Business',      level:'Beginner',     durLabel:'4h',    durKey:'medium', type:'Free', rating:4.6, enrolled:4100, lang:'en', tags:['entrepreneur','startup','business','idea'],  desc:'From idea to execution - learn the mindset, tools, and steps to launch your own venture.' },
+    { id:13, ytId:'Ks-_Mh1QhMc', title:'How to Use a Smartphone',         instructor:'TechSaathi',     category:'Smartphone',    level:'Beginner',     durLabel:'30min', durKey:'short',  type:'Free', rating:4.9, enrolled:8200, lang:'en', tags:['smartphone','mobile','apps','beginner'],    desc:'Simple step-by-step guide to using a smartphone - calls, messages, apps, and internet.' },
+    { id:14, ytId:'mP_ZMmgFHPY', title:'Internet Basics for Beginners',   instructor:'TechSaathi',     category:'Basics',        level:'Beginner',     durLabel:'25min', durKey:'short',  type:'Free', rating:4.8, enrolled:6100, lang:'en', tags:['internet','basics','google','whatsapp'],    desc:'Learn what the internet is, how to browse safely, and use Google and WhatsApp.' },
+    { id:15, ytId:'VvCytJvd4H0', title:'Basic Computer Skills',            instructor:'DigiLearn',      category:'Basics',        level:'Beginner',     durLabel:'40min', durKey:'short',  type:'Free', rating:4.7, enrolled:5400, lang:'en', tags:['computer','basics','typing','files'],       desc:'Learn to use a computer from scratch - typing, files, and basic applications.' },
+    { id:16, ytId:'eIho2S0ZahI', title:'How to Start a Small Business',    instructor:'StartupSchool',  category:'Basics',        level:'Beginner',     durLabel:'35min', durKey:'short',  type:'Free', rating:4.8, enrolled:4900, lang:'en', tags:['business','small','startup','basics'],      desc:'Simple guide to starting your own small business with little money and big ideas.' },
+    { id:17, ytId:'tShavGuo0_E', title:'Simple Communication Skills',      instructor:'SpeakUp India',  category:'Basics',        level:'Beginner',     durLabel:'20min', durKey:'short',  type:'Free', rating:4.6, enrolled:3800, lang:'en', tags:['communication','speaking','basics','soft'],  desc:'Learn to speak clearly and confidently in everyday situations at home and work.' },
+    { id:18, ytId:'Ks-_Mh1QhMc', title:'WhatsApp and Video Calls Guide',  instructor:'TechSaathi',     category:'Smartphone',    level:'Beginner',     durLabel:'20min', durKey:'short',  type:'Free', rating:4.9, enrolled:7100, lang:'en', tags:['whatsapp','video call','smartphone','chat'], desc:'Learn to use WhatsApp, make video calls, and share photos with family and friends.' },
+    { id:19, ytId:'HQzoZfc3GwQ', title:'Save Money Every Day',             instructor:'MoneyWise',      category:'Finance',       level:'Beginner',     durLabel:'18min', durKey:'short',  type:'Free', rating:4.7, enrolled:5200, lang:'en', tags:['savings','money','budget','daily'],         desc:'Easy tips to save money from your daily income and build a small emergency fund.' },
+    { id:20, ytId:'1Rs2ND1ryYc', title:'Basic Sewing and Tailoring',       instructor:'CraftIndia',     category:'Basics',        level:'Beginner',     durLabel:'45min', durKey:'short',  type:'Free', rating:4.8, enrolled:4300, lang:'en', tags:['sewing','tailoring','stitching','craft'],   desc:'Learn basic hand stitching and simple tailoring skills to make and repair clothes.' },
+    // â”€â”€ Hindi courses â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    { id:21, ytId:'BVbFHfFgFcE', title:'Silai Machine Chalana Sikhe',     instructor:'Sewing Duniya',  category:'Basics',        level:'Beginner',     durLabel:'40min', durKey:'short',  type:'Free', rating:4.9, enrolled:9100, lang:'hi', tags:['silai','machine','stitching','hindi','sewing'],     desc:'Silai machine ka basic istemal Hindi mein seekhein, bilkul shuruaat se.' },
+    { id:22, ytId:'7Gy_OkFbSKQ', title:'Kapde Ki Cutting aur Silai',       instructor:'Sewing Duniya',  category:'Basics',        level:'Beginner',     durLabel:'35min', durKey:'short',  type:'Free', rating:4.8, enrolled:7600, lang:'hi', tags:['kapde','cutting','silai','tailoring','hindi'],      desc:'Ghar par kapde ki cutting aur silai karna seekhein, step by step Hindi mein.' },
+    { id:23, ytId:'8jPQjjsBbIc', title:'Paise Kaise Bachaye - Hindi',      instructor:'Yadnya Academy', category:'Finance',        level:'Beginner',     durLabel:'20min', durKey:'short',  type:'Free', rating:4.7, enrolled:6200, lang:'hi', tags:['paise','bachana','savings','finance','hindi'],      desc:'Roz ki kamaai mein se paise kaise bachayein, simple aur practical tips Hindi mein.' },
+    { id:24, ytId:'qeMFqkcPYcg', title:'Smartphone Tips aur Tricks Hindi', instructor:'Technical Guruji',category:'Smartphone',    level:'Beginner',     durLabel:'25min', durKey:'short',  type:'Free', rating:4.9, enrolled:8800, lang:'hi', tags:['smartphone','tips','mobile','hindi','android'],     desc:'Apne smartphone ko better tarike se use karna seekhein, Hindi mein.' },
+    { id:25, ytId:'7lECIsRif0U', title:'Apna Business Kaise Shuru Karein', instructor:'Josh Talks Hindi',category:'Business',      level:'Beginner',     durLabel:'30min', durKey:'short',  type:'Free', rating:4.8, enrolled:5400, lang:'hi', tags:['business','startup','kaam','hindi','entrepreneur'], desc:'Khud ka chota business shuru karne ke liye zaruri steps, Hindi mein.' },
+    { id:26, ytId:'BVbFHfFgFcE', title:'Haath ki Silai Basics - Hindi',    instructor:'Sewing Duniya',  category:'Basics',        level:'Beginner',     durLabel:'45min', durKey:'short',  type:'Free', rating:4.9, enrolled:7200, lang:'hi', tags:['haath','silai','stitching','basics','hindi'],       desc:'Haath se silai karna seekhein, basic stitches aur techniques Hindi mein.' },
+    { id:27, ytId:'4deVAL4yphE', title:'Computer Basics Hindi Mein',       instructor:'LearnVern',      category:'Basics',        level:'Beginner',     durLabel:'40min', durKey:'short',  type:'Free', rating:4.7, enrolled:5900, lang:'hi', tags:['computer','basics','hindi','typing','files'],       desc:'Computer chalana Hindi mein seekhein, typing, files aur basic applications.' },
 ];
-const _skillFilters = { cat: new Set(), level: new Set(), dur: new Set(), type: new Set() };
+const _skillFilters = { cat: new Set(), level: new Set(), dur: new Set(), type: new Set(), lang: new Set() };
 
 function toggleSkillFilters() {
     const panel = document.getElementById('skill-filter-panel');
@@ -2129,6 +2138,7 @@ window.toggleSkillFilter = toggleSkillFilter;
 function clearSkillFilters() {
     Object.values(_skillFilters).forEach(s => s.clear());
     document.querySelectorAll('.skill-chip').forEach(b => { b.style.background = ''; b.style.color = ''; b.style.fontWeight = ''; b.style.boxShadow = ''; });
+    const _ls = document.getElementById('skill-lang-select'); if (_ls) _ls.value = '';
     const inp = document.getElementById('skill-search-input');
     if (inp) inp.value = '';
     applySkillFilters();
@@ -2137,13 +2147,16 @@ window.clearSkillFilters = clearSkillFilters;
 
 function applySkillFilters() {
     const q = (document.getElementById('skill-search-input')?.value || '').toLowerCase();
-    const { cat, level, dur, type } = _skillFilters;
+    const _langDrop = document.getElementById('skill-lang-select')?.value || '';
+    if (_langDrop) { _skillFilters.lang.clear(); _skillFilters.lang.add(_langDrop); } else if (!_skillFilters.lang.size) { _skillFilters.lang.clear(); }
+    const { cat, level, dur, type, lang } = _skillFilters;
     const filtered = _allCourses.filter(c => {
-        if (q && !`${c.title} ${c.instructor} ${c.category}`.toLowerCase().includes(q)) return false;
+        if (q && !`${c.title} ${c.instructor} ${c.category} ${(c.tags||[]).join(' ')}`.toLowerCase().includes(q)) return false;
         if (cat.size   && !cat.has(c.category))  return false;
         if (level.size && !level.has(c.level))   return false;
         if (dur.size   && !dur.has(c.durKey))    return false;
         if (type.size  && !type.has(c.type))     return false;
+        if (lang.size  && !lang.has(c.lang))     return false;
         return true;
     });
     _renderCourseCards(filtered);
@@ -2351,6 +2364,7 @@ function _renderCourseCardsInto(container, courses) {
                 </div>
                 <span style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.72);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px">${c.durLabel}</span>
                 ${enrolled ? '<span style="position:absolute;top:8px;left:8px;background:rgba(45,106,79,0.90);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px">Enrolled</span>' : ''}
+                ${c.lang === 'hi' ? '<span style="position:absolute;top:8px;right:8px;background:rgba(255,153,0,0.92);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px">&#127470;&#127475; Hindi</span>' : ''}
             </div>
             <div style="padding:14px 16px 16px">
                 <div style="display:flex;align-items:flex-start;gap:10px">
@@ -2405,16 +2419,16 @@ const _marketCategories = [
 ];
 
 const _marketProducts = [
-    { id:'m1', image:'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=400&q=80', name:'Hand-embroidered Dupatta',  seller:'Meena Crafts',   sellerType:'user',    category:'Clothing',    price:850,  stock:12, rating:4.8, desc:'Beautifully hand-embroidered dupatta with traditional motifs.' },
-    { id:'m2', image:'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=400&q=80', name:'Terracotta Earrings Set',   seller:'Clay & Co.',     sellerType:'company', category:'Jewellery',   price:320,  stock:30, rating:4.7, desc:'Lightweight terracotta earrings, eco-friendly and unique.' },
-    { id:'m3', image:'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=400&q=80', name:'Organic Turmeric Powder',   seller:'Spice Garden',   sellerType:'user',    category:'Food',        price:180,  stock:50, rating:4.9, desc:'100% organic turmeric sourced directly from farms.' },
-    { id:'m4', image:'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=400&q=80', name:'Madhubani Art Print',        seller:'ArtByPriya',     sellerType:'user',    category:'Art',         price:1200, stock:5,  rating:4.6, desc:'Original Madhubani art print on handmade paper.' },
-    { id:'m5', image:'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&q=80', name:'Handwoven Jute Bag',         seller:'GreenWeave',     sellerType:'company', category:'Handicrafts', price:450,  stock:20, rating:4.5, desc:'Eco-friendly jute bag, perfect for daily use.' },
-    { id:'m6', image:'https://images.unsplash.com/photo-1607006344380-b6775a0824a7?w=400&q=80', name:'Rose & Sandalwood Soap',     seller:'NaturalGlow',    sellerType:'user',    category:'Beauty',      price:150,  stock:40, rating:4.8, desc:'Handmade cold-process soap with natural ingredients.' },
-    { id:'m7', image:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80', name:'MacramÃƒÆ’Ã‚Â© Wall Hanging',       seller:'KnotArt Studio', sellerType:'company', category:'Home Decor',  price:2200, stock:8,  rating:4.7, desc:'Handcrafted macramÃƒÆ’Ã‚Â© wall hanging, boho style.' },
-    { id:'m8', image:'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=400&q=80', name:'Handmade Greeting Cards',    seller:'PaperLove',      sellerType:'user',    category:'Stationery',  price:80,   stock:100,rating:4.4, desc:'Set of 5 handmade greeting cards for all occasions.' },
-    { id:'m9', image:'https://images.unsplash.com/photo-1611085583191-a3b181a88401?w=400&q=80', name:'Silk Thread Bangles',        seller:'Meena Crafts',   sellerType:'user',    category:'Jewellery',   price:250,  stock:25, rating:4.6, desc:'Colourful silk thread bangles, set of 6.' },
-    { id:'m10',name:'Handloom Cotton Saree',      seller:'WeaversHub',     sellerType:'company', category:'Clothing',    price:3500, stock:15, rating:4.9, desc:'Pure handloom cotton saree with natural dyes.' },
+    { id:'m1', image:'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=400&q=80', name:'Hand-embroidered Dupatta',  seller:'Meena Crafts',   sellerType:'user',    category:'Clothing',    price:850,  stock:12, rating:4.8, desc:'Beautifully hand-embroidered dupatta with traditional motifs.', lang:'en' },
+    { id:'m2', image:'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=400&q=80', name:'Terracotta Earrings Set',   seller:'Clay & Co.',     sellerType:'company', category:'Jewellery',   price:320,  stock:30, rating:4.7, desc:'Lightweight terracotta earrings, eco-friendly and unique.', lang:'en' },
+    { id:'m3', image:'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=400&q=80', name:'Organic Turmeric Powder',   seller:'Spice Garden',   sellerType:'user',    category:'Food',        price:180,  stock:50, rating:4.9, desc:'100% organic turmeric sourced directly from farms.', lang:'en' },
+    { id:'m4', image:'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=400&q=80', name:'Madhubani Art Print',        seller:'ArtByPriya',     sellerType:'user',    category:'Art',         price:1200, stock:5,  rating:4.6, desc:'Original Madhubani art print on handmade paper.', lang:'en' },
+    { id:'m5', image:'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&q=80', name:'Handwoven Jute Bag',         seller:'GreenWeave',     sellerType:'company', category:'Handicrafts', price:450,  stock:20, rating:4.5, desc:'Eco-friendly jute bag, perfect for daily use.', lang:'en' },
+    { id:'m6', image:'https://images.unsplash.com/photo-1607006344380-b6775a0824a7?w=400&q=80', name:'Rose & Sandalwood Soap',     seller:'NaturalGlow',    sellerType:'user',    category:'Beauty',      price:150,  stock:40, rating:4.8, desc:'Handmade cold-process soap with natural ingredients.', lang:'en' },
+    { id:'m7', image:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80', name:'MacramÃƒÆ’Ã‚Â© Wall Hanging',       seller:'KnotArt Studio', sellerType:'company', category:'Home Decor',  price:2200, stock:8,  rating:4.7, desc:'Handcrafted macramÃƒÆ’Ã‚Â© wall hanging, boho style.', lang:'en' },
+    { id:'m8', image:'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=400&q=80', name:'Handmade Greeting Cards',    seller:'PaperLove',      sellerType:'user',    category:'Stationery',  price:80,   stock:100,rating:4.4, desc:'Set of 5 handmade greeting cards for all occasions.', lang:'en' },
+    { id:'m9', image:'https://images.unsplash.com/photo-1611085583191-a3b181a88401?w=400&q=80', name:'Silk Thread Bangles',        seller:'Meena Crafts',   sellerType:'user',    category:'Jewellery',   price:250,  stock:25, rating:4.6, desc:'Colourful silk thread bangles, set of 6.', lang:'en' },
+    { id:'m10',name:'Handloom Cotton Saree',      seller:'WeaversHub',     sellerType:'company', category:'Clothing',    price:3500, stock:15, rating:4.9, desc:'Pure handloom cotton saree with natural dyes.', lang:'en' },
 ];
 
 const _marketFilters = { cat: new Set(), price: new Set(), seller: new Set(), stock: new Set() };
@@ -2885,7 +2899,7 @@ function _animateCoinEarn(amount) {
     setTimeout(() => { el.style.transform = 'scale(1)'; el.style.color = ''; }, 400);
     // Floating +N toast
     const toast = document.createElement('div');
-    toast.textContent = `+${amount} ÃƒÂ°Ã…Â¸Ã‚ÂªÃ¢â€žÂ¢`;
+    toast.textContent = `+${amount} ⭐ coins`;
     toast.style.cssText = 'position:fixed;top:80px;right:20px;background:linear-gradient(135deg,#4d41df,#675df9);color:#fff;font-size:14px;font-weight:800;padding:8px 16px;border-radius:999px;z-index:9999;animation:coinFloat 1.8s ease-out forwards;pointer-events:none;box-shadow:0 4px 16px rgba(77,65,223,0.4)';
     if (!document.getElementById('coin-float-style')) {
         const s = document.createElement('style');
@@ -2913,7 +2927,7 @@ function _checkDailyLogin() {
 // Badge definitions
 const _allBadges = [
     { id: 'first_login',    icon: 'waving_hand',        color: '#4d41df', bg: 'rgba(77,65,223,0.12)',   name: 'Welcome!',          desc: 'Joined Tarini',                  condition: r => true },
-    { id: 'profile_star',   icon: 'person_check',       color: '#276749', bg: 'rgba(45,106,79,0.12)',   name: 'Profile \u0938\u094d\u091f\u093e\u0930',  desc: 'Completed your profile',         condition: r => computeProfileProgress() >= 100 },
+    { id: 'profile_star',   icon: 'person_check',       color: '#276749', bg: 'rgba(45,106,79,0.12)',   name: 'Profile Star',  desc: 'Completed your profile',         condition: r => computeProfileProgress() >= 100 },
     { id: 'first_apply',    icon: 'send',               color: '#875041', bg: 'rgba(135,80,65,0.12)',   name: 'First Apply',       desc: 'Applied to your first job',      condition: () => (JSON.parse(localStorage.getItem(_appsKey())||'[]')).length >= 1 },
     { id: 'rising_talent',  icon: 'trending_up',        color: '#675df9', bg: 'rgba(103,93,249,0.12)',  name: 'Rising Talent',     desc: 'Applied to 3+ jobs',             condition: () => (JSON.parse(localStorage.getItem(_appsKey())||'[]')).length >= 3 },
     { id: 'skill_learner',  icon: 'school',             color: '#5c51a0', bg: 'rgba(92,81,160,0.12)',   name: 'Skill Learner',     desc: 'Enrolled in a course',           condition: r => r.activity.some(a => a.reason.startsWith('Enrolled in')) },
@@ -2943,7 +2957,7 @@ window.checkAndAwardBadges = checkAndAwardBadges;
 function _showBadgeUnlockToast(badge) {
     const el = document.createElement('div');
     el.style.cssText = 'position:fixed;bottom:120px;left:50%;transform:translateX(-50%);background:#fff;border:2px solid rgba(77,65,223,0.25);border-radius:20px;padding:12px 20px;display:flex;align-items:center;gap:12px;z-index:9999;box-shadow:0 8px 32px rgba(77,65,223,0.20);animation:fadeIn 0.3s ease-out;min-width:260px;max-width:320px';
-    el.innerHTML = `<div style="width:40px;height:40px;border-radius:12px;background:${badge.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><span class="material-symbols-outlined" style="font-size:22px;color:${badge.color};font-variation-settings:'FILL' 1">${badge.icon}</span></div><div><p style="font-size:12px;font-weight:700;color:#4d41df">ÃƒÂ°Ã…Â¸Ã‚ÂÃ¢â‚¬Â¦ Badge Unlocked!</p><p style="font-size:13px;font-weight:700;color:#1b1b24">${badge.name}</p><p style="font-size:11px;color:#777587">${badge.desc}</p></div>`;
+    el.innerHTML = `<div style="width:40px;height:40px;border-radius:12px;background:${badge.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><span class="material-symbols-outlined" style="font-size:22px;color:${badge.color};font-variation-settings:'FILL' 1">${badge.icon}</span></div><div><p style="font-size:12px;font-weight:700;color:#4d41df">🏆 Badge Unlocked!</p><p style="font-size:13px;font-weight:700;color:#1b1b24">${badge.name}</p><p style="font-size:11px;color:#777587">${badge.desc}</p></div>`;
     document.body.appendChild(el);
     setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.4s'; setTimeout(() => el.remove(), 400); }, 3000);
 }
@@ -2991,36 +3005,47 @@ function _renderTasks() {
     const done = tasks.filter(t => t.done).length;
     if (label) label.textContent = `${done}/${tasks.length} done`;
 
+    const _d = document.documentElement.classList.contains('dark-theme');
+    const _cardBg = _d ? '#1c1b2e' : '#fff';
+    const _border = _d ? '#2a2840' : '#eae6f3';
+    const _titleC = _d ? '#e8e6f4' : '#1b1b24';
+    const _subC   = _d ? '#9e9bb8' : '#777587';
+    const _coinC  = _d ? '#e8e6f4' : '#1b1b24';
     container.innerHTML = tasks.map(t => `
-        <div style="display:flex;align-items:center;gap:12px;background:#fff;border-radius:16px;padding:12px 14px;border:1px solid ${t.done ? 'rgba(45,106,79,0.20)' : '#eae6f3'};box-shadow:0 2px 8px -4px rgba(77,65,223,0.08);transition:all 0.2s;${t.done ? 'opacity:0.75' : ''}">
+        <div style="display:flex;align-items:center;gap:12px;background:${_cardBg};border-radius:16px;padding:12px 14px;border:1px solid ${t.done ? 'rgba(45,106,79,0.20)' : _border};box-shadow:0 2px 8px -4px rgba(77,65,223,0.08);transition:all 0.2s;${t.done ? 'opacity:0.75' : ''}">
             <div style="width:40px;height:40px;border-radius:12px;background:${t.done ? 'rgba(45,106,79,0.12)' : `rgba(${t.color === '#4d41df' ? '77,65,223' : t.color === '#276749' ? '45,106,79' : t.color === '#875041' ? '135,80,65' : t.color === '#5c51a0' ? '92,81,160' : '199,125,255'},0.12)`};display:flex;align-items:center;justify-content:center;flex-shrink:0">
                 <span class="material-symbols-outlined" style="font-size:20px;color:${t.done ? '#276749' : t.color};font-variation-settings:'FILL' 1">${t.done ? 'check_circle' : t.icon}</span>
             </div>
             <div style="flex:1;min-width:0">
-                <p style="font-size:13px;font-weight:700;color:${t.done ? '#276749' : '#1b1b24'};${t.done ? 'text-decoration:line-through' : ''}">${t.label}</p>
-                <p style="font-size:11px;color:#777587;margin-top:1px">${t.desc}</p>
+                <p style="font-size:13px;font-weight:700;color:${t.done ? '#276749' : _titleC};${t.done ? 'text-decoration:line-through' : ''}">${t.label}</p>
+                <p style="font-size:11px;color:${_subC};margin-top:1px">${t.desc}</p>
             </div>
             <div style="display:flex;align-items:center;gap:3px;flex-shrink:0">
                 <span class="material-symbols-outlined" style="font-size:14px;color:#f59e0b;font-variation-settings:'FILL' 1">monetization_on</span>
-                <span style="font-size:12px;font-weight:700;color:#1b1b24">+${t.coins}</span>
+                <span style="font-size:12px;font-weight:700;color:${_coinC}">+${t.coins}</span>
             </div>
         </div>`).join('');
 }
 
 function _renderActivity(r) {
     const container = document.getElementById('rewards-activity-container');
+    const _d = document.documentElement.classList.contains('dark-theme');
+    const _cardBg = _d ? '#1c1b2e' : '#fff';
+    const _border = _d ? '#2a2840' : '#eae6f3';
+    const _textC  = _d ? '#c8c6dc' : '#464555';
+    const _earnC  = _d ? '#74c69d' : '#276749';
     if (!container) return;
     if (!r.activity.length) {
         container.innerHTML = `<div style="text-align:center;padding:24px 0;color:#9e9bb8;font-size:13px">No activity yet. Start earning coins!</div>`;
         return;
     }
     container.innerHTML = r.activity.slice(0, 6).map(a => `
-        <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fff;border-radius:14px;border:1px solid #eae6f3">
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:${_cardBg};border-radius:14px;border:1px solid ${_border}">
             <div style="width:32px;height:32px;border-radius:10px;background:rgba(77,65,223,0.10);display:flex;align-items:center;justify-content:center;flex-shrink:0">
                 <span class="material-symbols-outlined" style="font-size:16px;color:#4d41df;font-variation-settings:'FILL' 1">monetization_on</span>
             </div>
-            <p style="flex:1;font-size:12px;color:#464555;line-height:1.4">${a.reason}</p>
-            <span style="font-size:12px;font-weight:800;color:#276749;flex-shrink:0">+${a.amount}</span>
+            <p style="flex:1;font-size:12px;color:${_textC};line-height:1.4">${a.reason}</p>
+            <span style="font-size:12px;font-weight:800;color:${_earnC};flex-shrink:0">+${a.amount}</span>
         </div>`).join('');
 }
 
@@ -3029,17 +3054,22 @@ function _renderBadges(r) {
     const label = document.getElementById('badges-earned-label');
     if (!container) return;
     if (label) label.textContent = `${r.earnedBadges.length} earned`;
+    const _d = document.documentElement.classList.contains('dark-theme');
+    const _cardBg = _d ? '#1c1b2e' : '#fff';
+    const _border = _d ? '#2a2840' : '#eae6f3';
+    const _titleC = _d ? '#e8e6f4' : '#1b1b24';
+    const _shadow = _d ? '0 2px 8px -4px rgba(0,0,0,0.5)' : '0 2px 8px -4px rgba(77,65,223,0.06)';
 
     container.innerHTML = _allBadges.map(b => {
         const earned = r.earnedBadges.includes(b.id);
         return `
-        <div style="background:#fff;border-radius:18px;padding:14px 10px;border:${earned ? `2px solid ${b.color}30` : '1px solid #eae6f3'};box-shadow:${earned ? `0 4px 16px -4px ${b.color}30` : '0 2px 8px -4px rgba(77,65,223,0.06)'};text-align:center;transition:transform 0.15s;${earned ? '' : 'opacity:0.45;filter:grayscale(0.6)'}"
+        <div style="background:${_cardBg};border-radius:18px;padding:14px 10px;border:${earned ? `2px solid ${b.color}30` : `1px solid ${_border}`};box-shadow:${earned ? `0 4px 16px -4px ${b.color}30` : _shadow};text-align:center;transition:transform 0.15s;${earned ? '' : 'opacity:0.45;filter:grayscale(0.6)'}"
             onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
             <div style="width:48px;height:48px;border-radius:14px;background:${earned ? b.bg : 'rgba(119,117,135,0.08)'};display:flex;align-items:center;justify-content:center;margin:0 auto 8px;position:relative">
                 <span class="material-symbols-outlined" style="font-size:24px;color:${earned ? b.color : '#9e9bb8'};font-variation-settings:'FILL' 1">${b.icon}</span>
                 ${earned ? `<span style="position:absolute;-top:4px;-right:4px;width:14px;height:14px;background:#276749;border-radius:50%;display:flex;align-items:center;justify-content:center;top:-4px;right:-4px"><span class="material-symbols-outlined" style="font-size:10px;color:#fff;font-variation-settings:'FILL' 1">check</span></span>` : ''}
             </div>
-            <p style="font-size:11px;font-weight:700;color:${earned ? '#1b1b24' : '#9e9bb8'};line-height:1.3">${b.name}</p>
+            <p style="font-size:11px;font-weight:700;color:${earned ? _titleC : '#9e9bb8'};line-height:1.3">${b.name}</p>
             <p style="font-size:10px;color:#9e9bb8;margin-top:2px;line-height:1.3">${b.desc}</p>
         </div>`;
     }).join('');
