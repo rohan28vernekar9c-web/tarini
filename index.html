@@ -245,13 +245,13 @@
             transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
         }
 
-        /* Dark mode hover overrides — prevent flash to white on hover */
+        /* Dark mode hover overrides â€” prevent flash to white on hover */
         .dark-theme [style*="background:#fff"]:hover,
         .dark-theme [style*="background: #fff"]:hover,
         .dark-theme [style*="background:#ffffff"]:hover,
         .dark-theme [style*="background: #ffffff"]:hover { background: #252438 !important; }
 
-        /* Elements whose mouseleave resets background to '' — keep dark */
+        /* Elements whose mouseleave resets background to '' â€” keep dark */
         .dark-theme .bg-white:hover,
         .dark-theme .bg-surface-container-low:hover { background-color: #2a2840 !important; }
 
@@ -588,18 +588,18 @@
                                         <span class="material-symbols-outlined" style="font-size:16px;color:#4d41df">language</span>
                                         <select id="auth-lang-select" class="lang-dropdown" onchange="setGlobalLang(this.value)">
                                             <option value="en">English</option>
-                                            <option value="hi">हिन्दी (Hindi)</option>
-                                            <option value="bn">বাংলা (Bengali)</option>
-                                            <option value="te">తెలుగు (Telugu)</option>
-                                            <option value="mr">मराठी (Marathi)</option>
-                                            <option value="ta">தமிழ் (Tamil)</option>
-                                            <option value="ur">اردو (Urdu)</option>
-                                            <option value="gu">ગુજરાતી (Gujarati)</option>
-                                            <option value="kn">ಕನ್ನಡ (Kannada)</option>
-                                            <option value="ml">മലയാളം (Malayalam)</option>
-                                            <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
-                                            <option value="or">ଓଡ଼ିଆ (Odia)</option>
-                                            <option value="as">অসমীয়া (Assamese)</option>
+                                            <option value="hi">à¤¹à¤¿à¤¨à¥�à¤¦à¥€ (Hindi)</option>
+                                            <option value="bn">à¦¬à¦¾à¦‚à¦²à¦¾ (Bengali)</option>
+                                            <option value="te">à°¤à±†à°²à±�à°—à±� (Telugu)</option>
+                                            <option value="mr">à¤®à¤°à¤¾à¤ à¥€ (Marathi)</option>
+                                            <option value="ta">à®¤à®®à®¿à®´à¯� (Tamil)</option>
+                                            <option value="ur">Ø§Ø±Ø¯Ùˆ (Urdu)</option>
+                                            <option value="gu">àª—à«�àªœàª°àª¾àª¤à«€ (Gujarati)</option>
+                                            <option value="kn">à²•à²¨à³�à²¨à²¡ (Kannada)</option>
+                                            <option value="ml">à´®à´²à´¯à´¾à´³à´‚ (Malayalam)</option>
+                                            <option value="pa">à¨ªà©°à¨œà¨¾à¨¬à©€ (Punjabi)</option>
+                                            <option value="or">à¬“à¬¡à¬¼à¬¿à¬† (Odia)</option>
+                                            <option value="as">à¦…à¦¸à¦®à§€à¦¯à¦¼à¦¾ (Assamese)</option>
                                         </select>
                                     </div>
                                 </div>
@@ -946,28 +946,7 @@
                 </section>
 
                 
-                <!-- COMPANY SEARCH SECTION -->
-                <section id="company-search-section">
-                    <div class="flex items-center justify-between mb-3">
-                        <h3 class="font-['Plus_Jakarta_Sans'] text-[16px] font-bold text-on-surface tracking-tight">Explore Companies</h3>
-                        <span class="text-[11px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full" id="company-search-count"></span>
-                    </div>
-                    <div class="relative mb-4">
-                        <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                            <span class="material-symbols-outlined text-outline" style="font-size:18px">search</span>
-                        </div>
-                        <input id="company-search-input" type="text" placeholder="Search companies by name, industry..." oninput="searchCompanies()" class="w-full pl-11 pr-4 py-3.5 bg-surface-container-low border-none rounded-2xl focus:ring-2 focus:ring-primary/20 text-[14px] transition-all shadow-sm"/>
-                    </div>
-                    <div id="company-search-results" class="space-y-3"></div>
-                    <div id="company-search-empty" class="hidden flex-col items-center justify-center py-10 text-center">
-                        <div class="w-14 h-14 rounded-full bg-surface-container flex items-center justify-center mb-3">
-                            <span class="material-symbols-outlined text-outline" style="font-size:28px">domain_disabled</span>
-                        </div>
-                        <p class="font-semibold text-on-surface text-[14px]">No registered companies found.</p>
-                        <p class="text-[12px] text-on-surface-variant mt-1">Try a different keyword or check back later.</p>
-                    </div>
-                </section>
-
+                
 </div><!-- end px-5 -->
             </main>
             <!-- Floating Action Button for AI -->
@@ -1073,13 +1052,16 @@
                     <div id="ai-match-container" class="space-y-3"></div>
                 </div>
 
-                <!-- Top Companies Recommended -->
-                <div class="mb-lg">
+                <!-- Explore Companies -->
+                <section id="jobs-company-section" class="mb-lg">
                     <div class="flex items-center justify-between mb-3">
-                        <h3 class="font-['Plus_Jakarta_Sans'] text-[16px] font-bold text-on-surface">Top Companies Recommended</h3>
+                        <h3 class="font-['Plus_Jakarta_Sans'] text-[16px] font-bold text-on-surface">Explore Companies</h3>
+                        <button onclick="openAllCompanies()" class="text-[12px] font-semibold text-primary flex items-center gap-0.5 hover:underline active:scale-95 transition-all">
+                            View All <span class="material-symbols-outlined" style="font-size:14px">chevron_right</span>
+                        </button>
                     </div>
-                    <div id="top-companies-container" class="flex overflow-x-auto hide-scrollbar gap-3 pb-2"></div>
-                </div>
+                    <div id="jobs-company-container" class="flex overflow-x-auto hide-scrollbar gap-3 pb-2"></div>
+                </section>
 
                 <!-- Job List Header -->
                 <div class="flex justify-between items-end mb-3">
@@ -1866,7 +1848,7 @@
                         <div class="px-md py-sm flex justify-between items-center">
                             <div>
                                 <p class="text-xs text-outline font-semibold uppercase mb-1">Full Name</p>
-                                <p class="text-on-surface text-sm" id="profile-display-fullname">Ã¢â‚¬â€�</p>
+                                <p class="text-on-surface text-sm" id="profile-display-fullname">ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬ï¿½</p>
                             </div>
                         </div>
                         <div class="px-md py-sm pb-md flex justify-between items-center">
@@ -2345,9 +2327,9 @@
                                 class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-md transition-all">
                                 <option value="Fresher">Fresher (0 years)</option>
                                 <option value="Less than 1 year">Less than 1 year</option>
-                                <option value="1-2 years">1â€“2 years</option>
-                                <option value="2-5 years">2â€“5 years</option>
-                                <option value="5-10 years">5â€“10 years</option>
+                                <option value="1-2 years">1Ã¢â‚¬â€œ2 years</option>
+                                <option value="2-5 years">2Ã¢â‚¬â€œ5 years</option>
+                                <option value="5-10 years">5Ã¢â‚¬â€œ10 years</option>
                                 <option value="10+ years">10+ years</option>
                             </select>
                         </div>
@@ -2398,6 +2380,118 @@
                     </button>
 
                 </form>
+            </main>
+        </div>
+
+        <!-- SCREEN: COMPANY CANDIDATE SEARCH -->
+        <div id="screen-company-candidates" class="screen">
+            <main class="max-w-2xl mx-auto px-5 py-md pb-32">
+                <div class="flex items-center gap-3 mb-5">
+                    <button onclick="companyNavTo('company-dashboard')" class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center active:scale-90 transition-all">
+                        <span class="material-symbols-outlined">arrow_back</span>
+                    </button>
+                    <div class="flex-1 min-w-0">
+                        <h2 class="font-['Plus_Jakarta_Sans'] text-[20px] font-bold text-on-surface">Find Candidates</h2>
+                        <p class="text-[12px] text-on-surface-variant mt-0.5" id="candidates-count"></p>
+                    </div>
+                </div>
+
+                <!-- Filter inputs -->
+                <div class="space-y-3 mb-5">
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                            <span class="material-symbols-outlined text-outline" style="font-size:18px">psychology</span>
+                        </div>
+                        <input id="cand-search-skills" type="text" placeholder="Skills (e.g. Tailoring, Excel)" oninput="searchCandidates()" class="w-full pl-11 pr-4 py-3.5 bg-surface-container-low border-none rounded-2xl focus:ring-2 focus:ring-primary/20 text-[14px] transition-all shadow-sm"/>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                                <span class="material-symbols-outlined text-outline" style="font-size:16px">school</span>
+                            </div>
+                            <input id="cand-search-qual" type="text" placeholder="Qualification" oninput="searchCandidates()" class="w-full pl-9 pr-3 py-3 bg-surface-container-low border-none rounded-2xl focus:ring-2 focus:ring-primary/20 text-[13px] transition-all shadow-sm"/>
+                        </div>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                                <span class="material-symbols-outlined text-outline" style="font-size:16px">work_history</span>
+                            </div>
+                            <input id="cand-search-exp" type="text" placeholder="Experience" oninput="searchCandidates()" class="w-full pl-9 pr-3 py-3 bg-surface-container-low border-none rounded-2xl focus:ring-2 focus:ring-primary/20 text-[13px] transition-all shadow-sm"/>
+                        </div>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                                <span class="material-symbols-outlined text-outline" style="font-size:16px">location_on</span>
+                            </div>
+                            <input id="cand-search-loc" type="text" placeholder="Location" oninput="searchCandidates()" class="w-full pl-9 pr-3 py-3 bg-surface-container-low border-none rounded-2xl focus:ring-2 focus:ring-primary/20 text-[13px] transition-all shadow-sm"/>
+                        </div>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                                <span class="material-symbols-outlined text-outline" style="font-size:16px">interests</span>
+                            </div>
+                            <input id="cand-search-domain" type="text" placeholder="Domain / Interest" oninput="searchCandidates()" class="w-full pl-9 pr-3 py-3 bg-surface-container-low border-none rounded-2xl focus:ring-2 focus:ring-primary/20 text-[13px] transition-all shadow-sm"/>
+                        </div>
+                    </div>
+                    <button onclick="searchCandidates()" class="w-full h-12 rounded-2xl text-white font-bold text-[14px] active:scale-[0.98] transition-all" style="background:linear-gradient(135deg,#4d41df,#5c51a0)">
+                        <span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle;margin-right:4px">search</span>Search Candidates
+                    </button>
+                </div>
+
+                <!-- Results -->
+                <div id="candidates-list"></div>
+            </main>
+        </div>
+
+        <!-- SCREEN: ALL COMPANIES -->
+        <div id="screen-all-companies" class="screen">
+            <main class="max-w-2xl mx-auto px-5 py-md pb-32">
+                <!-- Header -->
+                <div class="flex items-center gap-3 mb-5">
+                    <button onclick="navigateTo('jobs')" class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center active:scale-90 transition-all">
+                        <span class="material-symbols-outlined">arrow_back</span>
+                    </button>
+                    <div class="flex-1 min-w-0">
+                        <h2 class="font-['Plus_Jakarta_Sans'] text-[20px] font-bold text-on-surface">All Companies</h2>
+                        <p class="text-[12px] text-on-surface-variant mt-0.5" id="all-companies-count"></p>
+                    </div>
+                </div>
+
+                <!-- Search + Filters -->
+                <div class="space-y-3 mb-5">
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                            <span class="material-symbols-outlined text-outline" style="font-size:18px">search</span>
+                        </div>
+                        <input id="all-companies-search" type="text" placeholder="Search by name, industry, location..." oninput="renderAllCompanies()" class="w-full pl-11 pr-4 py-3.5 bg-surface-container-low border-none rounded-2xl focus:ring-2 focus:ring-primary/20 text-[14px] transition-all shadow-sm"/>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <select id="all-companies-industry" onchange="renderAllCompanies()" class="h-12 px-4 rounded-2xl bg-surface-container-low border-none text-[13px] font-semibold text-on-surface shadow-sm focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
+                            <option value="">All Industries</option>
+                            <option>Technology</option>
+                            <option>Education</option>
+                            <option>Healthcare</option>
+                            <option>Retail</option>
+                            <option>Design</option>
+                            <option>Media</option>
+                            <option>Manufacturing</option>
+                            <option>Other</option>
+                        </select>
+                        <select id="all-companies-location" onchange="renderAllCompanies()" class="h-12 px-4 rounded-2xl bg-surface-container-low border-none text-[13px] font-semibold text-on-surface shadow-sm focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
+                            <option value="">All Locations</option>
+                            <option>Remote</option>
+                            <option>Mumbai</option>
+                            <option>Delhi</option>
+                            <option>Bangalore</option>
+                            <option>Pune</option>
+                            <option>Chennai</option>
+                            <option>Hybrid</option>
+                        </select>
+                    </div>
+                    <button onclick="clearAllCompanyFilters()" class="text-[12px] font-semibold text-error flex items-center gap-1 active:scale-95 transition-all">
+                        <span class="material-symbols-outlined" style="font-size:14px">close</span> Clear filters
+                    </button>
+                </div>
+
+                <!-- Results -->
+                <div id="all-companies-list" class="space-y-3"></div>
             </main>
         </div>
 
@@ -2501,6 +2595,16 @@
                             <div>
                                 <p class="font-bold text-on-surface text-[13px]">Training</p>
                                 <p class="text-[11px] text-on-surface-variant">Manage videos</p>
+                            </div>
+                        </button>
+                        <button onclick="companyNavTo('company-candidates')"
+                            class="flex items-center gap-3 p-4 bg-white rounded-[18px] border border-surface-container-high shadow-sm active:scale-[0.97] transition-all text-left">
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background:rgba(103,93,249,0.10)">
+                                <span class="material-symbols-outlined" style="font-size:20px;font-variation-settings:'FILL' 1;color:#675df9">person_search</span>
+                            </div>
+                            <div>
+                                <p class="font-bold text-on-surface text-[13px]">Find Candidates</p>
+                                <p class="text-[11px] text-on-surface-variant">Search women talent</p>
                             </div>
                         </button>
                         <button onclick="companyNavTo('company-profile')"
@@ -3267,6 +3371,24 @@
     </div>
 
     <script src="app.js"></script>
+
+    <!-- Google Translate Global Widget (Hidden) -->
+    <div id="google_translate_element" style="display:none;"></div>
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({pageLanguage: 'en', autoDisplay: false}, 'google_translate_element');
+        }
+    </script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+    <style>
+        /* Hide Google Translate UI */
+        .goog-te-banner-frame.skiptranslate { display: none !important; }
+        body { top: 0px !important; position: static !important; }
+        .goog-tooltip { display: none !important; }
+        .goog-tooltip:hover { display: none !important; }
+        .goog-text-highlight { background-color: transparent !important; border: none !important; box-shadow: none !important; }
+    </style>
+
 
     <!-- Google Translate Global Widget (Hidden) -->
     <div id="google_translate_element" style="display:none;"></div>

@@ -15,7 +15,7 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 // List of screens that should hide the bottom navigation
-const screensWithoutNav = ['login', 'notifications', 'ai-assistant', 'post-product', 'product-detail', 'edit-profile', 'job-detail', 'job-apply', 'skill-categories', 'market-categories'];
+const screensWithoutNav = ['login', 'notifications', 'ai-assistant', 'post-product', 'product-detail', 'edit-profile', 'job-detail', 'job-apply', 'skill-categories', 'market-categories', 'all-companies'];
 // Screens that show the nav but don't have a matching nav tab (no active highlight needed)
 const mainNavScreens = ['dashboard', 'jobs', 'skills', 'shop', 'profile'];
 const _navStack = [];
@@ -34,7 +34,7 @@ function navigateTo(screenId) {
         targetScreen.classList.add('active');
         updateBottomNav(screenId);
         if (screenId === 'profile') loadProfileScreen();
-        if (screenId === 'dashboard') { loadDashboardEarnings(); setTimeout(searchCompanies, 200); }
+        if (screenId === 'dashboard') { loadDashboardEarnings(); }
         if (screenId === 'notifications') loadNotificationsScreen();
         if (screenId === 'jobs') initJobsPage();
         if (screenId === 'applications') loadApplicationsScreen();
@@ -43,6 +43,7 @@ function navigateTo(screenId) {
         if (screenId === 'my-shop') initMyShop();
         if (screenId === 'cart') renderCart();
         if (screenId === 'rewards') initRewardsScreen();
+        if (screenId === 'all-companies') renderAllCompanies();
     } else {
         console.error(`Screen 'screen-${screenId}' not found.`);
     }
@@ -62,7 +63,7 @@ function navigateToWithOutHistory(screenId) {
         targetScreen.classList.add('active');
         updateBottomNav(screenId);
         if (screenId === 'profile') loadProfileScreen();
-        if (screenId === 'dashboard') { loadDashboardEarnings(); setTimeout(searchCompanies, 200); }
+        if (screenId === 'dashboard') { loadDashboardEarnings(); }
         if (screenId === 'notifications') loadNotificationsScreen();
         if (screenId === 'jobs') initJobsPage();
         if (screenId === 'applications') loadApplicationsScreen();
@@ -1559,30 +1560,128 @@ function _renderJobCards(jobs) {
     }).join('');
 }
 
-function renderTopCompanies() {
-    const container = document.getElementById('top-companies-container');
+function renderJobsCompanies() {
+    const container = document.getElementById('jobs-company-container');
+    const countEl   = document.getElementById('jobs-company-count');
     if (!container) return;
-    const _dark = document.documentElement.classList.contains('dark-theme');
+    const _dark   = document.documentElement.classList.contains('dark-theme');
     const cardBg  = _dark ? '#1c1b2e' : '#fff';
     const border  = _dark ? '#2a2840' : '#eae6f3';
     const titleC  = _dark ? '#e8e6f4' : '#1b1b24';
     const subC    = _dark ? '#9e9bb8' : '#777587';
     const shadowN = _dark ? '0 2px 10px -4px rgba(0,0,0,0.5)' : '0 2px 10px -4px rgba(77,65,223,0.10)';
     const shadowH = _dark ? '0 6px 18px -4px rgba(0,0,0,0.7)' : '0 6px 18px -4px rgba(77,65,223,0.18)';
-    container.innerHTML = _topCompanies.map(c => `
-        <div onclick="filterByCompany('${c.name}')" style="flex-shrink:0;width:130px;background:${cardBg};border-radius:18px;padding:14px 12px;border:1px solid ${border};box-shadow:${shadowN};cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;text-align:center"
-            onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='${shadowH}'"
-            onmouseleave="this.style.transform='';this.style.boxShadow='${shadowN}'"
-            ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform=''">
-            <div style="width:44px;height:44px;border-radius:12px;background:${c.bg};display:flex;align-items:center;justify-content:center;margin:0 auto 8px">
-                <span class="material-symbols-outlined" style="font-size:22px;color:${c.color};font-variation-settings:'FILL' 1">${c.icon}</span>
-            </div>
-            <p style="font-size:12px;font-weight:700;color:${titleC};line-height:1.3">${c.name}</p>
-            <p style="font-size:10px;color:${subC};margin-top:2px">${c.industry}</p>
-            <p style="font-size:10px;font-weight:600;color:${c.color};margin-top:4px;line-height:1.3">${c.tagline}</p>
-        </div>`).join('');
+    const grads   = ['linear-gradient(135deg,#4d41df,#675df9)','linear-gradient(135deg,#875041,#feb5a2)','linear-gradient(135deg,#5c51a0,#c8bfff)','linear-gradient(135deg,#2d6a4f,#74c69d)','linear-gradient(135deg,#c77dff,#7b2d8b)'];
+    const openJobs = name => _allJobs.filter(j => j.company.toLowerCase() === name.toLowerCase()).length;
+
+    _getAllRegisteredCompanies().then(all => {
+        const preview = all.slice(0, 8);
+        if (countEl) countEl.textContent = '';
+        container.innerHTML = preview.map((c, i) => {
+            const initials = (c.name||'C').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+            const grad = grads[i % grads.length];
+            const jobs = openJobs(c.name);
+            const isReg = !!c.uid;
+            const safeName = c.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+            return `<div onclick="filterByCompany('${safeName}')"
+                style="flex-shrink:0;width:130px;background:${cardBg};border-radius:18px;padding:14px 12px;border:1px solid ${border};box-shadow:${shadowN};cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;text-align:center"
+                onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='${shadowH}'"
+                onmouseleave="this.style.transform='';this.style.boxShadow='${shadowN}'"
+                ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform=''">
+                ${c.logo
+                    ? `<img src="${c.logo}" style="width:44px;height:44px;border-radius:12px;object-fit:cover;margin:0 auto 8px;display:block" onerror="this.style.display='none'"/>`
+                    : `<div style="width:44px;height:44px;border-radius:12px;background:${grad};display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-size:16px;font-weight:800;color:#fff">${initials}</div>`}
+                <p style="font-size:12px;font-weight:700;color:${titleC};line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.name}</p>
+                <p style="font-size:10px;color:${subC};margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.industry||''}</p>
+                <p style="font-size:10px;font-weight:600;color:#4d41df;margin-top:3px">${jobs} job${jobs!==1?'s':''}</p>
+                ${isReg ? '<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:999px;background:rgba(45,106,79,0.12);color:#276749;display:inline-block;margin-top:3px">Registered</span>' : ''}
+            </div>`;
+        }).join('');
+    });
 }
-window.renderTopCompanies = renderTopCompanies;
+window.renderJobsCompanies = renderJobsCompanies;
+window.renderTopCompanies  = renderJobsCompanies;
+
+// ---- Full companies page ----
+
+function openAllCompanies() {
+    navigateTo('all-companies');
+    setTimeout(renderAllCompanies, 100);
+}
+window.openAllCompanies = openAllCompanies;
+
+function clearAllCompanyFilters() {
+    const s = document.getElementById('all-companies-search');
+    const ind = document.getElementById('all-companies-industry');
+    const loc = document.getElementById('all-companies-location');
+    if (s)   s.value   = '';
+    if (ind) ind.value = '';
+    if (loc) loc.value = '';
+    renderAllCompanies();
+}
+window.clearAllCompanyFilters = clearAllCompanyFilters;
+
+function renderAllCompanies() {
+    const container = document.getElementById('all-companies-list');
+    const countEl   = document.getElementById('all-companies-count');
+    if (!container) return;
+
+    const query    = (document.getElementById('all-companies-search')?.value    || '').toLowerCase().trim();
+    const industry = (document.getElementById('all-companies-industry')?.value  || '').toLowerCase().trim();
+    const location = (document.getElementById('all-companies-location')?.value  || '').toLowerCase().trim();
+
+    container.innerHTML = '<div style="display:flex;align-items:center;gap:10px;padding:20px;background:rgba(77,65,223,0.05);border-radius:14px"><span class="material-symbols-outlined text-primary" style="font-size:20px;animation:spin 1s linear infinite">progress_activity</span><p style="font-size:13px;color:#777587">Loading companies...</p></div>';
+
+    _getAllRegisteredCompanies().then(all => {
+        let filtered = all;
+        if (query)    filtered = filtered.filter(c => (c.name+' '+c.industry+' '+c.location+' '+(c.tagline||'')).toLowerCase().includes(query));
+        if (industry) filtered = filtered.filter(c => (c.industry||'').toLowerCase().includes(industry));
+        if (location) filtered = filtered.filter(c => (c.location||'').toLowerCase().includes(location));
+
+        if (countEl) countEl.textContent = filtered.length + ' compan' + (filtered.length === 1 ? 'y' : 'ies');
+
+        if (filtered.length === 0) {
+            container.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;padding:48px 0;text-align:center"><div style="width:56px;height:56px;border-radius:50%;background:rgba(77,65,223,0.10);display:flex;align-items:center;justify-content:center;margin-bottom:12px"><span class="material-symbols-outlined" style="font-size:28px;color:#4d41df">domain_disabled</span></div><p style="font-size:14px;font-weight:700;color:#1b1b24">No companies found</p><p style="font-size:12px;color:#777587;margin-top:4px">Try different filters</p></div>';
+            return;
+        }
+
+        const _dark  = document.documentElement.classList.contains('dark-theme');
+        const cardBg = _dark ? '#1c1b2e' : '#fff';
+        const border = _dark ? '#2a2840' : '#eae6f3';
+        const titleC = _dark ? '#e8e6f4' : '#1b1b24';
+        const subC   = _dark ? '#9e9bb8' : '#777587';
+        const grads  = ['linear-gradient(135deg,#4d41df,#675df9)','linear-gradient(135deg,#875041,#feb5a2)','linear-gradient(135deg,#5c51a0,#c8bfff)','linear-gradient(135deg,#2d6a4f,#74c69d)','linear-gradient(135deg,#c77dff,#7b2d8b)'];
+        const openJobs = name => _allJobs.filter(j => j.company.toLowerCase() === name.toLowerCase()).length;
+
+        container.innerHTML = filtered.map((c, i) => {
+            const initials = (c.name||'C').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+            const grad = grads[i % grads.length];
+            const jobs = openJobs(c.name);
+            const isReg = !!c.uid;
+            const safeName = c.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+            return `<div style="background:${cardBg};border-radius:18px;padding:16px;border:1px solid ${border};box-shadow:0 2px 12px -4px rgba(77,65,223,0.08);display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;active:scale-[0.98]"
+                onclick="filterByCompany('${safeName}');navigateTo('jobs')"
+                onmouseenter="this.style.transform='translateY(-1px)'" onmouseleave="this.style.transform=''">
+                ${c.logo
+                    ? `<img src="${c.logo}" style="width:48px;height:48px;border-radius:14px;object-fit:cover;flex-shrink:0" onerror="this.style.display='none'"/>`
+                    : `<div style="width:48px;height:48px;border-radius:14px;background:${grad};display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:#fff;flex-shrink:0">${initials}</div>`}
+                <div style="flex:1;min-width:0">
+                    <div style="display:flex;align-items:center;gap:6px">
+                        <p style="font-size:14px;font-weight:700;color:${titleC};line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.name}</p>
+                        ${isReg ? '<span style="flex-shrink:0;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;background:rgba(45,106,79,0.12);color:#276749">Registered</span>' : ''}
+                    </div>
+                    <p style="font-size:12px;color:${subC};margin-top:2px">${c.industry||''}${c.location ? ' &bull; '+c.location : ''}</p>
+                    ${c.tagline ? `<p style="font-size:11px;color:#4d41df;font-weight:600;margin-top:2px">${c.tagline}</p>` : ''}
+                </div>
+                <div style="flex-shrink:0;text-align:right">
+                    <p style="font-size:13px;font-weight:800;color:#4d41df">${jobs}</p>
+                    <p style="font-size:10px;color:${subC}">job${jobs!==1?'s':''}</p>
+                </div>
+            </div>`;
+        }).join('');
+    });
+}
+window.renderAllCompanies = renderAllCompanies;
 
 function filterByCompany(name) {
     const input = document.getElementById('job-search-input');
@@ -1646,7 +1745,7 @@ function runAIMatch() {
 window.runAIMatch = runAIMatch;
 
 function initJobsPage() {
-    renderTopCompanies();
+    renderJobsCompanies();
     applyJobFilters();
 }
 window.initJobsPage = initJobsPage;
@@ -3136,6 +3235,7 @@ function companyNavTo(screenId) {
     if (screenId === 'company-profile') loadCompanyProfile();
     if (screenId === 'company-applications') loadCompanyApplications();
     if (screenId === 'company-training') loadTrainingScreen();
+    if (screenId === 'company-candidates') searchCandidates();
 
     history.pushState({ screen: screenId }, '', window.location.pathname);
 }
@@ -4160,6 +4260,21 @@ async function _getAllRegisteredCompanies() {
         } catch(e) {}
     });
 
+
+    // Static sample companies — always visible even before any company registers
+    [
+        { name:'TechSeva',           industry:'Technology', location:'Remote',    description:'Hiring freshers in tech roles.',          tagline:'Hiring freshers now!',  logo:'' },
+        { name:'Craft India',        industry:'Education',  location:'Mumbai',    description:'Teaching tailoring and crafts to women.', tagline:'Empowering artisans',   logo:'' },
+        { name:'GlowUp Studio',      industry:'Retail',     location:'Delhi',     description:'Beauty and wellness consultancy.',        tagline:'Beauty meets career',   logo:'' },
+        { name:'MediCare Plus',      industry:'Healthcare', location:'Bangalore', description:'Healthcare support roles available.',     tagline:'Join our care team',    logo:'' },
+        { name:'BrightMinds School', industry:'Education',  location:'Pune',      description:'Primary school teachers needed.',        tagline:'Shape future leaders',  logo:'' },
+        { name:'CodeNest',           industry:'Technology', location:'Hybrid',    description:'Web development internships available.',  tagline:'Build the future',      logo:'' },
+        { name:'FashionHub',         industry:'Retail',     location:'Chennai',   description:'Retail management and sales roles.',     tagline:'Style meets career',    logo:'' },
+        { name:'PixelWorks',         industry:'Design',     location:'Hybrid',    description:'UI/UX design internships available.',    tagline:'Create. Inspire. Grow.',logo:'' },
+        { name:'WordCraft',          industry:'Media',      location:'Remote',    description:'Content writing and editing roles.',     tagline:'Words that matter',     logo:'' },
+        { name:'InsightCo',          industry:'Technology', location:'Remote',    description:'Data analyst positions open.',           tagline:'Data-driven growth',    logo:'' },
+    ].forEach(s => { if (!seen.has(s.name)) { seen.add(s.name); companies.push(s); } });
+
     _companiesCache = companies;
     return companies;
 }
@@ -4339,3 +4454,257 @@ function applyToCompany(name) {
 }
 window.applyToCompany = applyToCompany;
 
+
+// ============================================================
+// WOMEN ↔ COMPANY CONNECTION MODULE
+// ============================================================
+
+
+
+// ---- COMPANY SIDE: Search/filter women candidates from Firestore ----
+
+function searchCandidates() {
+    if (_currentRole() !== 'company') return; // role-guard
+    const skillQ  = (document.getElementById('cand-search-skills')?.value  || '').toLowerCase().trim();
+    const qualQ   = (document.getElementById('cand-search-qual')?.value    || '').toLowerCase().trim();
+    const expQ    = (document.getElementById('cand-search-exp')?.value     || '').toLowerCase().trim();
+    const locQ    = (document.getElementById('cand-search-loc')?.value     || '').toLowerCase().trim();
+    const domainQ = (document.getElementById('cand-search-domain')?.value  || '').toLowerCase().trim();
+    const container = document.getElementById('candidates-list');
+    const countEl   = document.getElementById('candidates-count');
+    if (!container) return;
+
+    container.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:20px;background:rgba(77,65,223,0.05);border-radius:14px"><span class="material-symbols-outlined text-primary" style="font-size:20px;animation:spin 1s linear infinite">progress_activity</span><p style="font-size:13px;color:#777587">Searching candidates...</p></div>`;
+
+    db.collection('users').where('role', '==', 'woman').get()
+        .then(snap => {
+            let candidates = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+            // Apply filters
+            if (skillQ)  candidates = candidates.filter(c => (c.skills || '').toLowerCase().includes(skillQ));
+            if (qualQ)   candidates = candidates.filter(c => (c.education || c.jobPref || '').toLowerCase().includes(qualQ));
+            if (expQ)    candidates = candidates.filter(c => (c.experience || '').toLowerCase().includes(expQ));
+            if (locQ)    candidates = candidates.filter(c => (c.location || '').toLowerCase().includes(locQ));
+            if (domainQ) candidates = candidates.filter(c => (c.skills || c.title || c.bio || '').toLowerCase().includes(domainQ));
+
+            if (countEl) countEl.textContent = `${candidates.length} candidate${candidates.length !== 1 ? 's' : ''}`;
+
+            if (candidates.length === 0) {
+                container.innerHTML = `
+                    <div style="display:flex;flex-direction:column;align-items:center;padding:48px 0;text-align:center">
+                        <div style="width:56px;height:56px;border-radius:50%;background:rgba(77,65,223,0.10);display:flex;align-items:center;justify-content:center;margin-bottom:12px">
+                            <span class="material-symbols-outlined" style="font-size:28px;color:#4d41df">person_search</span>
+                        </div>
+                        <p style="font-size:14px;font-weight:700;color:#1b1b24">No candidates found</p>
+                        <p style="font-size:12px;color:#777587;margin-top:4px">Try different filters or clear all</p>
+                    </div>`;
+                return;
+            }
+
+            const _dark = document.documentElement.classList.contains('dark-theme');
+            const cardBg = _dark ? '#1c1b2e' : '#fff';
+            const border = _dark ? '#2a2840' : '#eae6f3';
+            const titleC = _dark ? '#e8e6f4' : '#1b1b24';
+            const subC   = _dark ? '#9e9bb8' : '#777587';
+            const grads  = ['linear-gradient(135deg,#4d41df,#675df9)','linear-gradient(135deg,#875041,#feb5a2)','linear-gradient(135deg,#5c51a0,#c8bfff)','linear-gradient(135deg,#2d6a4f,#74c69d)','linear-gradient(135deg,#c77dff,#7b2d8b)'];
+
+            container.innerHTML = candidates.map((c, i) => {
+                const initials = (c.name || 'U').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+                const grad = grads[i % grads.length];
+                const skills = (c.skills || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 4);
+                return `
+                <div style="background:${cardBg};border-radius:18px;padding:16px;border:1px solid ${border};box-shadow:0 2px 12px -4px rgba(77,65,223,0.08);margin-bottom:10px">
+                    <div style="display:flex;align-items:flex-start;gap:12px">
+                        <div style="width:48px;height:48px;border-radius:50%;background:${grad};display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;flex-shrink:0">${initials}</div>
+                        <div style="flex:1;min-width:0">
+                            <p style="font-size:14px;font-weight:700;color:${titleC};line-height:1.3">${c.name || 'Candidate'}</p>
+                            <p style="font-size:12px;color:${subC};margin-top:2px">${c.title || c.jobPref || 'Looking for opportunities'} ${c.location ? '&bull; ' + c.location : ''}</p>
+                            ${skills.length ? `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px">${skills.map(s => `<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:rgba(77,65,223,0.10);color:#4d41df">${s}</span>`).join('')}</div>` : ''}
+                            ${c.resumeName ? `<p style="font-size:11px;color:#276749;margin-top:6px;display:flex;align-items:center;gap:4px"><span class="material-symbols-outlined" style="font-size:13px">description</span>${c.resumeName}</p>` : ''}
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;margin-top:12px">
+                        <button onclick="inviteCandidate('${c.id}','${(c.name||'').replace(/'/g,'')}')" style="flex:1;height:36px;border-radius:10px;border:none;background:linear-gradient(135deg,#4d41df,#5c51a0);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif">Invite</button>
+                        <button onclick="contactCandidate('${c.email||''}')" style="flex:1;height:36px;border-radius:10px;border:1px solid rgba(77,65,223,0.25);background:rgba(77,65,223,0.06);color:#4d41df;font-size:12px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif">Contact</button>
+                    </div>
+                </div>`;
+            }).join('');
+        })
+        .catch(() => {
+            container.innerHTML = '<p style="font-size:13px;color:#777587;text-align:center;padding:24px 0">Could not load candidates. Check your connection.</p>';
+        });
+}
+window.searchCandidates = searchCandidates;
+
+function inviteCandidate(uid, name) {
+    db.collection('notifications').add({
+        toUid: uid,
+        type: 'job',
+        title: 'You have been invited!',
+        description: `A company has invited you to apply for a position on Tarini.`,
+        time: new Date().toISOString(),
+        read: false,
+    }).catch(console.warn);
+    showToast(`Invite sent to ${name} ✓`);
+}
+window.inviteCandidate = inviteCandidate;
+
+function contactCandidate(email) {
+    if (!email) { showToast('No email available for this candidate.'); return; }
+    window.open(`mailto:${email}?subject=Opportunity on Tarini`, '_blank');
+}
+window.contactCandidate = contactCandidate;
+
+// ---- COMPANY SIDE: Update application status ----
+
+function updateApplicationStatus(appKey, jobId, newStatus) {
+    // Update in the specific user's localStorage key
+    const list = JSON.parse(localStorage.getItem(appKey) || '[]');
+    const updated = list.map(a => a.jobId === jobId ? { ...a, status: newStatus } : a);
+    localStorage.setItem(appKey, JSON.stringify(updated));
+    // Also update in Firestore
+    db.collection('applications')
+        .where('jobId', '==', jobId)
+        .get()
+        .then(snap => snap.forEach(doc => doc.ref.update({ status: newStatus })))
+        .catch(console.warn);
+    loadCompanyApplications();
+    showToast(`Status updated to ${newStatus} ✓`);
+}
+window.updateApplicationStatus = updateApplicationStatus;
+
+// ---- Patch finalSubmitApplication to also write to Firestore ----
+// so companies can query applications cross-user
+
+(function _patchFinalSubmit() {
+    const _orig = window.finalSubmitApplication;
+    window.finalSubmitApplication = function () {
+        // Call original first
+        _orig();
+        // After a short delay (original uses setTimeout(1000)), write to Firestore
+        setTimeout(() => {
+            const job = _allJobs.find(j => j.id === _currentJobId);
+            if (!job) return;
+            const user = auth.currentUser;
+            const apps = JSON.parse(localStorage.getItem(_appsKey()) || '[]');
+            const app = apps.find(a => a.jobId === job.id);
+            if (!app || !user) return;
+            db.collection('applications').add({
+                ...app,
+                userId: user.uid,
+                companyId: job.company.toLowerCase().replace(/\s+/g, '_'),
+                createdAt: new Date().toISOString(),
+            }).catch(console.warn);
+        }, 1500);
+    };
+})();
+
+// ---- Patch loadCompanyApplications to show status-change buttons ----
+
+(function _patchLoadCompanyApplications() {
+    const _orig = loadCompanyApplications;
+    loadCompanyApplications = function () {
+        const d = getProfileData();
+        const user = auth.currentUser;
+        const name = d.name || (user && user.displayName) || '';
+        const companyId = name.toLowerCase().replace(/\s+/g, '_');
+        const container = document.getElementById('co-applications-list');
+        if (!container) return;
+
+        // Gather from all users' localStorage keys
+        const allKeys = Object.keys(localStorage).filter(k => k.startsWith('tarini_applications_'));
+        let apps = allKeys.reduce((acc, k) => {
+            const list = JSON.parse(localStorage.getItem(k) || '[]');
+            return acc.concat(list.filter(a => a.companyId === companyId).map(a => ({ ...a, _storageKey: k })));
+        }, []);
+
+        // Also try Firestore
+        db.collection('applications').where('companyId', '==', companyId).get()
+            .then(snap => {
+                const fsApps = snap.docs.map(doc => ({ ...doc.data(), _docId: doc.id }));
+                // Merge: prefer Firestore status if available
+                fsApps.forEach(fa => {
+                    const idx = apps.findIndex(a => a.jobId === fa.jobId && (a.applicant?.email === fa.applicant?.email));
+                    if (idx >= 0) apps[idx].status = fa.status;
+                    else apps.push(fa);
+                });
+                _renderCompanyApps(container, apps, companyId);
+            })
+            .catch(() => _renderCompanyApps(container, apps, companyId));
+    };
+
+    function _renderCompanyApps(container, apps, companyId) {
+        if (apps.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-16">
+                    <div class="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center mx-auto mb-4">
+                        <span class="material-symbols-outlined text-secondary" style="font-size:32px;font-variation-settings:'FILL' 1">assignment</span>
+                    </div>
+                    <p class="font-bold text-on-surface text-[15px]">No applications yet</p>
+                    <p class="text-[13px] text-on-surface-variant mt-1">Applications from candidates will appear here.</p>
+                </div>`;
+            return;
+        }
+
+        const _dark = document.documentElement.classList.contains('dark-theme');
+        const cardBg = _dark ? '#1c1b2e' : '#fff';
+        const border = _dark ? '#2a2840' : '#eae6f3';
+        const titleC = _dark ? '#e8e6f4' : '#1b1b24';
+        const subC   = _dark ? '#9e9bb8' : '#777587';
+
+        const statusStyle = s => s === 'Applied'     ? 'background:rgba(77,65,223,0.10);color:#4d41df'
+                               : s === 'Shortlisted' ? 'background:rgba(92,81,160,0.10);color:#5c51a0'
+                               : s === 'Hired'       ? 'background:rgba(45,106,79,0.10);color:#276749'
+                               :                       'background:rgba(135,80,65,0.10);color:#875041';
+
+        container.innerHTML = apps.map(app => {
+            const date = new Date(app.appliedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+            const storageKey = app._storageKey ? `'${app._storageKey}'` : 'null';
+            return `
+            <div style="background:${cardBg};border-radius:18px;padding:16px;border:1px solid ${border};box-shadow:0 2px 12px -4px rgba(77,65,223,0.08);margin-bottom:10px">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+                    <div style="flex:1;min-width:0">
+                        <p style="font-size:14px;font-weight:700;color:${titleC}">${app.applicant ? app.applicant.name : 'Applicant'}</p>
+                        <p style="font-size:12px;color:${subC};margin-top:2px">${app.title} &bull; ${app.location}</p>
+                        ${app.applicant ? `<p style="font-size:11px;color:${subC};margin-top:2px">Skills: ${app.applicant.skills || '—'} &bull; Exp: ${app.applicant.experience || '—'}</p>` : ''}
+                        <p style="font-size:11px;color:#9e9bb8;margin-top:4px">Applied ${date}</p>
+                    </div>
+                    <span style="flex-shrink:0;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;${statusStyle(app.status)}">${app.status}</span>
+                </div>
+                <div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap">
+                    <button onclick="updateApplicationStatus(${storageKey},${app.jobId},'Shortlisted')" style="height:30px;padding:0 12px;border-radius:8px;border:none;background:rgba(92,81,160,0.12);color:#5c51a0;font-size:11px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif">Shortlist</button>
+                    <button onclick="updateApplicationStatus(${storageKey},${app.jobId},'Hired')" style="height:30px;padding:0 12px;border-radius:8px;border:none;background:rgba(45,106,79,0.12);color:#276749;font-size:11px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif">Hire</button>
+                    <button onclick="updateApplicationStatus(${storageKey},${app.jobId},'Rejected')" style="height:30px;padding:0 12px;border-radius:8px;border:none;background:rgba(186,26,26,0.08);color:#ba1a1a;font-size:11px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif">Reject</button>
+                </div>
+            </div>`;
+        }).join('');
+    }
+})();
+
+// ---- Patch loadApplicationsScreen to show company response status ----
+
+(function _patchLoadApplicationsScreen() {
+    const _orig = window.loadApplicationsScreen;
+    window.loadApplicationsScreen = function () {
+        _orig();
+        // After rendering, refresh statuses from Firestore for real-time company responses
+        const user = auth.currentUser;
+        if (!user) return;
+        db.collection('applications').where('userId', '==', user.uid).get()
+            .then(snap => {
+                snap.forEach(doc => {
+                    const data = doc.data();
+                    // Update localStorage status if changed
+                    const apps = JSON.parse(localStorage.getItem(_appsKey()) || '[]');
+                    const idx = apps.findIndex(a => a.jobId === data.jobId);
+                    if (idx >= 0 && apps[idx].status !== data.status) {
+                        apps[idx].status = data.status;
+                        localStorage.setItem(_appsKey(), JSON.stringify(apps));
+                        // Re-render to show updated status
+                        _orig();
+                    }
+                });
+            })
+            .catch(console.warn);
+    };
+})();
