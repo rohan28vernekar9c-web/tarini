@@ -2441,9 +2441,9 @@
         </div>
 
         <!-- SCREEN: ALL COMPANIES -->
+        <!-- SCREEN: ALL COMPANIES -->
         <div id="screen-all-companies" class="screen">
             <main class="max-w-2xl mx-auto px-5 py-md pb-32">
-                <!-- Header -->
                 <div class="flex items-center gap-3 mb-5">
                     <button onclick="navigateTo('jobs')" class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center active:scale-90 transition-all">
                         <span class="material-symbols-outlined">arrow_back</span>
@@ -2453,8 +2453,6 @@
                         <p class="text-[12px] text-on-surface-variant mt-0.5" id="all-companies-count"></p>
                     </div>
                 </div>
-
-                <!-- Search + Filters -->
                 <div class="space-y-3 mb-5">
                     <div class="relative">
                         <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
@@ -2465,37 +2463,54 @@
                     <div class="grid grid-cols-2 gap-3">
                         <select id="all-companies-industry" onchange="renderAllCompanies()" class="h-12 px-4 rounded-2xl bg-surface-container-low border-none text-[13px] font-semibold text-on-surface shadow-sm focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
                             <option value="">All Industries</option>
-                            <option>Technology</option>
-                            <option>Education</option>
-                            <option>Healthcare</option>
-                            <option>Retail</option>
-                            <option>Design</option>
-                            <option>Media</option>
-                            <option>Manufacturing</option>
-                            <option>Other</option>
+                            <option>Technology</option><option>Education</option><option>Healthcare</option>
+                            <option>Retail</option><option>Design</option><option>Media</option>
+                            <option>Manufacturing</option><option>Other</option>
                         </select>
                         <select id="all-companies-location" onchange="renderAllCompanies()" class="h-12 px-4 rounded-2xl bg-surface-container-low border-none text-[13px] font-semibold text-on-surface shadow-sm focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
                             <option value="">All Locations</option>
-                            <option>Remote</option>
-                            <option>Mumbai</option>
-                            <option>Delhi</option>
-                            <option>Bangalore</option>
-                            <option>Pune</option>
-                            <option>Chennai</option>
-                            <option>Hybrid</option>
+                            <option>Remote</option><option>Mumbai</option><option>Delhi</option>
+                            <option>Bangalore</option><option>Pune</option><option>Chennai</option><option>Hybrid</option>
                         </select>
                     </div>
                     <button onclick="clearAllCompanyFilters()" class="text-[12px] font-semibold text-error flex items-center gap-1 active:scale-95 transition-all">
                         <span class="material-symbols-outlined" style="font-size:14px">close</span> Clear filters
                     </button>
                 </div>
-
-                <!-- Results -->
                 <div id="all-companies-list" class="space-y-3"></div>
             </main>
         </div>
 
+        <!-- SCREEN: COMPANY PROFILE (women-facing) -->
+        <div id="screen-company-profile" class="screen">
+            <main class="max-w-2xl mx-auto pb-32">
+                <div class="flex items-center gap-3 px-5 pt-4 pb-2">
+                    <button onclick="history.back()" class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center active:scale-90 transition-all">
+                        <span class="material-symbols-outlined">arrow_back</span>
+                    </button>
+                    <h2 class="font-['Plus_Jakarta_Sans'] text-[18px] font-bold text-on-surface">Company Profile</h2>
+                </div>
+                <div id="cp-header"></div>
+                <div class="px-5 pt-3 space-y-4">
+                    <div id="cp-stats" class="grid grid-cols-3 gap-2"></div>
+                    <div id="cp-about"></div>
+                    <div id="cp-jobs-section">
+                        <div class="flex items-center justify-between mb-3">
+                            <p class="font-['Plus_Jakarta_Sans'] text-[15px] font-bold text-on-surface">Open Positions</p>
+                            <span id="cp-jobs-count" class="text-[11px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full"></span>
+                        </div>
+                        <div id="cp-jobs"></div>
+                    </div>
+                    <div id="cp-videos-section">
+                        <p class="font-['Plus_Jakarta_Sans'] text-[15px] font-bold text-on-surface mb-3">Company Videos</p>
+                        <div id="cp-videos"></div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
         <!-- SCREEN: COMPANY DASHBOARD -->
+
         <div id="screen-company-dashboard" class="screen">
             <main class="max-w-2xl mx-auto pb-32 pt-1">
 
@@ -2607,7 +2622,7 @@
                                 <p class="text-[11px] text-on-surface-variant">Search women talent</p>
                             </div>
                         </button>
-                        <button onclick="companyNavTo('company-profile')"
+                        <button onclick="companyNavTo('co-own-profile')"
                             class="flex items-center gap-3 p-4 bg-white rounded-[18px] border border-surface-container-high shadow-sm active:scale-[0.97] transition-all text-left">
                             <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background:rgba(45,106,79,0.10)">
                                 <span class="material-symbols-outlined" style="font-size:20px;font-variation-settings:'FILL' 1;color:#276749">business</span>
@@ -2796,8 +2811,8 @@
             </main>
         </div>
 
-        <!-- SCREEN: COMPANY PROFILE -->
-                <div id="screen-company-profile" class="screen">
+        <!-- SCREEN: COMPANY OWN PROFILE (company-side) -->
+                <div id="screen-co-own-profile" class="screen">
             <main class="max-w-2xl mx-auto pb-32">
 
                 <!-- Top bar -->
@@ -3001,7 +3016,7 @@
         <div id="screen-edit-company-profile" class="screen">
             <main class="max-w-2xl mx-auto px-5 py-md pb-16">
                 <div class="flex items-center gap-3 mb-5">
-                    <button onclick="companyNavTo('company-profile')" class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center active:scale-90 transition-all">
+                    <button onclick="companyNavTo('co-own-profile')" class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center active:scale-90 transition-all">
                         <span class="material-symbols-outlined">arrow_back</span>
                     </button>
                     <h2 class="font-['Plus_Jakarta_Sans'] text-[20px] font-bold text-on-surface">Edit Company Profile</h2>
@@ -3299,7 +3314,7 @@
                 <span class="text-[11px] font-semibold font-['Plus_Jakarta_Sans']">Messages</span>
             </div>
             <div class="co-nav-item flex flex-col items-center justify-center cursor-pointer transition-all active:scale-95 text-slate-400"
-                data-co-target="company-profile" onclick="companyNavTo('company-profile')">
+                data-co-target="co-own-profile" onclick="companyNavTo('co-own-profile')">
                 <span class="material-symbols-outlined co-nav-icon">business</span>
                 <span class="text-[11px] font-semibold font-['Plus_Jakarta_Sans']">Profile</span>
             </div>

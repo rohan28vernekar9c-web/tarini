@@ -15,7 +15,7 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 // List of screens that should hide the bottom navigation
-const screensWithoutNav = ['login', 'notifications', 'ai-assistant', 'post-product', 'product-detail', 'edit-profile', 'job-detail', 'job-apply', 'skill-categories', 'market-categories', 'all-companies'];
+const screensWithoutNav = ['login', 'notifications', 'ai-assistant', 'post-product', 'product-detail', 'edit-profile', 'job-detail', 'job-apply', 'skill-categories', 'market-categories', 'all-companies', 'company-profile'];
 // Screens that show the nav but don't have a matching nav tab (no active highlight needed)
 const mainNavScreens = ['dashboard', 'jobs', 'skills', 'shop', 'profile'];
 const _navStack = [];
@@ -44,6 +44,8 @@ function navigateTo(screenId) {
         if (screenId === 'cart') renderCart();
         if (screenId === 'rewards') initRewardsScreen();
         if (screenId === 'all-companies') renderAllCompanies();
+        if (screenId === 'company-profile') renderCompanyProfile();
+        if (screenId === 'co-own-profile') loadCompanyProfile();
     } else {
         console.error(`Screen 'screen-${screenId}' not found.`);
     }
@@ -1022,7 +1024,7 @@ function toggleTheme() {
         ['screen-company-training',     () => loadTrainingScreen()],
         ['screen-company-dashboard',    () => loadCompanyDashboard()],
         ['screen-company-applications', () => loadCompanyApplications()],
-        ['screen-company-profile',      () => loadCompanyProfile()],
+        ['screen-co-own-profile',        () => loadCompanyProfile()],
     ];
     _screens.forEach(([id, fn]) => { const s = document.getElementById(id); if (s && s.classList.contains('active')) fn(); });
     // Update upload modal card bg if open
@@ -1497,7 +1499,7 @@ function applyJobFilters() {
     const { type, exp, loc, industry, salary } = _jobFilters;
 
     const filtered = _allJobs.filter(job => {
-        if (query && !`${job.title} ${job.company} ${job.location}`.toLowerCase().includes(query)) return false;
+        if (query && !`${job.title} ${job.company} ${job.location} ${job.industry}`.toLowerCase().includes(query)) return false;
         if (type.size && !type.has(job.type)) return false;
         if (exp.size && !exp.has(job.exp)) return false;
         if (loc.size && !loc.has(job.locType)) return false;
@@ -1507,6 +1509,22 @@ function applyJobFilters() {
     });
 
     _renderJobCards(filtered);
+
+    // Also filter the Explore Companies section by query
+    if (query) {
+        _getAllRegisteredCompanies().then(all => {
+            const companyMatch = all.filter(c =>
+                (c.name + ' ' + c.industry + ' ' + c.location).toLowerCase().includes(query)
+            );
+            const sec = document.getElementById('jobs-company-section');
+            if (sec) sec.style.display = companyMatch.length ? '' : 'none';
+            if (companyMatch.length) renderJobsCompanies(companyMatch);
+        });
+    } else {
+        const sec = document.getElementById('jobs-company-section');
+        if (sec) sec.style.display = '';
+        renderJobsCompanies();
+    }
 }
 window.applyJobFilters = applyJobFilters;
 
@@ -1560,7 +1578,7 @@ function _renderJobCards(jobs) {
     }).join('');
 }
 
-function renderJobsCompanies() {
+function renderJobsCompanies(prefiltered) {
     const container = document.getElementById('jobs-company-container');
     const countEl   = document.getElementById('jobs-company-count');
     if (!container) return;
@@ -1575,7 +1593,7 @@ function renderJobsCompanies() {
     const openJobs = name => _allJobs.filter(j => j.company.toLowerCase() === name.toLowerCase()).length;
 
     _getAllRegisteredCompanies().then(all => {
-        const preview = all.slice(0, 8);
+        const preview = (prefiltered || all).slice(0, 8);
         if (countEl) countEl.textContent = '';
         container.innerHTML = preview.map((c, i) => {
             const initials = (c.name||'C').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
@@ -1583,7 +1601,7 @@ function renderJobsCompanies() {
             const jobs = openJobs(c.name);
             const isReg = !!c.uid;
             const safeName = c.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-            return `<div onclick="filterByCompany('${safeName}')"
+            return `<div onclick="openCompanyProfile('${safeName}')"
                 style="flex-shrink:0;width:130px;background:${cardBg};border-radius:18px;padding:14px 12px;border:1px solid ${border};box-shadow:${shadowN};cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;text-align:center"
                 onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='${shadowH}'"
                 onmouseleave="this.style.transform='';this.style.boxShadow='${shadowN}'"
@@ -1660,7 +1678,7 @@ function renderAllCompanies() {
             const isReg = !!c.uid;
             const safeName = c.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
             return `<div style="background:${cardBg};border-radius:18px;padding:16px;border:1px solid ${border};box-shadow:0 2px 12px -4px rgba(77,65,223,0.08);display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;active:scale-[0.98]"
-                onclick="filterByCompany('${safeName}');navigateTo('jobs')"
+                onclick="openCompanyProfile('${safeName}')"
                 onmouseenter="this.style.transform='translateY(-1px)'" onmouseleave="this.style.transform=''">
                 ${c.logo
                     ? `<img src="${c.logo}" style="width:48px;height:48px;border-radius:14px;object-fit:cover;flex-shrink:0" onerror="this.style.display='none'"/>`
@@ -3196,7 +3214,7 @@ function _renderBadges(r) {
 // COMPANY DASHBOARD
 // ============================================================
 
-const _companyScreens = ['company-dashboard', 'company-post-job', 'company-applications', 'company-messages', 'company-profile'];
+const _companyScreens = ['company-dashboard', 'company-post-job', 'company-applications', 'company-messages', 'co-own-profile'];
 
 function isCompanyUser() {
     const d = getProfileData();
@@ -3232,7 +3250,7 @@ function companyNavTo(screenId) {
     });
 
     if (screenId === 'company-dashboard') loadCompanyDashboard();
-    if (screenId === 'company-profile') loadCompanyProfile();
+    if (screenId === 'co-own-profile') loadCompanyProfile();
     if (screenId === 'company-applications') loadCompanyApplications();
     if (screenId === 'company-training') loadTrainingScreen();
     if (screenId === 'company-candidates') searchCandidates();
@@ -3509,7 +3527,7 @@ function saveCompanyProfile() {
     d.linkedin       = get('ecp-linkedin');
     d.twitter        = get('ecp-twitter');
     saveCompanyData(d);
-    companyNavTo('company-profile');
+    companyNavTo('co-own-profile');
 }
 window.saveCompanyProfile = saveCompanyProfile;
 
@@ -4454,6 +4472,183 @@ function applyToCompany(name) {
 }
 window.applyToCompany = applyToCompany;
 
+
+
+// ============================================================
+// COMPANY PROFILE PAGE (women-facing)
+// ============================================================
+
+let _currentCompanyName = null;
+
+function openCompanyProfile(name) {
+    _currentCompanyName = name;
+    navigateTo('company-profile');
+}
+window.openCompanyProfile = openCompanyProfile;
+
+function renderCompanyProfile() {
+    if (!_currentCompanyName) return;
+    const name = _currentCompanyName;
+
+    _getAllRegisteredCompanies().then(all => {
+        const c = all.find(x => x.name === name) || { name, industry: '', location: '', description: '', tagline: '', logo: '', employees: '', founded: '', website: '' };
+
+        const _d     = document.documentElement.classList.contains('dark-theme');
+        const titleC = _d ? '#e8e6f4' : '#1b1b24';
+        const subC   = _d ? '#9e9bb8' : '#777587';
+        const cardBg = _d ? '#1c1b2e' : '#fff';
+        const border = _d ? '#2a2840' : '#eae6f3';
+        const grads  = ['linear-gradient(135deg,#4d41df,#675df9)','linear-gradient(135deg,#875041,#feb5a2)','linear-gradient(135deg,#5c51a0,#c8bfff)','linear-gradient(135deg,#2d6a4f,#74c69d)','linear-gradient(135deg,#c77dff,#7b2d8b)'];
+        const grad   = grads[Math.abs(name.split('').reduce((a,ch)=>a+ch.charCodeAt(0),0)) % grads.length];
+        const initials = name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+
+        // ── Header ──────────────────────────────────────────────────────────
+        const hdr = document.getElementById('cp-header');
+        if (hdr) {
+            hdr.innerHTML = `
+            <div style="position:relative;overflow:hidden;border-radius:0 0 28px 28px;background:${grad};padding:24px 20px 28px">
+                <div style="position:absolute;top:-20px;right:-20px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.10)"></div>
+                <div style="display:flex;align-items:flex-start;gap:14px;position:relative;z-index:1">
+                    ${c.logo
+                        ? `<img src="${c.logo}" style="width:64px;height:64px;border-radius:18px;object-fit:cover;border:2px solid rgba(255,255,255,0.3);flex-shrink:0" onerror="this.style.display='none'"/>`
+                        : `<div style="width:64px;height:64px;border-radius:18px;background:rgba(255,255,255,0.20);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#fff;flex-shrink:0">${initials}</div>`}
+                    <div style="flex:1;min-width:0">
+                        <p style="font-size:20px;font-weight:800;color:#fff;font-family:'Plus Jakarta Sans',sans-serif;line-height:1.2">${c.name}</p>
+                        ${c.tagline ? `<p style="font-size:12px;color:rgba(255,255,255,0.80);margin-top:3px">${c.tagline}</p>` : ''}
+                        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">
+                            ${c.industry ? `<span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,0.20);color:#fff">${c.industry}</span>` : ''}
+                            ${c.location ? `<span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,0.20);color:#fff">&#128205; ${c.location}</span>` : ''}
+                            ${c.employees ? `<span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,0.20);color:#fff">&#128100; ${c.employees}</span>` : ''}
+                            ${c.founded ? `<span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,0.20);color:#fff">Est. ${c.founded}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        // ── Stats row ────────────────────────────────────────────────────────
+        const statsEl = document.getElementById('cp-stats');
+        if (statsEl) {
+            const uid = c.uid;
+            const postedCount = uid ? JSON.parse(localStorage.getItem('companyJobs_' + uid) || '[]').filter(j => j.status === 'active').length : 0;
+            const builtinCount = _allJobs.filter(j => j.company.toLowerCase() === name.toLowerCase()).length;
+            const totalJobs = builtinCount + postedCount;
+            const videoCount = uid ? JSON.parse(localStorage.getItem('companyTraining_' + uid) || '[]').filter(v => v.privacy === 'public' || !v.privacy).length : 0;
+            const statCard = (val, label, color) =>
+                `<div style="background:${cardBg};border-radius:16px;padding:12px 8px;text-align:center;border:1px solid ${border}">
+                    <p style="font-size:20px;font-weight:800;color:${color};line-height:1">${val}</p>
+                    <p style="font-size:10px;font-weight:600;color:${subC};margin-top:4px;text-transform:uppercase;letter-spacing:0.04em">${label}</p>
+                </div>`;
+            statsEl.innerHTML =
+                statCard(totalJobs, 'Open Jobs', '#4d41df') +
+                statCard(c.employees || '—', 'Employees', '#875041') +
+                statCard(videoCount || '—', 'Videos', '#5c51a0');
+        }
+
+        // ── About ────────────────────────────────────────────────────────────
+        const about = document.getElementById('cp-about');
+        if (about) {
+            const hasInfo = c.description || c.mission || c.website;
+            about.innerHTML = hasInfo ? `
+            <div style="background:${cardBg};border-radius:20px;padding:16px;border:1px solid ${border}">
+                <p style="font-size:12px;font-weight:700;color:${subC};text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">About</p>
+                ${c.description ? `<p style="font-size:13px;color:${subC};line-height:1.6;margin-bottom:8px">${c.description}</p>` : ''}
+                ${c.mission ? `<p style="font-size:13px;color:${subC};line-height:1.6;font-style:italic">"${c.mission}"</p>` : ''}
+                ${c.website ? `<a href="${c.website.startsWith('http')?c.website:'https://'+c.website}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:#4d41df;margin-top:8px;text-decoration:none"><span class="material-symbols-outlined" style="font-size:14px">language</span>${c.website}</a>` : ''}
+            </div>` : '';
+        }
+
+        // ── Jobs ─────────────────────────────────────────────────────────────
+        const jobsEl = document.getElementById('cp-jobs');
+        const jobsCountEl = document.getElementById('cp-jobs-count');
+        if (jobsEl) {
+            const uid = c.uid;
+            const compJobs   = _allJobs.filter(j => j.company.toLowerCase() === name.toLowerCase());
+            const postedJobs = uid ? JSON.parse(localStorage.getItem('companyJobs_' + uid) || '[]').filter(j => j.status === 'active') : [];
+            const total = compJobs.length + postedJobs.length;
+            if (jobsCountEl) jobsCountEl.textContent = total ? total + ' open' : '';
+
+            const typeColor = t => t === 'Full-time' ? 'rgba(77,65,223,0.10);color:#4d41df'
+                : t === 'Part-time' ? 'rgba(135,80,65,0.10);color:#875041'
+                : t === 'Internship' ? 'rgba(92,81,160,0.10);color:#5c51a0'
+                : 'rgba(45,106,79,0.10);color:#2d6a4f';
+
+            const jobCards = compJobs.map(j => `
+                <div style="background:${cardBg};border-radius:16px;padding:14px;border:1px solid ${border};margin-bottom:8px;cursor:pointer;transition:transform 0.15s"
+                    onclick="openJobDetail(${j.id})"
+                    onmouseenter="this.style.transform='translateY(-1px)'" onmouseleave="this.style.transform=''">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+                        <div style="flex:1;min-width:0">
+                            <p style="font-size:14px;font-weight:700;color:${titleC};line-height:1.3">${j.title}</p>
+                            <p style="font-size:12px;color:${subC};margin-top:2px">${j.location} &bull; ${j.exp}</p>
+                        </div>
+                        <span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:${typeColor(j.type)}">${j.type}</span>
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
+                        <span style="font-size:12px;font-weight:700;color:#276749">${j.salary}</span>
+                        <button onclick="event.stopPropagation();openJobDetail(${j.id})"
+                            style="height:32px;padding:0 14px;border-radius:10px;border:none;background:linear-gradient(135deg,#4d41df,#5c51a0);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif">
+                            Apply
+                        </button>
+                    </div>
+                </div>`).join('');
+
+            const postedCards = postedJobs.map(j => `
+                <div style="background:${cardBg};border-radius:16px;padding:14px;border:1px solid ${border};margin-bottom:8px;cursor:pointer;transition:transform 0.15s"
+                    onmouseenter="this.style.transform='translateY(-1px)'" onmouseleave="this.style.transform=''">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+                        <div style="flex:1;min-width:0">
+                            <p style="font-size:14px;font-weight:700;color:${titleC};line-height:1.3">${j.title}</p>
+                            <p style="font-size:12px;color:${subC};margin-top:2px">${j.location||''} &bull; ${j.experience||''}</p>
+                        </div>
+                        <span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:rgba(77,65,223,0.10);color:#4d41df">${j.type||''}</span>
+                    </div>
+                    ${j.description ? `<p style="font-size:12px;color:${subC};margin-top:6px;line-height:1.5">${(j.description||'').slice(0,120)}${j.description.length>120?'...':''}</p>` : ''}
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
+                        <span style="font-size:12px;font-weight:700;color:#276749">${j.salaryMin&&j.salaryMax?'&#8377;'+j.salaryMin+'–&#8377;'+j.salaryMax:''}</span>
+                        <button onclick="navigateTo('jobs')"
+                            style="height:32px;padding:0 14px;border-radius:10px;border:none;background:linear-gradient(135deg,#4d41df,#5c51a0);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif">
+                            Apply
+                        </button>
+                    </div>
+                </div>`).join('');
+
+            jobsEl.innerHTML = (jobCards + postedCards) || `<div style="text-align:center;padding:24px 0;color:${subC};font-size:13px">No open positions right now.</div>`;
+        }
+
+        // ── Videos ───────────────────────────────────────────────────────────
+        const videosEl = document.getElementById('cp-videos');
+        if (videosEl) {
+            const uid = c.uid;
+            const videos = uid
+                ? JSON.parse(localStorage.getItem('companyTraining_' + uid) || '[]').filter(v => v.privacy === 'public' || !v.privacy)
+                : [];
+            if (videos.length === 0) {
+                videosEl.innerHTML = `<p style="font-size:13px;color:${subC};text-align:center;padding:16px 0">No public videos uploaded yet.</p>`;
+            } else {
+                videosEl.innerHTML = videos.map(v => `
+                    <div style="background:${cardBg};border-radius:16px;overflow:hidden;border:1px solid ${border};margin-bottom:10px;cursor:pointer"
+                        onclick="openTrainingPlayer && openTrainingPlayer(${JSON.stringify(v).replace(/"/g,'&quot;')})">
+                        <div style="position:relative;width:100%;padding-top:56.25%;background:#000;overflow:hidden">
+                            ${v.thumbnail
+                                ? `<img src="${v.thumbnail}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"/>`
+                                : `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(77,65,223,0.12)"><span class="material-symbols-outlined" style="font-size:40px;color:#4d41df;font-variation-settings:'FILL' 1">play_circle</span></div>`}
+                            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.25)">
+                                <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.90);display:flex;align-items:center;justify-content:center">
+                                    <span class="material-symbols-outlined" style="font-size:24px;color:#4d41df;font-variation-settings:'FILL' 1;margin-left:3px">play_arrow</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="padding:12px">
+                            <p style="font-size:13px;font-weight:700;color:${titleC};line-height:1.3">${v.title||'Untitled'}</p>
+                            ${v.description ? `<p style="font-size:12px;color:${subC};margin-top:4px;line-height:1.4">${v.description}</p>` : ''}
+                        </div>
+                    </div>`).join('');
+            }
+        }
+    });
+}
+window.renderCompanyProfile = renderCompanyProfile;
 
 // ============================================================
 // WOMEN ↔ COMPANY CONNECTION MODULE
