@@ -3527,6 +3527,7 @@ function saveCompanyProfile() {
     d.linkedin       = get('ecp-linkedin');
     d.twitter        = get('ecp-twitter');
     saveCompanyData(d);
+    _companiesCache = null; // invalidate so updated data shows on next profile view
     companyNavTo('co-own-profile');
 }
 window.saveCompanyProfile = saveCompanyProfile;
@@ -3892,7 +3893,20 @@ function _trainingKey() {
     return u ? `companyTraining_${u.uid}` : 'companyTraining_guest';
 }
 function _getTrainingVideos() { return JSON.parse(localStorage.getItem(_trainingKey()) || '[]'); }
-function _saveTrainingVideos(v) { localStorage.setItem(_trainingKey(), JSON.stringify(v)); }
+function _saveTrainingVideos(v) {
+    localStorage.setItem(_trainingKey(), JSON.stringify(v));
+    // Sync public video metadata to Firestore so other users can see them
+    const u = auth.currentUser;
+    if (!u) return;
+    const pub = v.filter(x => x.privacy === 'public' || !x.privacy).map(x => ({
+        id: x.id, title: x.title, desc: x.desc || '',
+        privacy: x.privacy || 'public', fileName: x.fileName || '',
+        fileSize: x.fileSize || '', uploadedAt: x.uploadedAt || ''
+    }));
+    db.collection('users').doc(u.uid).update({ trainingVideos: pub }).catch(() =>
+        db.collection('users').doc(u.uid).set({ trainingVideos: pub }, { merge: true })
+    );
+}
 
 let _tvPrivacy = 'public';
 
@@ -4046,6 +4060,37 @@ function openTrainingPlayer(id) {
 }
 window.openTrainingPlayer = openTrainingPlayer;
 
+// Opens the player modal from a video data object (used on public company profile)
+function openPublicVideoPlayer(v) {
+    if (!v) return;
+    document.getElementById('player-title').textContent = v.title || 'Untitled';
+    document.getElementById('player-meta').textContent  = v.desc || '';
+    const badge = document.getElementById('player-privacy-badge');
+    badge.textContent = 'Public';
+    badge.style.cssText = 'font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;background:rgba(45,106,79,0.25);color:#74c69d';
+    document.getElementById('player-date').textContent = v.uploadedAt ? new Date(v.uploadedAt).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '';
+    document.getElementById('player-size').textContent = v.fileSize || '';
+    const video  = document.getElementById('training-player-video');
+    const noFile = document.getElementById('player-no-file');
+    // Try in-memory object URL first (same session as uploader), then no-file fallback
+    const objUrl = _trainingObjectURLs[v.id] || '';
+    if (objUrl) {
+        video.src = objUrl;
+        video.classList.remove('hidden');
+        noFile.classList.add('hidden');
+        noFile.style.display = 'none';
+        video.load();
+    } else {
+        video.src = '';
+        video.classList.add('hidden');
+        noFile.classList.remove('hidden');
+        noFile.style.display = 'flex';
+    }
+    document.getElementById('training-player-modal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+window.openPublicVideoPlayer = openPublicVideoPlayer;
+
 function closeTrainingPlayer(e) {
     if (e && e.target !== document.getElementById('training-player-modal')) return;
     const video = document.getElementById('training-player-video');
@@ -4057,6 +4102,8 @@ function closeTrainingPlayer(e) {
 window.closeTrainingPlayer = closeTrainingPlayer;
 function loadTrainingScreen() {
     const videos  = _getTrainingVideos();
+    // Sync to Firestore on every load so other users always see latest public videos
+    if (videos.length) _saveTrainingVideos(videos);
     const empty   = document.getElementById('training-empty-state');
     const list    = document.getElementById('training-list');
     const fab     = document.getElementById('training-fab');
@@ -4226,21 +4273,27 @@ async function _getAllRegisteredCompanies() {
                 const cpKey = `companyProfileData_${doc.id}`;
                 const cp = JSON.parse(localStorage.getItem(cpKey) || '{}');
                 companies.push({
-                    uid:          doc.id,
-                    name:         cp.name         || d.name         || '',
-                    tagline:      cp.tagline       || d.tagline      || '',
-                    industry:     cp.industry      || d.industry     || '',
-                    location:     cp.location      || d.address      || d.location || '',
-                    description:  cp.description   || d.description  || '',
-                    email:        cp.email         || d.email        || '',
-                    website:      cp.website       || d.website      || '',
-                    employees:    cp.employees     || d.employees    || '',
-                    founded:      cp.founded       || d.founded      || '',
-                    logo:         cp.logo          || d.logo         || '',
-                    type:         cp.type          || d.type         || '',
-                    mission:      cp.mission       || d.mission      || '',
-                    linkedin:     cp.linkedin      || d.linkedin     || '',
-                    specialisations: cp.specialisations || d.specialisations || '',
+                    uid:             doc.id,
+                    name:            cp.name            || d.name            || '',
+                    tagline:         cp.tagline          || d.tagline         || '',
+                    industry:        cp.industry         || d.industry        || '',
+                    location:        cp.location         || d.address         || d.location || '',
+                    description:     cp.description      || d.description     || '',
+                    email:           cp.email            || d.email           || '',
+                    phone:           cp.phone            || d.phone           || '',
+                    address:         cp.address          || d.address         || '',
+                    website:         cp.website          || d.website         || '',
+                    employees:       cp.employees        || d.employees       || '',
+                    founded:         cp.founded          || d.founded         || '',
+                    logo:            cp.logo             || d.logo            || '',
+                    type:            cp.type             || d.type            || '',
+                    revenue:         cp.revenue          || d.revenue         || '',
+                    hq:              cp.hq               || d.hq              || '',
+                    mission:         cp.mission          || d.mission         || '',
+                    highlights:      cp.highlights       || d.highlights      || '',
+                    specialisations: cp.specialisations  || d.specialisations || '',
+                    linkedin:        cp.linkedin         || d.linkedin        || '',
+                    twitter:         cp.twitter          || d.twitter         || '',
                 });
             }
         });
@@ -4255,7 +4308,8 @@ async function _getAllRegisteredCompanies() {
             const d = JSON.parse(localStorage.getItem(key) || '{}');
             if (d.name && !seen.has(d.name)) {
                 seen.add(d.name);
-                companies.push(d);
+                const uid = key.replace('companyProfileData_', '');
+                companies.push(Object.assign({}, d, { uid: d.uid || uid }));
             }
         } catch(e) {}
     });
@@ -4479,19 +4533,28 @@ window.applyToCompany = applyToCompany;
 // ============================================================
 
 let _currentCompanyName = null;
+let _cpFromScreen = 'jobs';
 
 function openCompanyProfile(name) {
     _currentCompanyName = name;
+    // remember which screen we came from
+    const active = document.querySelector('.screen.active');
+    _cpFromScreen = active ? active.id.replace('screen-', '') : 'jobs';
     navigateTo('company-profile');
 }
 window.openCompanyProfile = openCompanyProfile;
 
+function goBackFromCompanyProfile() {
+    navigateTo(_cpFromScreen || 'jobs');
+}
+window.goBackFromCompanyProfile = goBackFromCompanyProfile;
+
 function renderCompanyProfile() {
     if (!_currentCompanyName) return;
     const name = _currentCompanyName;
-
+    _companiesCache = null; // always fetch fresh so uid is up to date
     _getAllRegisteredCompanies().then(all => {
-        const c = all.find(x => x.name === name) || { name, industry: '', location: '', description: '', tagline: '', logo: '', employees: '', founded: '', website: '' };
+        const c = all.find(x => x.name === name) || { name };
 
         const _d     = document.documentElement.classList.contains('dark-theme');
         const titleC = _d ? '#e8e6f4' : '#1b1b24';
@@ -4504,146 +4567,281 @@ function renderCompanyProfile() {
 
         // ── Header ──────────────────────────────────────────────────────────
         const hdr = document.getElementById('cp-header');
-        if (hdr) {
-            hdr.innerHTML = `
+        if (hdr) hdr.innerHTML = `
             <div style="position:relative;overflow:hidden;border-radius:0 0 28px 28px;background:${grad};padding:24px 20px 28px">
-                <div style="position:absolute;top:-20px;right:-20px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.10)"></div>
+                <div style="position:absolute;top:-20px;right:-20px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,0.10)"></div>
+                <div style="position:absolute;bottom:-30px;left:-20px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,0.06)"></div>
                 <div style="display:flex;align-items:flex-start;gap:14px;position:relative;z-index:1">
                     ${c.logo
-                        ? `<img src="${c.logo}" style="width:64px;height:64px;border-radius:18px;object-fit:cover;border:2px solid rgba(255,255,255,0.3);flex-shrink:0" onerror="this.style.display='none'"/>`
-                        : `<div style="width:64px;height:64px;border-radius:18px;background:rgba(255,255,255,0.20);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#fff;flex-shrink:0">${initials}</div>`}
+                        ? `<img src="${c.logo}" style="width:68px;height:68px;border-radius:18px;object-fit:cover;border:2px solid rgba(255,255,255,0.35);flex-shrink:0" onerror="this.style.display='none'"/>`
+                        : `<div style="width:68px;height:68px;border-radius:18px;background:rgba(255,255,255,0.22);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:#fff;flex-shrink:0;letter-spacing:-1px">${initials}</div>`}
                     <div style="flex:1;min-width:0">
-                        <p style="font-size:20px;font-weight:800;color:#fff;font-family:'Plus Jakarta Sans',sans-serif;line-height:1.2">${c.name}</p>
-                        ${c.tagline ? `<p style="font-size:12px;color:rgba(255,255,255,0.80);margin-top:3px">${c.tagline}</p>` : ''}
+                        <p style="font-size:21px;font-weight:800;color:#fff;font-family:'Plus Jakarta Sans',sans-serif;line-height:1.2">${c.name}</p>
+                        ${c.tagline ? `<p style="font-size:12px;color:rgba(255,255,255,0.82);margin-top:3px;line-height:1.4">${c.tagline}</p>` : ''}
                         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">
                             ${c.industry ? `<span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,0.20);color:#fff">${c.industry}</span>` : ''}
                             ${c.location ? `<span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,0.20);color:#fff">&#128205; ${c.location}</span>` : ''}
                             ${c.employees ? `<span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,0.20);color:#fff">&#128100; ${c.employees}</span>` : ''}
                             ${c.founded ? `<span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,0.20);color:#fff">Est. ${c.founded}</span>` : ''}
+                            ${c.type ? `<span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,0.20);color:#fff">${c.type}</span>` : ''}
                         </div>
                     </div>
                 </div>
             </div>`;
-        }
 
         // ── Stats row ────────────────────────────────────────────────────────
         const statsEl = document.getElementById('cp-stats');
         if (statsEl) {
             const uid = c.uid;
-            const postedCount = uid ? JSON.parse(localStorage.getItem('companyJobs_' + uid) || '[]').filter(j => j.status === 'active').length : 0;
+            const postedCount  = uid ? JSON.parse(localStorage.getItem('companyJobs_' + uid) || '[]').filter(j => j.status === 'active').length : 0;
             const builtinCount = _allJobs.filter(j => j.company.toLowerCase() === name.toLowerCase()).length;
-            const totalJobs = builtinCount + postedCount;
-            const videoCount = uid ? JSON.parse(localStorage.getItem('companyTraining_' + uid) || '[]').filter(v => v.privacy === 'public' || !v.privacy).length : 0;
-            const statCard = (val, label, color) =>
+            const totalJobs    = builtinCount + postedCount;
+            const localVids     = uid ? JSON.parse(localStorage.getItem('companyTraining_' + uid) || '[]') : [];
+            const localPubCount = localVids.filter(v => v.privacy === 'public' || !v.privacy).length;
+            const sc = (val, label, color) =>
                 `<div style="background:${cardBg};border-radius:16px;padding:12px 8px;text-align:center;border:1px solid ${border}">
                     <p style="font-size:20px;font-weight:800;color:${color};line-height:1">${val}</p>
                     <p style="font-size:10px;font-weight:600;color:${subC};margin-top:4px;text-transform:uppercase;letter-spacing:0.04em">${label}</p>
                 </div>`;
             statsEl.innerHTML =
-                statCard(totalJobs, 'Open Jobs', '#4d41df') +
-                statCard(c.employees || '—', 'Employees', '#875041') +
-                statCard(videoCount || '—', 'Videos', '#5c51a0');
+                sc(totalJobs || 0, 'Open Jobs', '#4d41df') +
+                sc(c.employees || '—', 'Team Size', '#875041') +
+                sc(localPubCount, 'Videos', '#5c51a0');
+            if (!localVids.length && uid) {
+                db.collection('users').doc(uid).get().then(doc => {
+                    const fVids = doc.exists ? (doc.data().trainingVideos || []).filter(v => v.privacy === 'public' || !v.privacy) : [];
+                    if (fVids.length) {
+                        const cards = statsEl.querySelectorAll('div');
+                        if (cards[2]) cards[2].querySelector('p').textContent = fVids.length;
+                    }
+                }).catch(() => {});
+            }
         }
+
+        // helper: section card
+        const card = (content) =>
+            `<div style="background:${cardBg};border-radius:20px;padding:16px;border:1px solid ${border}">${content}</div>`;
+        const sectionTitle = (icon, label, color) =>
+            `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+                <div style="width:30px;height:30px;border-radius:10px;background:${color}1a;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                    <span class="material-symbols-outlined" style="font-size:15px;color:${color};font-variation-settings:'FILL' 1">${icon}</span>
+                </div>
+                <p style="font-size:13px;font-weight:700;color:${titleC};text-transform:uppercase;letter-spacing:0.06em">${label}</p>
+            </div>`;
 
         // ── About ────────────────────────────────────────────────────────────
         const about = document.getElementById('cp-about');
         if (about) {
-            const hasInfo = c.description || c.mission || c.website;
-            about.innerHTML = hasInfo ? `
-            <div style="background:${cardBg};border-radius:20px;padding:16px;border:1px solid ${border}">
-                <p style="font-size:12px;font-weight:700;color:${subC};text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">About</p>
-                ${c.description ? `<p style="font-size:13px;color:${subC};line-height:1.6;margin-bottom:8px">${c.description}</p>` : ''}
-                ${c.mission ? `<p style="font-size:13px;color:${subC};line-height:1.6;font-style:italic">"${c.mission}"</p>` : ''}
-                ${c.website ? `<a href="${c.website.startsWith('http')?c.website:'https://'+c.website}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:#4d41df;margin-top:8px;text-decoration:none"><span class="material-symbols-outlined" style="font-size:14px">language</span>${c.website}</a>` : ''}
-            </div>` : '';
+            let html = '';
+            if (c.description || c.mission) {
+                html += card(
+                    sectionTitle('info', 'About', '#4d41df') +
+                    (c.description ? `<p style="font-size:13px;color:${subC};line-height:1.65;margin-bottom:${c.mission?'10px':'0'}">${c.description}</p>` : '') +
+                    (c.mission ? `<p style="font-size:13px;color:${subC};line-height:1.65;font-style:italic;border-left:3px solid #4d41df;padding-left:10px;margin-top:4px">"${c.mission}"</p>` : '')
+                );
+            }
+            // Highlights
+            if (c.highlights) {
+                const lines = c.highlights.split('\n').map(l=>l.trim()).filter(Boolean);
+                if (lines.length) {
+                    html += `<div style="margin-top:12px">${card(
+                        sectionTitle('workspace_premium', 'Highlights', '#5c51a0') +
+                        lines.map(l=>`<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px">
+                            <span class="material-symbols-outlined" style="font-size:15px;color:#5c51a0;margin-top:1px;font-variation-settings:'FILL' 1">check_circle</span>
+                            <p style="font-size:13px;color:${subC};line-height:1.5">${l}</p>
+                        </div>`).join('')
+                    )}</div>`;
+                }
+            }
+            // Specialisations
+            if (c.specialisations) {
+                const specs = c.specialisations.split(',').map(s=>s.trim()).filter(Boolean);
+                if (specs.length) {
+                    html += `<div style="margin-top:12px">${card(
+                        sectionTitle('category', 'Specialisations', '#2d6a4f') +
+                        `<div style="display:flex;flex-wrap:wrap;gap:6px">${specs.map(s=>`<span style="font-size:12px;font-weight:600;padding:4px 12px;border-radius:999px;background:rgba(45,106,79,0.10);color:#2d6a4f">${s}</span>`).join('')}</div>`
+                    )}</div>`;
+                }
+            }
+            about.innerHTML = html;
+        }
+
+        // ── Company Details ──────────────────────────────────────────────────
+        const detailsEl = document.getElementById('cp-about');
+        // (details are merged into about section above; extra details card below)
+        const statsSection = document.getElementById('cp-stats');
+        // Insert details card after stats if any detail fields exist
+        const hasDetails = c.type || c.revenue || c.hq || c.founded || c.employees;
+        let detailsCard = '';
+        if (hasDetails) {
+            const row = (label, val) => val ? `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid ${border}">
+                    <p style="font-size:11px;font-weight:700;color:${subC};text-transform:uppercase;letter-spacing:0.05em">${label}</p>
+                    <p style="font-size:13px;font-weight:600;color:${titleC};text-align:right;max-width:60%">${val}</p>
+                </div>` : '';
+            detailsCard = card(
+                sectionTitle('corporate_fare', 'Company Details', '#875041') +
+                row('Type', c.type) +
+                row('Industry', c.industry) +
+                row('Headquarters', c.hq || c.location) +
+                row('Founded', c.founded) +
+                row('Team Size', c.employees) +
+                row('Revenue', c.revenue)
+            );
+        }
+
+        // ── Contact ──────────────────────────────────────────────────────────
+        const hasContact = c.email || c.phone || c.address || c.website;
+        let contactCard = '';
+        if (hasContact) {
+            const cRow = (icon, label, val, href) => val ? `
+                <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid ${border}">
+                    <span class="material-symbols-outlined" style="font-size:18px;color:${subC};font-variation-settings:'FILL' 1">${icon}</span>
+                    <div style="flex:1;min-width:0">
+                        <p style="font-size:10px;font-weight:700;color:${subC};text-transform:uppercase;letter-spacing:0.05em">${label}</p>
+                        ${href
+                            ? `<a href="${href}" target="_blank" style="font-size:13px;font-weight:600;color:#4d41df;text-decoration:none;word-break:break-all">${val}</a>`
+                            : `<p style="font-size:13px;font-weight:500;color:${titleC};word-break:break-all">${val}</p>`}
+                    </div>
+                </div>` : '';
+            contactCard = card(
+                sectionTitle('contact_page', 'Contact', '#875041') +
+                cRow('mail', 'Email', c.email, c.email ? 'mailto:'+c.email : null) +
+                cRow('call', 'Phone', c.phone, null) +
+                cRow('location_city', 'Address', c.address, null) +
+                cRow('language', 'Website', c.website, c.website ? (c.website.startsWith('http') ? c.website : 'https://'+c.website) : null)
+            );
+        }
+
+        // ── Social Links ─────────────────────────────────────────────────────
+        const hasSocial = c.linkedin || c.twitter;
+        let socialCard = '';
+        if (hasSocial) {
+            const sRow = (icon, label, url, color) => url ? `
+                <a href="${url.startsWith('http')?url:'https://'+url}" target="_blank"
+                   style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid ${border};text-decoration:none">
+                    <div style="width:32px;height:32px;border-radius:10px;background:${color}18;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                        <span class="material-symbols-outlined" style="font-size:16px;color:${color}">${icon}</span>
+                    </div>
+                    <p style="font-size:13px;font-weight:600;color:${color}">${label}</p>
+                    <span class="material-symbols-outlined" style="font-size:14px;color:${subC};margin-left:auto">open_in_new</span>
+                </a>` : '';
+            socialCard = card(
+                sectionTitle('share', 'Social & Links', '#4d41df') +
+                sRow('group', 'LinkedIn', c.linkedin, '#0077b5') +
+                sRow('tag', 'Twitter / X', c.twitter, '#1da1f2')
+            );
+        }
+
+        // Inject details + contact + social after cp-about
+        const aboutEl = document.getElementById('cp-about');
+        if (aboutEl) {
+            let extra = '';
+            if (detailsCard) extra += `<div style="margin-top:12px">${detailsCard}</div>`;
+            if (contactCard) extra += `<div style="margin-top:12px">${contactCard}</div>`;
+            if (socialCard)  extra += `<div style="margin-top:12px">${socialCard}</div>`;
+            aboutEl.innerHTML += extra;
         }
 
         // ── Jobs ─────────────────────────────────────────────────────────────
-        const jobsEl = document.getElementById('cp-jobs');
+        const jobsEl      = document.getElementById('cp-jobs');
         const jobsCountEl = document.getElementById('cp-jobs-count');
         if (jobsEl) {
-            const uid = c.uid;
+            const uid        = c.uid;
             const compJobs   = _allJobs.filter(j => j.company.toLowerCase() === name.toLowerCase());
             const postedJobs = uid ? JSON.parse(localStorage.getItem('companyJobs_' + uid) || '[]').filter(j => j.status === 'active') : [];
-            const total = compJobs.length + postedJobs.length;
+            const total      = compJobs.length + postedJobs.length;
             if (jobsCountEl) jobsCountEl.textContent = total ? total + ' open' : '';
 
-            const typeColor = t => t === 'Full-time' ? 'rgba(77,65,223,0.10);color:#4d41df'
-                : t === 'Part-time' ? 'rgba(135,80,65,0.10);color:#875041'
-                : t === 'Internship' ? 'rgba(92,81,160,0.10);color:#5c51a0'
-                : 'rgba(45,106,79,0.10);color:#2d6a4f';
+            const typeColor = t => t === 'Full-time' ? '#4d41df' : t === 'Part-time' ? '#875041' : t === 'Internship' ? '#5c51a0' : '#2d6a4f';
 
-            const jobCards = compJobs.map(j => `
+            const jobCard = (title, loc, exp, type, salary, onclick) => `
                 <div style="background:${cardBg};border-radius:16px;padding:14px;border:1px solid ${border};margin-bottom:8px;cursor:pointer;transition:transform 0.15s"
-                    onclick="openJobDetail(${j.id})"
-                    onmouseenter="this.style.transform='translateY(-1px)'" onmouseleave="this.style.transform=''">
+                    onclick="${onclick}" onmouseenter="this.style.transform='translateY(-1px)'" onmouseleave="this.style.transform=''">
                     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
                         <div style="flex:1;min-width:0">
-                            <p style="font-size:14px;font-weight:700;color:${titleC};line-height:1.3">${j.title}</p>
-                            <p style="font-size:12px;color:${subC};margin-top:2px">${j.location} &bull; ${j.exp}</p>
+                            <p style="font-size:14px;font-weight:700;color:${titleC};line-height:1.3">${title}</p>
+                            <p style="font-size:12px;color:${subC};margin-top:2px">${loc}${exp?' &bull; '+exp:''}</p>
                         </div>
-                        <span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:${typeColor(j.type)}">${j.type}</span>
+                        ${type ? `<span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:${typeColor(type)}18;color:${typeColor(type)};flex-shrink:0">${type}</span>` : ''}
                     </div>
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
-                        <span style="font-size:12px;font-weight:700;color:#276749">${j.salary}</span>
-                        <button onclick="event.stopPropagation();openJobDetail(${j.id})"
-                            style="height:32px;padding:0 14px;border-radius:10px;border:none;background:linear-gradient(135deg,#4d41df,#5c51a0);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif">
+                        <span style="font-size:12px;font-weight:700;color:#276749">${salary||''}</span>
+                        <button onclick="event.stopPropagation();${onclick}"
+                            style="height:32px;padding:0 14px;border-radius:10px;border:none;background:linear-gradient(135deg,#4d41df,#5c51a0);color:#fff;font-size:12px;font-weight:700;cursor:pointer">
                             Apply
                         </button>
                     </div>
-                </div>`).join('');
+                </div>`;
 
-            const postedCards = postedJobs.map(j => `
-                <div style="background:${cardBg};border-radius:16px;padding:14px;border:1px solid ${border};margin-bottom:8px;cursor:pointer;transition:transform 0.15s"
-                    onmouseenter="this.style.transform='translateY(-1px)'" onmouseleave="this.style.transform=''">
-                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
-                        <div style="flex:1;min-width:0">
-                            <p style="font-size:14px;font-weight:700;color:${titleC};line-height:1.3">${j.title}</p>
-                            <p style="font-size:12px;color:${subC};margin-top:2px">${j.location||''} &bull; ${j.experience||''}</p>
-                        </div>
-                        <span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:rgba(77,65,223,0.10);color:#4d41df">${j.type||''}</span>
-                    </div>
-                    ${j.description ? `<p style="font-size:12px;color:${subC};margin-top:6px;line-height:1.5">${(j.description||'').slice(0,120)}${j.description.length>120?'...':''}</p>` : ''}
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
-                        <span style="font-size:12px;font-weight:700;color:#276749">${j.salaryMin&&j.salaryMax?'&#8377;'+j.salaryMin+'–&#8377;'+j.salaryMax:''}</span>
-                        <button onclick="navigateTo('jobs')"
-                            style="height:32px;padding:0 14px;border-radius:10px;border:none;background:linear-gradient(135deg,#4d41df,#5c51a0);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif">
-                            Apply
-                        </button>
-                    </div>
-                </div>`).join('');
+            const builtinCards = compJobs.map(j => jobCard(j.title, j.location, j.exp, j.type, j.salary, `openJobDetail(${j.id})`)).join('');
+            const postedCards  = postedJobs.map(j => jobCard(
+                j.title, j.location||'', j.experience||'', j.type||'',
+                j.salaryMin&&j.salaryMax ? '&#8377;'+j.salaryMin+'–&#8377;'+j.salaryMax : '',
+                `navigateTo('jobs')`
+            )).join('');
 
-            jobsEl.innerHTML = (jobCards + postedCards) || `<div style="text-align:center;padding:24px 0;color:${subC};font-size:13px">No open positions right now.</div>`;
+            jobsEl.innerHTML = (builtinCards + postedCards) ||
+                `<div style="text-align:center;padding:24px 0;color:${subC};font-size:13px">No open positions right now.</div>`;
         }
 
         // ── Videos ───────────────────────────────────────────────────────────
         const videosEl = document.getElementById('cp-videos');
         if (videosEl) {
             const uid = c.uid;
-            const videos = uid
+            // First try localStorage (same device), then fall back to Firestore
+            const localVideos = uid
                 ? JSON.parse(localStorage.getItem('companyTraining_' + uid) || '[]').filter(v => v.privacy === 'public' || !v.privacy)
                 : [];
-            if (videos.length === 0) {
-                videosEl.innerHTML = `<p style="font-size:13px;color:${subC};text-align:center;padding:16px 0">No public videos uploaded yet.</p>`;
-            } else {
-                videosEl.innerHTML = videos.map(v => `
-                    <div style="background:${cardBg};border-radius:16px;overflow:hidden;border:1px solid ${border};margin-bottom:10px;cursor:pointer"
-                        onclick="openTrainingPlayer && openTrainingPlayer(${JSON.stringify(v).replace(/"/g,'&quot;')})">
-                        <div style="position:relative;width:100%;padding-top:56.25%;background:#000;overflow:hidden">
-                            ${v.thumbnail
-                                ? `<img src="${v.thumbnail}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"/>`
-                                : `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(77,65,223,0.12)"><span class="material-symbols-outlined" style="font-size:40px;color:#4d41df;font-variation-settings:'FILL' 1">play_circle</span></div>`}
-                            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.25)">
-                                <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.90);display:flex;align-items:center;justify-content:center">
-                                    <span class="material-symbols-outlined" style="font-size:24px;color:#4d41df;font-variation-settings:'FILL' 1;margin-left:3px">play_arrow</span>
-                                </div>
-                            </div>
+
+            const renderVideos = (videos) => {
+                if (!videos.length) {
+                    videosEl.innerHTML = `<p style="font-size:13px;color:${subC};text-align:center;padding:16px 0">No public videos uploaded yet.</p>`;
+                    return;
+                }
+                const vGrads = ['linear-gradient(135deg,#4d41df,#675df9)','linear-gradient(135deg,#875041,#feb5a2)','linear-gradient(135deg,#5c51a0,#c8bfff)','linear-gradient(135deg,#2d6a4f,#74c69d)','linear-gradient(135deg,#c77dff,#7b2d8b)'];
+                // Store videos in a window-level map so onclick can access by index safely
+                window._cpVideosMap = {};
+                videosEl.innerHTML = videos.map((v, i) => {
+                    window._cpVideosMap[i] = v;
+                    const vGrad = vGrads[i % vGrads.length];
+                    const date  = v.uploadedAt ? new Date(v.uploadedAt).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '';
+                    return `
+                    <div onclick="openPublicVideoPlayer(window._cpVideosMap[${i}])"
+                        style="background:${cardBg};border-radius:16px;overflow:hidden;border:1px solid ${border};margin-bottom:10px;cursor:pointer;transition:transform 0.15s"
+                        onmouseenter="this.style.transform='translateY(-1px)'" onmouseleave="this.style.transform=''">
+                        <div style="position:relative;width:100%;height:140px;background:${vGrad};display:flex;align-items:center;justify-content:center;overflow:hidden">
+                            <span class="material-symbols-outlined" style="font-size:52px;color:rgba(255,255,255,0.85);font-variation-settings:'FILL' 1">play_circle</span>
+                            <span style="position:absolute;top:8px;left:8px;background:rgba(45,106,79,0.85);color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;display:flex;align-items:center;gap:3px">
+                                <span class="material-symbols-outlined" style="font-size:10px;font-variation-settings:'FILL' 1">public</span>Public
+                            </span>
+                            ${v.fileSize ? `<span style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.60);color:#fff;font-size:10px;font-weight:600;padding:2px 7px;border-radius:6px">${v.fileSize}</span>` : ''}
                         </div>
                         <div style="padding:12px">
                             <p style="font-size:13px;font-weight:700;color:${titleC};line-height:1.3">${v.title||'Untitled'}</p>
-                            ${v.description ? `<p style="font-size:12px;color:${subC};margin-top:4px;line-height:1.4">${v.description}</p>` : ''}
+                            ${v.desc ? `<p style="font-size:12px;color:${subC};margin-top:4px;line-height:1.4">${v.desc}</p>` : ''}
+                            <p style="font-size:11px;color:${subC};margin-top:6px">${date}${v.fileName?' &bull; '+v.fileName:''}</p>
                         </div>
-                    </div>`).join('');
+                    </div>`;
+                }).join('');
+            };
+
+            if (localVideos.length) {
+                renderVideos(localVideos);
+            } else if (uid) {
+                // Fetch from Firestore
+                videosEl.innerHTML = `<p style="font-size:12px;color:${subC};text-align:center;padding:12px 0">Loading videos...</p>`;
+                db.collection('users').doc(uid).get().then(doc => {
+                    const data = doc.exists ? doc.data() : {};
+                    const firestoreVideos = (data.trainingVideos || []).filter(v => v.privacy === 'public' || !v.privacy);
+                    // Cache locally for this session
+                    if (firestoreVideos.length) {
+                        localStorage.setItem('companyTraining_' + uid, JSON.stringify(firestoreVideos));
+                    }
+                    renderVideos(firestoreVideos);
+                }).catch(() => renderVideos([]));
+            } else {
+                renderVideos([]);
             }
         }
     });
