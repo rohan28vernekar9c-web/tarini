@@ -1010,6 +1010,23 @@ function toggleTheme() {
         const catTitle = document.getElementById('skill-cat-page-title');
         if (catTitle && catTitle.textContent !== 'All Categories') openSkillCategory(catTitle.textContent);
     }
+
+    // Re-render all dynamic screens on theme change
+    const _screens = [
+        ['screen-rewards',              () => initRewardsScreen()],
+        ['screen-notifications',        () => loadNotificationsScreen()],
+        ['screen-applications',         () => loadApplicationsScreen()],
+        ['screen-dashboard',            () => loadDashboardEarnings()],
+        ['screen-profile',              () => loadProfileScreen()],
+        ['screen-company-training',     () => loadTrainingScreen()],
+        ['screen-company-dashboard',    () => loadCompanyDashboard()],
+        ['screen-company-applications', () => loadCompanyApplications()],
+        ['screen-company-profile',      () => loadCompanyProfile()],
+    ];
+    _screens.forEach(([id, fn]) => { const s = document.getElementById(id); if (s && s.classList.contains('active')) fn(); });
+    // Update upload modal card bg if open
+    const _mc = document.getElementById('training-modal-card');
+    if (_mc && !document.getElementById('training-upload-modal').classList.contains('hidden')) _mc.style.background = isDark ? '#1c1b2e' : '#ffffff';
 }
 window.toggleTheme = toggleTheme;
 
@@ -2344,7 +2361,7 @@ function _renderCourseCardsInto(container, courses) {
             `<span class="material-symbols-outlined" style="font-size:13px;color:${i < Math.floor(c.rating) ? '#f59e0b' : starEmpty};font-variation-settings:'FILL' 1">star</span>`
         ).join('');
         return `
-        <div style="background:${cardBg};border-radius:20px;overflow:hidden;border:1px solid ${cardBorder};box-shadow:${shadowNorm};transition:transform 0.15s,box-shadow 0.15s"
+        <div onclick="openTrainingPlayer(${v.id})" style="background:${cardBg};border-radius:20px;overflow:hidden;border:1px solid ${cardBorder};box-shadow:${shadowNorm};transition:transform 0.15s,box-shadow 0.15s"
             onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='${shadowHov}'"
             onmouseleave="this.style.transform='';this.style.boxShadow='${shadowNorm}'"
             ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform=''">
@@ -3118,6 +3135,7 @@ function companyNavTo(screenId) {
     if (screenId === 'company-dashboard') loadCompanyDashboard();
     if (screenId === 'company-profile') loadCompanyProfile();
     if (screenId === 'company-applications') loadCompanyApplications();
+    if (screenId === 'company-training') loadTrainingScreen();
 
     history.pushState({ screen: screenId }, '', window.location.pathname);
 }
@@ -3305,13 +3323,36 @@ loadCompanyProfile = function() {
     const name = d.name || (user && user.displayName) || 'Company';
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
     set('co-profile-name', name);
+    set('co-profile-tagline', d.tagline || 'Building the future together');
     set('co-profile-industry', d.industry || '');
-    set('co-profile-location', d.location || '');
-    set('co-profile-website', d.website || '');
-    set('co-profile-desc', d.description || '');
-    set('co-profile-email', d.email || '');
-    set('co-profile-phone', d.phone || '');
-    set('co-profile-address', d.address || '');
+    set('co-profile-location', d.location || 'Location not set');
+    set('co-profile-website', d.website || 'Website not set');
+    set('co-profile-employees', d.employees || '—');
+    set('co-profile-founded', d.founded || '—');
+    set('co-profile-desc', d.description || 'No description added yet.');
+    set('co-profile-email', d.email || '—');
+    set('co-profile-phone', d.phone || '—');
+    set('co-profile-address', d.address || '—');
+    const wLink = document.getElementById('co-profile-website-link');
+    if (wLink && d.website) { wLink.href = d.website.startsWith('http') ? d.website : 'https://' + d.website; wLink.onclick = null; }
+    const hlEl = document.getElementById('co-profile-highlights-list');
+    if (hlEl) {
+        const lines = (d.highlights || '').split('\n').map(l => l.trim()).filter(Boolean);
+        hlEl.innerHTML = lines.length ? lines.map(function(l){ return '<div style="display:flex;align-items:center;gap:8px"><span class="material-symbols-outlined" style="font-size:16px;color:#5c51a0">check_circle</span><p style="font-size:13px;font-weight:500;color:inherit">' + l + '</p></div>'; }).join('') : '<p style="font-size:13px;color:#777587">No highlights added yet.</p>';
+    }
+    const jobCount = (typeof getCompanyJobs === 'function') ? getCompanyJobs().length : 0;
+    set('co-stat-jobs-count', jobCount || '0');
+    set('co-profile-type', d.type || '-');
+    set('co-profile-revenue', d.revenue || '-');
+    set('co-profile-hq', d.hq || d.location || '-');
+    set('co-profile-industry-detail', d.industry || '-');
+    set('co-profile-mission', d.mission || 'No mission statement added yet.');
+    var specEl = document.getElementById('co-profile-specialisations');
+    if (specEl) { var specs = (d.specialisations||'').split(',').map(function(s){return s.trim();}).filter(Boolean); specEl.innerHTML = specs.length ? specs.map(function(s){return '<span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;background:rgba(77,65,223,0.10);color:#4d41df">'+s+'</span>';}).join('') : '<p style="font-size:13px;color:#777587">-</p>'; }
+    var socialEl = document.getElementById('co-social-links');
+    if (socialEl) { var sLinks=[]; if(d.website) sLinks.push({icon:'language',label:'Website',url:d.website.startsWith('http')?d.website:'https://'+d.website,color:'#4d41df'}); if(d.linkedin) sLinks.push({icon:'group',label:'LinkedIn',url:d.linkedin,color:'#0077b5'}); if(d.twitter) sLinks.push({icon:'tag',label:'Twitter/X',url:d.twitter,color:'#1da1f2'}); socialEl.innerHTML = sLinks.length ? sLinks.map(function(l){return '<a href="'+l.url+'" target="_blank" style="display:flex;align-items:center;gap:10px;padding:8px 0;text-decoration:none"><div style="width:32px;height:32px;border-radius:10px;background:rgba(77,65,223,0.08);display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" style="font-size:16px;color:'+l.color+'">'+l.icon+'</span></div><p style="font-size:13px;font-weight:600;color:'+l.color+'">'+l.label+'</p></a>';}).join('') : '<p style="font-size:13px;color:#777587">No social links added yet.</p>'; }
+    var jobsListEl = document.getElementById('co-profile-jobs-list');
+    if (jobsListEl && typeof getCompanyJobs==='function') { var aJobs=getCompanyJobs().filter(function(j){return j.status==='active';}).slice(0,3); jobsListEl.innerHTML = aJobs.length ? aJobs.map(function(j){return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(77,65,223,0.05);border-radius:12px;margin-bottom:6px"><div><p style="font-size:13px;font-weight:700;color:#1b1b24">'+j.title+'</p><p style="font-size:11px;color:#777587;margin-top:1px">'+j.type+' &bull; '+j.location+'</p></div><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(45,106,79,0.10);color:#276749">Active</span></div>';}).join('') : '<p style="font-size:13px;color:#777587">No active jobs yet.</p>'; }
     const img = document.getElementById('co-logo-img');
     const icon = document.getElementById('co-logo-icon');
     if (img && icon) {
@@ -3325,12 +3366,23 @@ function openEditCompanyProfile() {
     const user = auth.currentUser;
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
     set('ecp-name', d.name || (user && user.displayName) || '');
+    set('ecp-tagline', d.tagline || '');
     set('ecp-industry', d.industry || '');
+    set('ecp-employees', d.employees || '');
+    set('ecp-founded', d.founded || '');
     set('ecp-desc', d.description || '');
     set('ecp-location', d.location || '');
     set('ecp-website', d.website || '');
     set('ecp-email', d.email || (user && user.email) || '');
     set('ecp-phone', d.phone || '');
+    set('ecp-highlights', d.highlights || '');
+    set('ecp-type', d.type || '');
+    set('ecp-revenue', d.revenue || '');
+    set('ecp-hq', d.hq || '');
+    set('ecp-specialisations', d.specialisations || '');
+    set('ecp-mission', d.mission || '');
+    set('ecp-linkedin', d.linkedin || '');
+    set('ecp-twitter', d.twitter || '');
     companyNavTo('edit-company-profile');
 }
 window.openEditCompanyProfile = openEditCompanyProfile;
@@ -3339,12 +3391,23 @@ function saveCompanyProfile() {
     const d = getCompanyData();
     const get = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
     d.name        = get('ecp-name');
+    d.tagline     = get('ecp-tagline');
     d.industry    = get('ecp-industry');
+    d.employees   = get('ecp-employees');
+    d.founded     = get('ecp-founded');
     d.description = get('ecp-desc');
     d.location    = get('ecp-location');
     d.website     = get('ecp-website');
     d.email       = get('ecp-email');
     d.phone       = get('ecp-phone');
+    d.highlights     = get('ecp-highlights');
+    d.type           = get('ecp-type');
+    d.revenue        = get('ecp-revenue');
+    d.hq             = get('ecp-hq');
+    d.specialisations= get('ecp-specialisations');
+    d.mission        = get('ecp-mission');
+    d.linkedin       = get('ecp-linkedin');
+    d.twitter        = get('ecp-twitter');
     saveCompanyData(d);
     companyNavTo('company-profile');
 }
@@ -3701,3 +3764,317 @@ function _animateCounter(el, newVal) {
         if (screenId === 'company-dashboard') updateActiveJobsCounter();
     };
 })();
+
+// ============================================================
+// COMPANY TRAINING
+// ============================================================
+
+function _trainingKey() {
+    const u = auth.currentUser;
+    return u ? `companyTraining_${u.uid}` : 'companyTraining_guest';
+}
+function _getTrainingVideos() { return JSON.parse(localStorage.getItem(_trainingKey()) || '[]'); }
+function _saveTrainingVideos(v) { localStorage.setItem(_trainingKey(), JSON.stringify(v)); }
+
+let _tvPrivacy = 'public';
+
+function setTrainingPrivacy(val) {
+    _tvPrivacy = val;
+    const pub = document.getElementById('tv-public-btn');
+    const prv = document.getElementById('tv-private-btn');
+    if (val === 'public') {
+        pub.style.cssText = 'flex:1;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600;font-size:13px;transition:all 0.2s;border:2px solid #4d41df;background:rgba(77,65,223,0.12);color:#4d41df';
+        prv.style.cssText = 'flex:1;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600;font-size:13px;transition:all 0.2s;border:2px solid #c7c4d8;background:transparent;color:#777587';
+    } else {
+        prv.style.cssText = 'flex:1;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600;font-size:13px;transition:all 0.2s;border:2px solid #875041;background:rgba(135,80,65,0.12);color:#875041';
+        pub.style.cssText = 'flex:1;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600;font-size:13px;transition:all 0.2s;border:2px solid #c7c4d8;background:transparent;color:#777587';
+    }
+}
+window.setTrainingPrivacy = setTrainingPrivacy;
+
+function handleTrainingFileChange(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    document.getElementById('tv-file-label').textContent = file.name;
+    // Sync both inputs to same file
+    document.getElementById('tv-file').files = event.target.files;
+}
+window.handleTrainingFileChange = handleTrainingFileChange;
+
+function openTrainingUpload() {
+    _tvPrivacy = 'public';
+    document.getElementById('tv-title').value = '';
+    document.getElementById('tv-desc').value = '';
+    document.getElementById('tv-file-label').textContent = 'Choose file';
+    document.getElementById('tv-error').classList.add('hidden');
+    const btn = document.getElementById('tv-submit-btn');
+    btn.disabled = false; btn.style.opacity = '1';
+    setTrainingPrivacy('public');
+    const card = document.getElementById('training-modal-card');
+    if (card) {
+        const _d = document.documentElement.classList.contains('dark-theme');
+        card.style.background = _d ? '#1c1b2e' : '#ffffff';
+    }
+    document.getElementById('training-upload-modal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    // Camera opens via label[for=tv-camera] click - no programmatic trigger needed
+}
+
+window.openTrainingUpload = openTrainingUpload;
+
+function closeTrainingUpload() {
+    document.getElementById('training-upload-modal').classList.add('hidden');
+    document.body.style.overflow = '';
+}
+window.closeTrainingUpload = closeTrainingUpload;
+
+// Session-only object URL store (cleared on page reload â€” videos are not persisted as binary)
+const _trainingObjectURLs = {};
+
+function submitTrainingVideo() {
+    const title = document.getElementById('tv-title').value.trim();
+    const desc  = document.getElementById('tv-desc').value.trim();
+    const fileInput   = document.getElementById('tv-file');
+    const cameraInput = document.getElementById('tv-camera');
+    const file = (fileInput.files && fileInput.files[0]) || (cameraInput.files && cameraInput.files[0]);
+    const errEl = document.getElementById('tv-error');
+    const btn   = document.getElementById('tv-submit-btn');
+
+    if (!title) { errEl.textContent = 'Please enter a video title.'; errEl.classList.remove('hidden'); return; }
+    errEl.classList.add('hidden');
+
+    btn.disabled = true; btn.style.opacity = '0.75';
+    btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px;animation:spin 0.8s linear infinite">progress_activity</span> Saving...';
+
+    const id = Date.now();
+
+    // Store only metadata â€” never read video binary into memory
+    const entry = {
+        id,
+        title,
+        desc,
+        privacy: _tvPrivacy,
+        fileName: file ? file.name : '',
+        fileSize: file ? Math.round(file.size / 1024) + ' KB' : '',
+        hasFile: !!file,
+        uploadedAt: new Date().toISOString(),
+    };
+
+    // Keep an object URL in memory for this session so the video can be previewed
+    if (file) {
+        _trainingObjectURLs[id] = URL.createObjectURL(file);
+    }
+
+    setTimeout(() => {
+        const videos = _getTrainingVideos();
+        videos.unshift(entry);
+        _saveTrainingVideos(videos);
+        closeTrainingUpload();
+        loadTrainingScreen();
+    }, 600);
+}
+window.submitTrainingVideo = submitTrainingVideo;
+
+function deleteTrainingVideo(id) {
+    if (!confirm('Delete this training video?')) return;
+    _saveTrainingVideos(_getTrainingVideos().filter(v => v.id !== id));
+    loadTrainingScreen();
+}
+window.deleteTrainingVideo = deleteTrainingVideo;
+
+function toggleTrainingPrivacy(id) {
+    const videos = _getTrainingVideos().map(v => v.id === id ? { ...v, privacy: v.privacy === 'public' ? 'private' : 'public' } : v);
+    _saveTrainingVideos(videos);
+    loadTrainingScreen();
+}
+window.toggleTrainingPrivacy = toggleTrainingPrivacy;
+
+
+function openTrainingPlayer(id) {
+    const v = _getTrainingVideos().find(x => x.id === id);
+    if (!v) return;
+    const objUrl = _trainingObjectURLs[v.id] || '';
+    const video  = document.getElementById('training-player-video');
+    const noFile = document.getElementById('player-no-file');
+
+    document.getElementById('player-title').textContent = v.title;
+    document.getElementById('player-meta').textContent  = v.desc || '';
+
+    const isPrivate = v.privacy === 'private';
+    const badge = document.getElementById('player-privacy-badge');
+    badge.textContent = isPrivate ? 'ðŸ”’ Private' : 'ðŸŒ Public';
+    badge.style.cssText = isPrivate
+        ? 'font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;background:rgba(135,80,65,0.25);color:#feb5a2'
+        : 'font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;background:rgba(45,106,79,0.25);color:#74c69d';
+
+    document.getElementById('player-date').textContent = new Date(v.uploadedAt).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
+    document.getElementById('player-size').textContent = v.fileSize || '';
+
+    if (objUrl) {
+        video.src = objUrl;
+        video.classList.remove('hidden');
+        noFile.classList.add('hidden');
+        noFile.style.display = 'none';
+        video.load();
+    } else {
+        video.src = '';
+        video.classList.add('hidden');
+        noFile.classList.remove('hidden');
+        noFile.style.display = 'flex';
+    }
+
+    document.getElementById('training-player-modal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+window.openTrainingPlayer = openTrainingPlayer;
+
+function closeTrainingPlayer(e) {
+    if (e && e.target !== document.getElementById('training-player-modal')) return;
+    const video = document.getElementById('training-player-video');
+    video.pause();
+    video.src = '';
+    document.getElementById('training-player-modal').classList.add('hidden');
+    document.body.style.overflow = '';
+}
+window.closeTrainingPlayer = closeTrainingPlayer;
+function loadTrainingScreen() {
+    const videos  = _getTrainingVideos();
+    const empty   = document.getElementById('training-empty-state');
+    const list    = document.getElementById('training-list');
+    const fab     = document.getElementById('training-fab');
+    if (!list) return;
+
+    const _d     = document.documentElement.classList.contains('dark-theme');
+    const cardBg = _d ? '#1c1b2e' : '#ffffff';
+    const border = _d ? '#2a2840' : '#eae6f3';
+    const titleC = _d ? '#e8e6f4' : '#1b1b24';
+    const subC   = _d ? '#9e9bb8' : '#777587';
+    const shadow = _d ? '0 4px 16px -4px rgba(0,0,0,0.5)' : '0 4px 16px -4px rgba(77,65,223,0.10)';
+    const thumbBg= _d ? '#252438' : '#f0ecf9';
+
+    // Update stats
+    const total   = videos.length;
+    const pub     = videos.filter(v => v.privacy === 'public').length;
+    const priv    = videos.filter(v => v.privacy === 'private').length;
+    const setEl   = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    setEl('training-stat-total',   total);
+    setEl('training-stat-public',  pub);
+    setEl('training-stat-private', priv);
+
+    if (total === 0) {
+        empty.classList.remove('hidden'); empty.style.display = 'flex';
+        list.innerHTML = '';
+        if (fab) fab.classList.add('hidden');
+        return;
+    }
+    empty.classList.add('hidden'); empty.style.display = 'none';
+    if (fab) fab.classList.remove('hidden');
+
+    const recent  = videos.slice(0, 4);
+    const older   = videos.slice(4);
+
+    const gradients = [
+        'linear-gradient(135deg,#4d41df,#675df9)',
+        'linear-gradient(135deg,#875041,#feb5a2)',
+        'linear-gradient(135deg,#5c51a0,#c8bfff)',
+        'linear-gradient(135deg,#276749,#74c69d)',
+        'linear-gradient(135deg,#c77dff,#7b2d8b)',
+    ];
+
+    const videoCard = (v, idx) => {
+        const isPrivate   = v.privacy === 'private';
+        const date        = new Date(v.uploadedAt).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' });
+        const privacyCol  = isPrivate ? '#875041' : '#276749';
+        const privacyBg   = isPrivate ? 'rgba(135,80,65,0.12)' : 'rgba(45,106,79,0.12)';
+        const privacyIcon = isPrivate ? 'lock' : 'public';
+        const grad        = gradients[idx % gradients.length];
+        const objUrl      = _trainingObjectURLs[v.id] || '';
+        const initials    = v.title.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+
+        return `
+        <div onclick="openTrainingPlayer(${v.id})" style="background:${cardBg};border-radius:20px;overflow:hidden;border:1px solid ${border};box-shadow:${shadow};transition:transform 0.15s;cursor:pointer"
+            onmouseenter="this.style.transform='translateY(-2px)'" onmouseleave="this.style.transform=''">
+            <!-- Thumbnail -->
+            <div style="width:100%;height:140px;background:${thumbBg};position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center">
+                ${objUrl
+                    ? `<video src="${objUrl}" style="width:100%;height:100%;object-fit:cover" muted></video>`
+                    : `<div style="width:100%;height:100%;background:${grad};display:flex;align-items:center;justify-content:center">
+                        <span class="material-symbols-outlined" style="font-size:48px;color:rgba(255,255,255,0.9);font-variation-settings:'FILL' 1">play_circle</span>
+                       </div>`
+                }
+                <!-- Privacy badge -->
+                <span style="position:absolute;top:8px;left:8px;background:${privacyBg};color:${privacyCol};font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;backdrop-filter:blur(8px);display:flex;align-items:center;gap:3px;border:1px solid ${privacyCol}30">
+                    <span class="material-symbols-outlined" style="font-size:10px;font-variation-settings:'FILL' 1">${privacyIcon}</span>${isPrivate ? 'Private' : 'Public'}
+                </span>
+                ${v.fileSize ? `<span style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.65);color:#fff;font-size:10px;font-weight:600;padding:2px 7px;border-radius:6px">${v.fileSize}</span>` : ''}
+            </div>
+            <!-- Info -->
+            <div style="padding:14px 14px 12px">
+                <p style="font-size:14px;font-weight:700;color:${titleC};line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px">${v.title}</p>
+                ${v.desc ? `<p style="font-size:12px;color:${subC};line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:6px">${v.desc}</p>` : ''}
+                <p style="font-size:11px;color:${subC};margin-bottom:10px">${date}${v.fileName ? ' &bull; ' + v.fileName : ''}</p>
+                <!-- Actions -->
+                <div style="display:flex;gap:6px">
+                    <button onclick="event.stopPropagation();toggleTrainingPrivacy(${v.id})"
+                        style="flex:1;height:32px;border-radius:8px;border:1px solid ${border};background:transparent;color:${subC};font-size:11px;font-weight:600;cursor:pointer;font-family:'Poppins',sans-serif;display:flex;align-items:center;justify-content:center;gap:4px">
+                        <span class="material-symbols-outlined" style="font-size:13px">${isPrivate ? 'public' : 'lock'}</span>
+                        Make ${isPrivate ? 'Public' : 'Private'}
+                    </button>
+                    <button onclick="event.stopPropagation();deleteTrainingVideo(${v.id})"
+                        style="width:32px;height:32px;border-radius:8px;border:none;background:rgba(186,26,26,0.10);color:${_d ? '#ff8a8a' : '#ba1a1a'};cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                        <span class="material-symbols-outlined" style="font-size:15px">delete</span>
+                    </button>
+                </div>
+            </div>
+        </div>`;
+    };
+
+    let html = '';
+
+    // Recent Videos section
+    html += `
+    <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <h3 style="font-size:16px;font-weight:700;color:${titleC};font-family:'Plus Jakarta Sans',sans-serif">Recent Videos</h3>
+            <span style="font-size:12px;font-weight:600;color:#4d41df;background:rgba(77,65,223,0.10);padding:3px 10px;border-radius:999px">${total} total</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
+            ${recent.map((v, i) => videoCard(v, i)).join('')}
+        </div>
+    </div>`;
+
+    // Older Videos section
+    if (older.length > 0) {
+        html += `
+    <div>
+        <h3 style="font-size:16px;font-weight:700;color:${titleC};font-family:'Plus Jakarta Sans',sans-serif;margin-bottom:12px">All Videos</h3>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
+            ${older.map((v, i) => videoCard(v, i + recent.length)).join('')}
+        </div>
+    </div>`;
+    }
+
+    list.innerHTML = html;
+}
+window.loadTrainingScreen = loadTrainingScreen;
+
+// Access control: check if current user is hired by this company
+function canViewPrivateTraining() {
+    const user = auth.currentUser;
+    if (!user) return false;
+    const allAppsKeys = Object.keys(localStorage).filter(k => k.startsWith('tarini_applications_'));
+    return allAppsKeys.some(k => {
+        const apps = JSON.parse(localStorage.getItem(k) || '[]');
+        return apps.some(a => a.userId === user.uid && a.status === 'Hired');
+    });
+}
+window.canViewPrivateTraining = canViewPrivateTraining;
+
+// Women users: view company training videos (public always, private only if hired)
+function viewCompanyTraining(companyUid) {
+    const key = `companyTraining_${companyUid}`;
+    const all = JSON.parse(localStorage.getItem(key) || '[]');
+    const hired = canViewPrivateTraining();
+    return all.filter(v => v.privacy === 'public' || hired);
+}
+window.viewCompanyTraining = viewCompanyTraining;

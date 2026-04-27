@@ -818,7 +818,7 @@
 
         <!-- SCREEN: DASHBOARD -->
         <div id="screen-dashboard" class="screen">
-            <main class="max-w-2xl mx-auto pb-32">
+            <main class="max-w-2xl mx-auto pb-32 pt-1">
 
                 <!-- -- GREETING SECTION -- -->
                 <section class="relative overflow-hidden px-5 pt-6 pb-7 mb-1"
@@ -1078,7 +1078,7 @@
 
         <!-- SCREEN: SKILL HUB -->
         <div id="screen-skills" class="screen">
-            <main class="max-w-2xl mx-auto pb-32">
+            <main class="max-w-2xl mx-auto pb-32 pt-1">
 
                 <!-- Header -->
                 <section class="px-container-padding pt-md pb-sm">
@@ -2380,7 +2380,7 @@
 
         <!-- SCREEN: COMPANY DASHBOARD -->
         <div id="screen-company-dashboard" class="screen">
-            <main class="max-w-2xl mx-auto pb-32">
+            <main class="max-w-2xl mx-auto pb-32 pt-1">
 
                 <!-- Welcome Section -->
                 <section class="relative overflow-hidden px-5 pt-6 pb-7 mb-1"
@@ -2470,14 +2470,14 @@
                                 <p class="text-[11px] text-on-surface-variant">Review candidates</p>
                             </div>
                         </button>
-                        <button onclick="companyNavTo('company-messages')"
+                        <button onclick="companyNavTo('company-training')"
                             class="flex items-center gap-3 p-4 bg-white rounded-[18px] border border-surface-container-high shadow-sm active:scale-[0.97] transition-all text-left">
-                            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background:rgba(92,81,160,0.10)">
-                                <span class="material-symbols-outlined text-tertiary" style="font-size:20px;font-variation-settings:'FILL' 1">chat</span>
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background:rgba(77,65,223,0.10)">
+                                <span class="material-symbols-outlined text-primary" style="font-size:20px;font-variation-settings:'FILL' 1">play_lesson</span>
                             </div>
                             <div>
-                                <p class="font-bold text-on-surface text-[13px]">Messages</p>
-                                <p class="text-[11px] text-on-surface-variant">Chat with candidates</p>
+                                <p class="font-bold text-on-surface text-[13px]">Training</p>
+                                <p class="text-[11px] text-on-surface-variant">Manage videos</p>
                             </div>
                         </button>
                         <button onclick="companyNavTo('company-profile')"
@@ -2670,86 +2670,203 @@
         </div>
 
         <!-- SCREEN: COMPANY PROFILE -->
-        <div id="screen-company-profile" class="screen">
-            <main class="max-w-2xl mx-auto px-5 py-md space-y-4 pb-32">
+                <div id="screen-company-profile" class="screen">
+            <main class="max-w-2xl mx-auto pb-32">
 
-                <!-- Header -->
-                <div class="flex items-center gap-3">
+                <!-- Top bar -->
+                <div class="flex items-center justify-between px-5 pt-4 pb-2">
                     <button onclick="companyNavTo('company-dashboard')" class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center active:scale-90 transition-all">
                         <span class="material-symbols-outlined">arrow_back</span>
                     </button>
-                    <h2 class="font-['Plus_Jakarta_Sans'] text-[20px] font-bold text-on-surface flex-1">Company Profile</h2>
-                    <button onclick="openEditCompanyProfile()" class="h-9 px-3 rounded-full flex items-center gap-1.5 font-semibold text-[13px] active:scale-90 transition-all" style="background:rgba(92,81,160,0.12);color:#5c51a0">
-                        <span class="material-symbols-outlined" style="font-size:16px">edit</span> Edit
+                    <button onclick="openEditCompanyProfile()" class="flex items-center gap-1.5 h-9 px-4 rounded-full font-semibold text-[13px] active:scale-90 transition-all" style="background:rgba(92,81,160,0.12);color:#5c51a0">
+                        <span class="material-symbols-outlined" style="font-size:16px">edit</span> Edit Profile
                     </button>
                 </div>
 
-                <!-- Hero Card -->
-                <div class="relative overflow-hidden rounded-[28px] p-6 text-white" style="background:linear-gradient(135deg,#5c51a0,#4d41df)">
-                    <div class="absolute -right-8 -top-8 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
-                    <div class="relative z-10">
-                        <!-- Logo + Name row -->
-                        <div class="flex items-center gap-4 mb-4">
-                            <div class="relative">
-                                <div class="w-20 h-20 rounded-2xl bg-white/20 border-2 border-white/30 overflow-hidden flex items-center justify-center cursor-pointer" onclick="document.getElementById('co-logo-input').click()">
+                <!-- Hero Banner -->
+                <div class="relative overflow-hidden mx-5 mb-4 rounded-[28px]" style="background:linear-gradient(135deg,#4d41df 0%,#5c51a0 55%,#875041 100%)">
+                    <div class="absolute -right-10 -top-10 w-48 h-48 rounded-full" style="background:rgba(255,255,255,0.07)"></div>
+                    <div class="absolute -left-6 bottom-0 w-32 h-32 rounded-full" style="background:rgba(255,255,255,0.05)"></div>
+                    <div class="relative z-10 p-6">
+                        <div class="flex items-start gap-4 mb-4">
+                            <div class="relative flex-shrink-0">
+                                <div class="w-20 h-20 rounded-2xl border-2 border-white/30 overflow-hidden flex items-center justify-center cursor-pointer" style="background:rgba(255,255,255,0.18)" onclick="document.getElementById('co-logo-input').click()">
                                     <img id="co-logo-img" class="w-full h-full object-cover hidden" alt=""/>
-                                    <span id="co-logo-icon" class="material-symbols-outlined text-white" style="font-size:40px;font-variation-settings:'FILL' 1">business</span>
+                                    <span id="co-logo-icon" class="material-symbols-outlined text-white" style="font-size:38px;font-variation-settings:'FILL' 1">business</span>
                                 </div>
                                 <div class="absolute -bottom-1 -right-1 w-6 h-6 bg-white rounded-full flex items-center justify-center cursor-pointer shadow" onclick="document.getElementById('co-logo-input').click()">
-                                    <span class="material-symbols-outlined text-tertiary" style="font-size:14px">photo_camera</span>
+                                    <span class="material-symbols-outlined text-tertiary" style="font-size:13px">photo_camera</span>
                                 </div>
                                 <input type="file" id="co-logo-input" accept="image/*" class="hidden" onchange="handleCompanyLogoChange(event)"/>
                             </div>
-                            <div class="flex-1 min-w-0">
-                                <p class="text-white/60 text-[11px] font-semibold uppercase tracking-wide mb-0.5">Welcome</p>
-                                <h3 class="font-extrabold text-[22px] leading-tight" id="co-profile-name">Company Name</h3>
-                                <p class="text-white/70 text-[13px] mt-0.5" id="co-profile-industry">Industry</p>
+                            <div class="flex-1 min-w-0 pt-1">
+                                <h3 class="font-['Plus_Jakarta_Sans'] font-extrabold text-[22px] text-white leading-tight" id="co-profile-name">Company Name</h3>
+                                <p class="text-white/70 text-[13px] mt-0.5 font-medium" id="co-profile-tagline">Building the future together</p>
+                                <p class="text-white/55 text-[12px] mt-1" id="co-profile-industry"></p>
                             </div>
                         </div>
-                        <!-- Meta chips -->
+                        <div class="grid grid-cols-3 gap-2 mb-4">
+                            <div class="rounded-2xl p-3 text-center" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.15)">
+                                <p class="text-white font-extrabold text-[18px] leading-none" id="co-stat-jobs-count">0</p>
+                                <p class="text-white/60 text-[10px] font-semibold uppercase tracking-wide mt-1">Jobs Posted</p>
+                            </div>
+                            <div class="rounded-2xl p-3 text-center" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.15)">
+                                <p class="text-white font-extrabold text-[18px] leading-none" id="co-profile-employees">-</p>
+                                <p class="text-white/60 text-[10px] font-semibold uppercase tracking-wide mt-1">Employees</p>
+                            </div>
+                            <div class="rounded-2xl p-3 text-center" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.15)">
+                                <p class="text-white font-extrabold text-[18px] leading-none" id="co-profile-founded">-</p>
+                                <p class="text-white/60 text-[10px] font-semibold uppercase tracking-wide mt-1">Founded</p>
+                            </div>
+                        </div>
                         <div class="flex flex-wrap gap-2">
-                            <span class="flex items-center gap-1 text-white/70 text-[12px]">
-                                <span class="material-symbols-outlined" style="font-size:14px">location_on</span>
+                            <span class="flex items-center gap-1.5 text-white/75 text-[12px] font-medium bg-white/10 px-3 py-1.5 rounded-full">
+                                <span class="material-symbols-outlined" style="font-size:13px;font-variation-settings:'FILL' 1">location_on</span>
                                 <span id="co-profile-location">Location</span>
                             </span>
-                            <span class="flex items-center gap-1 text-white/70 text-[12px]">
-                                <span class="material-symbols-outlined" style="font-size:14px">link</span>
+                            <a id="co-profile-website-link" href="#" target="_blank" onclick="return false" class="flex items-center gap-1.5 text-white/75 text-[12px] font-medium bg-white/10 px-3 py-1.5 rounded-full hover:bg-white/20 transition-all">
+                                <span class="material-symbols-outlined" style="font-size:13px">language</span>
                                 <span id="co-profile-website">Website</span>
-                            </span>
+                            </a>
                         </div>
                     </div>
                 </div>
 
-                <!-- Company Details -->
-                <div class="bg-white rounded-[24px] border border-surface-container-high shadow-sm overflow-hidden">
-                    <div class="px-5 pt-5 pb-3">
-                        <h3 class="font-semibold text-on-surface text-[15px]">Company Details</h3>
-                    </div>
-                    <div class="divide-y divide-surface-container-high">
-                        <div class="px-5 py-3">
-                            <p class="text-[11px] text-outline font-semibold uppercase mb-1">Description</p>
-                            <p class="text-on-surface text-[13px] leading-relaxed" id="co-profile-desc">No description added yet.</p>
-                        </div>
-                        <div class="px-5 py-3 grid grid-cols-2 gap-3">
-                            <div>
-                                <p class="text-[11px] text-outline font-semibold uppercase mb-1">Contact Email</p>
-                                <p class="text-on-surface text-[13px]" id="co-profile-email">—</p>
-                            </div>
-                            <div>
-                                <p class="text-[11px] text-outline font-semibold uppercase mb-1">Phone</p>
-                                <p class="text-on-surface text-[13px]" id="co-profile-phone">—</p>
-                            </div>
-                        </div>
-                        <div class="px-5 py-3 pb-5">
-                            <p class="text-[11px] text-outline font-semibold uppercase mb-1">Address</p>
-                            <p class="text-on-surface text-[13px]" id="co-profile-address">—</p>
-                        </div>
-                    </div>
-                </div>
+                <div class="px-5 space-y-4">
 
-                <button onclick="handleLogout()" class="w-full p-4 text-error font-semibold flex items-center justify-center gap-2 hover:bg-error/5 rounded-xl transition-colors">
-                    <span class="material-symbols-outlined">logout</span> Sign Out
-                </button>
+                    <!-- About -->
+                    <div class="bg-white rounded-[22px] border border-surface-container-high shadow-sm p-5" id="co-about-card">
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:rgba(77,65,223,0.10)">
+                                <span class="material-symbols-outlined text-primary" style="font-size:16px;font-variation-settings:'FILL' 1">info</span>
+                            </div>
+                            <h4 class="font-['Plus_Jakarta_Sans'] font-bold text-on-surface text-[14px]">About Us</h4>
+                        </div>
+                        <p class="text-on-surface text-[13px] leading-relaxed" id="co-profile-desc">No description added yet.</p>
+                    </div>
+
+                    <!-- Contact Info -->
+                    <div class="bg-white rounded-[22px] border border-surface-container-high shadow-sm overflow-hidden" id="co-contact-card">
+                        <div class="flex items-center gap-2 px-5 pt-5 pb-3">
+                            <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:rgba(135,80,65,0.10)">
+                                <span class="material-symbols-outlined text-secondary" style="font-size:16px;font-variation-settings:'FILL' 1">contact_page</span>
+                            </div>
+                            <h4 class="font-['Plus_Jakarta_Sans'] font-bold text-on-surface text-[14px]">Contact Information</h4>
+                        </div>
+                        <div class="divide-y divide-surface-container-high">
+                            <div class="px-5 py-3 flex items-center gap-3">
+                                <span class="material-symbols-outlined text-outline" style="font-size:18px;font-variation-settings:'FILL' 1">mail</span>
+                                <div><p class="text-[10px] text-outline font-bold uppercase tracking-wide">Email</p><p class="text-on-surface text-[13px] font-medium" id="co-profile-email">-</p></div>
+                            </div>
+                            <div class="px-5 py-3 flex items-center gap-3">
+                                <span class="material-symbols-outlined text-outline" style="font-size:18px;font-variation-settings:'FILL' 1">call</span>
+                                <div><p class="text-[10px] text-outline font-bold uppercase tracking-wide">Phone</p><p class="text-on-surface text-[13px] font-medium" id="co-profile-phone">-</p></div>
+                            </div>
+                            <div class="px-5 py-3 pb-5 flex items-center gap-3">
+                                <span class="material-symbols-outlined text-outline" style="font-size:18px;font-variation-settings:'FILL' 1">location_city</span>
+                                <div><p class="text-[10px] text-outline font-bold uppercase tracking-wide">Address</p><p class="text-on-surface text-[13px] font-medium" id="co-profile-address">-</p></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Key Highlights -->
+                    <div class="bg-white rounded-[22px] border border-surface-container-high shadow-sm p-5" id="co-highlights-card">
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:rgba(92,81,160,0.10)">
+                                <span class="material-symbols-outlined text-tertiary" style="font-size:16px;font-variation-settings:'FILL' 1">workspace_premium</span>
+                            </div>
+                            <h4 class="font-['Plus_Jakarta_Sans'] font-bold text-on-surface text-[14px]">Key Highlights</h4>
+                        </div>
+                        <div id="co-profile-highlights-list" class="space-y-2">
+                            <p class="text-[13px] text-on-surface-variant">No highlights added yet.</p>
+                        </div>
+                    </div>
+
+                    <!-- Company Details -->
+                    <div class="bg-white rounded-[22px] border border-surface-container-high shadow-sm overflow-hidden" id="co-details-card">
+                        <div class="flex items-center gap-2 px-5 pt-5 pb-3">
+                            <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:rgba(45,106,79,0.10)">
+                                <span class="material-symbols-outlined" style="font-size:16px;color:#276749;font-variation-settings:'FILL' 1">corporate_fare</span>
+                            </div>
+                            <h4 class="font-['Plus_Jakarta_Sans'] font-bold text-on-surface text-[14px]">Company Details</h4>
+                        </div>
+                        <div class="divide-y divide-surface-container-high">
+                            <div class="px-5 py-3 grid grid-cols-2 gap-3">
+                                <div>
+                                    <p class="text-[10px] text-outline font-bold uppercase tracking-wide mb-1">Company Type</p>
+                                    <p class="text-on-surface text-[13px] font-medium" id="co-profile-type">-</p>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] text-outline font-bold uppercase tracking-wide mb-1">Revenue</p>
+                                    <p class="text-on-surface text-[13px] font-medium" id="co-profile-revenue">-</p>
+                                </div>
+                            </div>
+                            <div class="px-5 py-3 grid grid-cols-2 gap-3">
+                                <div>
+                                    <p class="text-[10px] text-outline font-bold uppercase tracking-wide mb-1">Industry</p>
+                                    <p class="text-on-surface text-[13px] font-medium" id="co-profile-industry-detail">-</p>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] text-outline font-bold uppercase tracking-wide mb-1">Headquarters</p>
+                                    <p class="text-on-surface text-[13px] font-medium" id="co-profile-hq">-</p>
+                                </div>
+                            </div>
+                            <div class="px-5 py-3 pb-5">
+                                <p class="text-[10px] text-outline font-bold uppercase tracking-wide mb-2">Specialisations</p>
+                                <div id="co-profile-specialisations" class="flex flex-wrap gap-1.5"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mission & Vision -->
+                    <div class="bg-white rounded-[22px] border border-surface-container-high shadow-sm p-5" id="co-mission-card">
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:rgba(199,125,255,0.12)">
+                                <span class="material-symbols-outlined" style="font-size:16px;color:#c77dff;font-variation-settings:'FILL' 1">lightbulb</span>
+                            </div>
+                            <h4 class="font-['Plus_Jakarta_Sans'] font-bold text-on-surface text-[14px]">Mission & Vision</h4>
+                        </div>
+                        <p class="text-on-surface text-[13px] leading-relaxed" id="co-profile-mission">No mission statement added yet.</p>
+                    </div>
+
+                    <!-- Social Links -->
+                    <div class="bg-white rounded-[22px] border border-surface-container-high shadow-sm p-5" id="co-social-card">
+                        <div class="flex items-center gap-2 mb-3">
+                            <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:rgba(77,65,223,0.10)">
+                                <span class="material-symbols-outlined text-primary" style="font-size:16px;font-variation-settings:'FILL' 1">share</span>
+                            </div>
+                            <h4 class="font-['Plus_Jakarta_Sans'] font-bold text-on-surface text-[14px]">Social & Links</h4>
+                        </div>
+                        <div class="space-y-2" id="co-social-links">
+                            <p class="text-[13px] text-on-surface-variant">No social links added yet.</p>
+                        </div>
+                    </div>
+
+                    <!-- Active Jobs -->
+                    <div class="bg-white rounded-[22px] border border-surface-container-high shadow-sm p-5" id="co-jobs-preview-card">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:rgba(135,80,65,0.10)">
+                                    <span class="material-symbols-outlined text-secondary" style="font-size:16px;font-variation-settings:'FILL' 1">work</span>
+                                </div>
+                                <h4 class="font-['Plus_Jakarta_Sans'] font-bold text-on-surface text-[14px]">Active Job Postings</h4>
+                            </div>
+                            <button onclick="companyNavTo('company-post-job')" class="text-[12px] font-semibold text-primary flex items-center gap-0.5 active:scale-95 transition-all">
+                                Post Job <span class="material-symbols-outlined" style="font-size:14px">chevron_right</span>
+                            </button>
+                        </div>
+                        <div id="co-profile-jobs-list" class="space-y-2">
+                            <p class="text-[13px] text-on-surface-variant">No active jobs yet.</p>
+                        </div>
+                    </div>
+
+                    <!-- Sign Out -->
+                    <button onclick="handleLogout()" class="w-full p-4 text-error font-semibold flex items-center justify-center gap-2 hover:bg-error/5 rounded-xl transition-colors">
+                        <span class="material-symbols-outlined">logout</span> Sign Out
+                    </button>
+
+
+                </div>
             </main>
         </div>
 
@@ -2766,6 +2883,32 @@
                     <div class="space-y-1">
                         <label class="font-label-caps text-label-caps text-on-surface-variant px-1">COMPANY NAME</label>
                         <input type="text" id="ecp-name" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-5 transition-all" data-i18n-placeholder="companyNamePlaceholder" placeholder="Acme Pvt. Ltd."/>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">TAGLINE</label>
+                        <input type="text" id="ecp-tagline" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-5 transition-all" placeholder="e.g. Empowering Women, Building Futures"/>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="space-y-1">
+                            <label class="font-label-caps text-label-caps text-on-surface-variant px-1">EMPLOYEES</label>
+                            <select id="ecp-employees" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-5 transition-all">
+                                <option value="">Select range</option>
+                                <option>1-10</option><option>11-50</option><option>51-200</option>
+                                <option>201-500</option><option>500+</option>
+                            </select>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="font-label-caps text-label-caps text-on-surface-variant px-1">FOUNDED YEAR</label>
+                            <input type="number" id="ecp-founded" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-5 transition-all" placeholder="e.g. 2018" min="1900" max="2099"/>
+                        </div>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">KEY HIGHLIGHTS</label>
+                        <textarea id="ecp-highlights" rows="3" class="w-full bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-5 py-3 transition-all resize-none text-[14px]" placeholder="One highlight per line"></textarea>
+                        <p class="text-[11px] text-on-surface-variant px-1">Enter one highlight per line</p>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">INDUSTRY</label>
                     </div>
                     <div class="space-y-1">
                         <label class="font-label-caps text-label-caps text-on-surface-variant px-1">INDUSTRY</label>
@@ -2801,13 +2944,209 @@
                         <label class="font-label-caps text-label-caps text-on-surface-variant px-1">PHONE NUMBER</label>
                         <input type="tel" id="ecp-phone" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-5 transition-all" placeholder="+91 XXXXX XXXXX"/>
                     </div>
-                    <button type="submit" class="w-full h-14 rounded-xl text-white font-bold text-[15px] active:scale-95 transition-all shadow-lg" style="background:linear-gradient(135deg,#5c51a0,#4d41df)">
+                                        <div class="space-y-1">
+                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">COMPANY TYPE</label>
+                        <select id="ecp-type" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-5 transition-all">
+                            <option value="">Select type</option>
+                            <option>Private Limited</option><option>Public Limited</option>
+                            <option>Partnership</option><option>Sole Proprietorship</option>
+                            <option>NGO / Non-profit</option><option>Startup</option><option>Government</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">ANNUAL REVENUE</label>
+                        <select id="ecp-revenue" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-5 transition-all">
+                            <option value="">Prefer not to say</option>
+                            <option>Under 10 Lakhs</option><option>10L - 1 Crore</option>
+                            <option>1Cr - 10 Crore</option><option>10Cr - 100 Crore</option><option>100 Crore+</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">HEADQUARTERS</label>
+                        <input type="text" id="ecp-hq" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-5 transition-all" placeholder="e.g. Mumbai, Maharashtra"/>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">SPECIALISATIONS</label>
+                        <input type="text" id="ecp-specialisations" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-5 transition-all" placeholder="e.g. AI, Healthcare, Education (comma separated)"/>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">MISSION STATEMENT</label>
+                        <textarea id="ecp-mission" rows="2" class="w-full bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-5 py-3 transition-all resize-none text-[14px]" placeholder="Our mission is to..."></textarea>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">LINKEDIN URL</label>
+                        <input type="url" id="ecp-linkedin" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-5 transition-all" placeholder="https://linkedin.com/company/..."/>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">TWITTER / X URL</label>
+                        <input type="url" id="ecp-twitter" class="w-full h-14 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-5 transition-all" placeholder="https://twitter.com/..."/>
+                    </div>
+<button type="submit" class="w-full h-14 rounded-xl text-white font-bold text-[15px] active:scale-95 transition-all shadow-lg" style="background:linear-gradient(135deg,#5c51a0,#4d41df)">
                         Save Changes
                     </button>
                 </form>
             </main>
         </div>
 
+
+        <!-- SCREEN: COMPANY TRAINING -->
+        <div id="screen-company-training" class="screen">
+                        <main class="max-w-2xl mx-auto pb-32 pt-1">
+                <!-- Hero Banner -->
+                <div class="relative overflow-hidden mx-5 mt-2 mb-3 rounded-[24px] p-5" style="background:linear-gradient(135deg,#4d41df 0%,#5c51a0 60%,#875041 100%)">
+                    <div class="absolute -right-8 -top-8 w-40 h-40 rounded-full" style="background:rgba(255,255,255,0.08)"></div>
+                    <div class="absolute -left-4 -bottom-6 w-28 h-28 rounded-full" style="background:rgba(255,255,255,0.05)"></div>
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="material-symbols-outlined text-white/80" style="font-size:18px;font-variation-settings:'FILL' 1">play_lesson</span>
+                            <p class="text-[11px] font-bold tracking-[0.12em] uppercase text-white/70">Company Training Hub</p>
+                        </div>
+                        <h2 class="font-['Plus_Jakarta_Sans'] text-[22px] font-extrabold text-white leading-tight mb-3">Train Your Team,<br/>Build Excellence.</h2>
+                        <div class="flex items-center gap-3">
+                            <div class="flex-1 rounded-2xl p-3 border border-white/20" style="background:rgba(255,255,255,0.12)">
+                                <p class="text-[10px] font-bold uppercase tracking-wide text-white/70">Total Videos</p>
+                                <p class="text-[24px] font-extrabold text-white leading-none" id="training-stat-total">0</p>
+                            </div>
+                            <div class="flex-1 rounded-2xl p-3 border border-white/20" style="background:rgba(255,255,255,0.12)">
+                                <p class="text-[10px] font-bold uppercase tracking-wide text-white/70">Public</p>
+                                <p class="text-[24px] font-extrabold text-white leading-none" id="training-stat-public">0</p>
+                            </div>
+                            <div class="flex-1 rounded-2xl p-3 border border-white/20" style="background:rgba(255,255,255,0.12)">
+                                <p class="text-[10px] font-bold uppercase tracking-wide text-white/70">Private</p>
+                                <p class="text-[24px] font-extrabold text-white leading-none" id="training-stat-private">0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Empty state -->
+                <div id="training-empty-state" class="hidden flex-col items-center justify-center py-12 text-center px-5">
+                    <div class="w-24 h-24 rounded-[28px] flex items-center justify-center mb-4" style="background:linear-gradient(135deg,rgba(77,65,223,0.15),rgba(92,81,160,0.10))">
+                        <span class="material-symbols-outlined text-primary" style="font-size:44px;font-variation-settings:'FILL' 1">video_library</span>
+                    </div>
+                    <p class="font-['Plus_Jakarta_Sans'] font-bold text-on-surface text-[18px] mb-1">No videos yet</p>
+                    <p class="text-[13px] text-on-surface-variant mb-6 max-w-xs">Upload your first training video to start building your team's knowledge hub.</p>
+                    <button onclick="openTrainingUpload()" class="flex items-center gap-2 px-7 py-3.5 rounded-2xl text-white font-bold text-[14px] active:scale-95 transition-all shadow-lg" style="background:linear-gradient(135deg,#4d41df,#5c51a0)">
+                        <span class="material-symbols-outlined" style="font-size:20px;font-variation-settings:'FILL' 1">add_circle</span> Upload First Video
+                    </button>
+                </div>
+
+                <!-- Video sections -->
+                <div id="training-list" class="px-5 space-y-6"></div>
+
+            </main>
+
+            <!-- Floating + button (shown after first upload) -->
+            <button id="training-fab" onclick="openTrainingUpload()"
+                class="hidden fixed bottom-28 right-5 w-14 h-14 rounded-full text-white shadow-xl flex items-center justify-center active:scale-90 transition-all z-40"
+                style="background:linear-gradient(135deg,#4d41df,#5c51a0)">
+                <span class="material-symbols-outlined" style="font-size:28px">add</span>
+            </button>
+
+            <!-- Upload Modal -->
+                        <!-- Video Player Modal -->
+            <div id="training-player-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,0.85)" onclick="closeTrainingPlayer(event)">
+                <div class="w-full max-w-2xl rounded-[24px] overflow-hidden" style="background:#0f0e17" id="training-player-card">
+                    <!-- Header -->
+                    <div class="flex items-center justify-between px-5 py-4">
+                        <div style="flex:1;min-width:0">
+                            <p class="font-bold text-white text-[15px] truncate" id="player-title">Video</p>
+                            <p class="text-[12px] mt-0.5" style="color:rgba(255,255,255,0.55)" id="player-meta"></p>
+                        </div>
+                        <button onclick="closeTrainingPlayer()" class="w-9 h-9 rounded-full flex items-center justify-center ml-3 flex-shrink-0 active:scale-90 transition-all" style="background:rgba(255,255,255,0.12)">
+                            <span class="material-symbols-outlined text-white" style="font-size:20px">close</span>
+                        </button>
+                    </div>
+                    <!-- Video -->
+                    <div style="width:100%;background:#000;position:relative">
+                        <video id="training-player-video"
+                            controls
+                            playsinline
+                            style="width:100%;max-height:60vh;display:block;background:#000">
+                        </video>
+                        <!-- No-file fallback -->
+                        <div id="player-no-file" class="hidden" style="width:100%;height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(77,65,223,0.10)">
+                            <span class="material-symbols-outlined" style="font-size:56px;color:rgba(139,131,255,0.7);font-variation-settings:'FILL' 1">videocam_off</span>
+                            <p style="font-size:13px;color:rgba(255,255,255,0.5);font-weight:600">Video file not available in this session</p>
+                            <p style="font-size:11px;color:rgba(255,255,255,0.35);text-align:center;max-width:260px">Videos are stored temporarily. Re-upload to watch again.</p>
+                        </div>
+                    </div>
+                    <!-- Footer info -->
+                    <div class="px-5 py-4 flex items-center gap-3">
+                        <span id="player-privacy-badge" class="text-[11px] font-bold px-3 py-1 rounded-full"></span>
+                        <span id="player-date" style="font-size:11px;color:rgba(255,255,255,0.45)"></span>
+                        <span id="player-size" style="font-size:11px;color:rgba(255,255,255,0.45)"></span>
+                    </div>
+                </div>
+            </div>
+            <div id="training-upload-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,0.6);overflow-y:auto">
+                <div class="w-full max-w-lg bg-white rounded-[28px] p-6 pb-8 space-y-4 overflow-y-auto my-auto" style="max-height:88vh" id="training-modal-card">
+                    <div class="flex items-center justify-between mb-1">
+                        <h3 class="font-['Plus_Jakarta_Sans'] text-[18px] font-bold text-on-surface">Upload Training Video</h3>
+                        <button onclick="closeTrainingUpload()" class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center active:scale-90 transition-all">
+                            <span class="material-symbols-outlined text-on-surface-variant" style="font-size:18px">close</span>
+                        </button>
+                    </div>
+
+                    <!-- Title -->
+                    <div class="space-y-1">
+                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">VIDEO TITLE</label>
+                        <input id="tv-title" type="text" placeholder="e.g. Onboarding Guide"
+                            class="w-full h-12 bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-4 transition-all text-[14px]"/>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="space-y-1">
+                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">DESCRIPTION (OPTIONAL)</label>
+                        <textarea id="tv-desc" rows="2" placeholder="What will employees learn?"
+                            class="w-full bg-surface-container-low border-transparent focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-4 py-3 transition-all resize-none text-[14px]"></textarea>
+                    </div>
+
+                    <!-- File / Camera -->
+                    <div class="space-y-1">
+                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">VIDEO FILE</label>
+                        <div class="flex gap-2">
+                            <label class="flex-1 h-12 bg-surface-container-low rounded-xl flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all border-2 border-dashed border-outline-variant hover:border-primary">
+                                <span class="material-symbols-outlined text-primary" style="font-size:18px">upload_file</span>
+                                <span class="text-[13px] font-semibold text-on-surface-variant" id="tv-file-label">Choose file</span>
+                                <input id="tv-file" type="file" accept="video/*" class="hidden" onchange="handleTrainingFileChange(event)"/>
+                            </label>
+                            <label for="tv-camera" class="w-12 h-12 bg-surface-container-low rounded-xl flex items-center justify-center cursor-pointer active:scale-95 transition-all border-2 border-dashed border-outline-variant hover:border-primary">
+                                <span class="material-symbols-outlined text-primary" style="font-size:20px">videocam</span>
+                                <input id="tv-camera" type="file" accept="video/*" capture="environment" class="hidden" onchange="handleTrainingFileChange(event)"/>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Privacy -->
+                    <div class="space-y-1">
+                        <label class="font-label-caps text-label-caps text-on-surface-variant px-1">VISIBILITY</label>
+                        <div class="flex gap-2">
+                            <button id="tv-public-btn" onclick="setTrainingPrivacy('public')"
+                                class="flex-1 h-11 rounded-xl flex items-center justify-center gap-2 font-semibold text-[13px] transition-all active:scale-95 border-2"
+                                style="background:rgba(77,65,223,0.12);border-color:#4d41df;color:#4d41df">
+                                <span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1">public</span> Public
+                            </button>
+                            <button id="tv-private-btn" onclick="setTrainingPrivacy('private')"
+                                class="flex-1 h-11 rounded-xl flex items-center justify-center gap-2 font-semibold text-[13px] transition-all active:scale-95 border-2"
+                                style="background:transparent;border-color:#c7c4d8;color:#777587">
+                                <span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1">lock</span> Private
+                            </button>
+                        </div>
+                        <p class="text-[11px] text-on-surface-variant px-1" id="tv-privacy-hint">Public: visible to everyone. Private: visible only to hired users.</p>
+                    </div>
+
+                    <div id="tv-error" class="hidden text-error text-[12px] font-semibold px-1"></div>
+
+                    <button onclick="submitTrainingVideo()"
+                        class="w-full h-12 rounded-xl text-white font-bold text-[14px] active:scale-95 transition-all shadow-md flex items-center justify-center gap-2"
+                        style="background:linear-gradient(135deg,#4d41df,#5c51a0)" id="tv-submit-btn">
+                        <span class="material-symbols-outlined" style="font-size:18px;font-variation-settings:'FILL' 1">upload</span>
+                        Upload Video
+                    </button>
+                </div>
+            </div>
+        </div>
         <!-- COMPANY BOTTOM NAVIGATION -->
         <nav id="company-bottom-nav"
             class="fixed bottom-0 left-0 w-full z-50 bg-white/90 backdrop-blur-2xl border-t border-indigo-100/20 shadow-[0_-8px_30px_rgb(108,99,255,0.08)] rounded-t-[32px] flex justify-around items-center px-4 pt-3 pb-8 hidden">
@@ -2826,6 +3165,7 @@
                 <span class="material-symbols-outlined co-nav-icon">assignment</span>
                 <span class="text-[11px] font-semibold font-['Plus_Jakarta_Sans']">Applications</span>
             </div>
+            
             <div class="co-nav-item flex flex-col items-center justify-center cursor-pointer transition-all active:scale-95 text-slate-400"
                 data-co-target="company-messages" onclick="companyNavTo('company-messages')">
                 <span class="material-symbols-outlined co-nav-icon">chat</span>
