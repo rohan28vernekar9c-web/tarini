@@ -34,7 +34,7 @@ function navigateTo(screenId) {
         targetScreen.classList.add('active');
         updateBottomNav(screenId);
         if (screenId === 'profile') loadProfileScreen();
-        if (screenId === 'dashboard') loadDashboardEarnings();
+        if (screenId === 'dashboard') { loadDashboardEarnings(); setTimeout(searchCompanies, 200); }
         if (screenId === 'notifications') loadNotificationsScreen();
         if (screenId === 'jobs') initJobsPage();
         if (screenId === 'applications') loadApplicationsScreen();
@@ -62,7 +62,7 @@ function navigateToWithOutHistory(screenId) {
         targetScreen.classList.add('active');
         updateBottomNav(screenId);
         if (screenId === 'profile') loadProfileScreen();
-        if (screenId === 'dashboard') loadDashboardEarnings();
+        if (screenId === 'dashboard') { loadDashboardEarnings(); setTimeout(searchCompanies, 200); }
         if (screenId === 'notifications') loadNotificationsScreen();
         if (screenId === 'jobs') initJobsPage();
         if (screenId === 'applications') loadApplicationsScreen();
@@ -4078,3 +4078,264 @@ function viewCompanyTraining(companyUid) {
     return all.filter(v => v.privacy === 'public' || hired);
 }
 window.viewCompanyTraining = viewCompanyTraining;
+
+// ============================================================
+// COMPANY SEARCH (Women Dashboard)
+// ============================================================
+
+
+// ============================================================
+// COMPANY SEARCH â€” Women Dashboard
+// ============================================================
+
+// In-memory cache so Firestore is only queried once per session
+let _companiesCache = null;
+
+async function _getAllRegisteredCompanies() {
+    if (_companiesCache !== null) return _companiesCache;
+
+    const companies = [];
+    const seen = new Set();
+
+    // 1. Firestore: query all users with role=company
+    try {
+        const snap = await db.collection('users').where('role', '==', 'company').get();
+        snap.forEach(doc => {
+            const d = doc.data();
+            if (d.name && !seen.has(d.name)) {
+                seen.add(d.name);
+                // Merge with companyProfileData if available in localStorage
+                const cpKey = `companyProfileData_${doc.id}`;
+                const cp = JSON.parse(localStorage.getItem(cpKey) || '{}');
+                companies.push({
+                    uid:          doc.id,
+                    name:         cp.name         || d.name         || '',
+                    tagline:      cp.tagline       || d.tagline      || '',
+                    industry:     cp.industry      || d.industry     || '',
+                    location:     cp.location      || d.address      || d.location || '',
+                    description:  cp.description   || d.description  || '',
+                    email:        cp.email         || d.email        || '',
+                    website:      cp.website       || d.website      || '',
+                    employees:    cp.employees     || d.employees    || '',
+                    founded:      cp.founded       || d.founded      || '',
+                    logo:         cp.logo          || d.logo         || '',
+                    type:         cp.type          || d.type         || '',
+                    mission:      cp.mission       || d.mission      || '',
+                    linkedin:     cp.linkedin      || d.linkedin     || '',
+                    specialisations: cp.specialisations || d.specialisations || '',
+                });
+            }
+        });
+    } catch(e) {
+        console.warn('Firestore company fetch failed, falling back to localStorage', e);
+    }
+
+    // 2. Fallback: localStorage companyProfileData_* (covers offline / same-device)
+    Object.keys(localStorage).forEach(key => {
+        if (!key.startsWith('companyProfileData_')) return;
+        try {
+            const d = JSON.parse(localStorage.getItem(key) || '{}');
+            if (d.name && !seen.has(d.name)) {
+                seen.add(d.name);
+                companies.push(d);
+            }
+        } catch(e) {}
+    });
+
+    // 3. Fallback: profileData_* with role=company
+    Object.keys(localStorage).forEach(key => {
+        if (!key.startsWith('profileData_')) return;
+        try {
+            const d = JSON.parse(localStorage.getItem(key) || '{}');
+            if (d.role === 'company' && d.name && !seen.has(d.name)) {
+                seen.add(d.name);
+                companies.push({
+                    name: d.name, industry: d.industry || '',
+                    location: d.address || d.location || '',
+                    description: d.description || '', email: d.email || '',
+                    website: d.website || '', tagline: d.tagline || '',
+                    employees: d.employees || '', founded: d.founded || '', logo: '',
+                });
+            }
+        } catch(e) {}
+    });
+
+    _companiesCache = companies;
+    return companies;
+}
+
+async function searchCompanies() {
+    const q       = (document.getElementById('company-search-input')?.value || '').toLowerCase().trim();
+    const results = document.getElementById('company-search-results');
+    const empty   = document.getElementById('company-search-empty');
+    const countEl = document.getElementById('company-search-count');
+    if (!results) return;
+
+    // Show loading skeleton
+    results.innerHTML = '<div style="display:flex;align-items:center;gap:10px;padding:16px;border-radius:16px;background:rgba(77,65,223,0.05)">' +
+        '<span class="material-symbols-outlined text-primary" style="font-size:20px;animation:spin 1s linear infinite">progress_activity</span>' +
+        '<p style="font-size:13px;color:#777587">Searching companies...</p></div>';
+    empty.classList.add('hidden'); empty.style.display = 'none';
+
+    const all = await _getAllRegisteredCompanies();
+
+    const filtered = q
+        ? all.filter(c => (c.name + ' ' + c.industry + ' ' + c.location + ' ' + c.description + ' ' + c.tagline + ' ' + c.specialisations)
+            .toLowerCase().includes(q))
+        : all;
+
+    if (countEl) countEl.textContent = filtered.length > 0 ? filtered.length + (filtered.length === 1 ? ' company' : ' companies') : '';
+
+    if (filtered.length === 0) {
+        results.innerHTML = '';
+        empty.classList.remove('hidden'); empty.style.display = 'flex';
+        return;
+    }
+    empty.classList.add('hidden'); empty.style.display = 'none';
+
+    const _d     = document.documentElement.classList.contains('dark-theme');
+    const cardBg = _d ? '#1c1b2e' : '#ffffff';
+    const border = _d ? '#2a2840' : '#eae6f3';
+    const titleC = _d ? '#e8e6f4' : '#1b1b24';
+    const subC   = _d ? '#9e9bb8' : '#777587';
+    const shadow = _d ? '0 4px 16px -4px rgba(0,0,0,0.45)' : '0 4px 16px -4px rgba(77,65,223,0.10)';
+    const grads  = [
+        'linear-gradient(135deg,#4d41df,#675df9)',
+        'linear-gradient(135deg,#875041,#feb5a2)',
+        'linear-gradient(135deg,#5c51a0,#c8bfff)',
+        'linear-gradient(135deg,#276749,#74c69d)',
+        'linear-gradient(135deg,#c77dff,#7b2d8b)',
+    ];
+
+    results.innerHTML = filtered.map((c, i) => {
+        const initials  = c.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+        const grad      = grads[i % grads.length];
+        const desc      = c.description || c.tagline || 'No description available.';
+        const shortDesc = desc.length > 100 ? desc.slice(0, 100) + '...' : desc;
+        const chips     = [c.industry, c.type, c.employees ? c.employees + ' employees' : '', c.founded ? 'Est. ' + c.founded : ''].filter(Boolean);
+        const safeName  = c.name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+        const logoHtml = c.logo
+            ? `<img src="${c.logo}" alt="${c.name}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+               <div style="display:none;width:100%;height:100%;background:${grad};align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff">${initials}</div>`
+            : `<div style="width:100%;height:100%;background:${grad};display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff">${initials}</div>`;
+
+        return `
+        <div style="background:${cardBg};border-radius:22px;overflow:hidden;border:1px solid ${border};box-shadow:${shadow};transition:transform 0.15s,box-shadow 0.15s"
+            onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='${_d ? '0 8px 24px -4px rgba(0,0,0,0.6)' : '0 8px 24px -4px rgba(77,65,223,0.16)'}'"
+            onmouseleave="this.style.transform='';this.style.boxShadow='${shadow}'">
+            <!-- Card header strip -->
+            <div style="height:6px;background:${grad}"></div>
+            <div style="padding:16px">
+                <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:10px">
+                    <!-- Logo -->
+                    <div style="width:52px;height:52px;border-radius:14px;overflow:hidden;flex-shrink:0;border:2px solid ${border}">${logoHtml}</div>
+                    <!-- Name + location -->
+                    <div style="flex:1;min-width:0">
+                        <p style="font-size:15px;font-weight:800;color:${titleC};line-height:1.2;font-family:'Plus Jakarta Sans',sans-serif">${c.name}</p>
+                        ${c.tagline ? `<p style="font-size:12px;color:#4d41df;font-weight:600;margin-top:1px">${c.tagline}</p>` : ''}
+                        ${c.location ? `<p style="font-size:11px;color:${subC};margin-top:3px;display:flex;align-items:center;gap:3px"><span class="material-symbols-outlined" style="font-size:12px;font-variation-settings:'FILL' 1">location_on</span>${c.location}</p>` : ''}
+                    </div>
+                </div>
+                <!-- Chips -->
+                ${chips.length ? `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px">${chips.map(ch => `<span style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;background:rgba(77,65,223,0.10);color:#4d41df">${ch}</span>`).join('')}</div>` : ''}
+                <!-- Description -->
+                <p style="font-size:12px;color:${subC};line-height:1.6;margin-bottom:12px">${shortDesc}</p>
+                <!-- Actions -->
+                <div style="display:flex;gap:8px">
+                    <button onclick="viewCompanyDetails('${safeName}')"
+                        style="flex:1;height:38px;border-radius:12px;border:1.5px solid rgba(77,65,223,0.3);background:transparent;color:#4d41df;font-size:12px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;display:flex;align-items:center;justify-content:center;gap:5px;transition:background 0.15s"
+                        onmouseenter="this.style.background='rgba(77,65,223,0.07)'" onmouseleave="this.style.background='transparent'">
+                        <span class="material-symbols-outlined" style="font-size:15px;font-variation-settings:'FILL' 1">info</span>View Details
+                    </button>
+                    <button onclick="applyToCompany('${safeName}')"
+                        style="flex:1;height:38px;border-radius:12px;border:none;background:linear-gradient(135deg,#4d41df,#5c51a0);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;display:flex;align-items:center;justify-content:center;gap:5px;transition:opacity 0.15s"
+                        onmouseenter="this.style.opacity='0.88'" onmouseleave="this.style.opacity='1'">
+                        <span class="material-symbols-outlined" style="font-size:15px;font-variation-settings:'FILL' 1">send</span>Apply
+                    </button>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+window.searchCompanies = searchCompanies;
+
+function viewCompanyDetails(name) {
+    _getAllRegisteredCompanies().then(all => {
+        const c = all.find(x => x.name === name);
+        if (!c) return;
+        // Build a detail modal
+        const _d = document.documentElement.classList.contains('dark-theme');
+        const bg = _d ? '#1c1b2e' : '#ffffff';
+        const titleC = _d ? '#e8e6f4' : '#1b1b24';
+        const subC   = _d ? '#9e9bb8' : '#777587';
+
+        let existing = document.getElementById('co-detail-modal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'co-detail-modal';
+        modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto';
+        modal.onclick = e => { if (e.target === modal) modal.remove(); };
+
+        const rows = [
+            c.industry    ? ['business_center', 'Industry',    c.industry]    : null,
+            c.type        ? ['corporate_fare',  'Type',        c.type]        : null,
+            c.location    ? ['location_on',     'Location',    c.location]    : null,
+            c.employees   ? ['group',           'Employees',   c.employees]   : null,
+            c.founded     ? ['calendar_today',  'Founded',     c.founded]     : null,
+            c.email       ? ['mail',            'Email',       c.email]       : null,
+            c.website     ? ['language',        'Website',     `<a href="${c.website.startsWith('http') ? c.website : 'https://' + c.website}" target="_blank" style="color:#4d41df;font-weight:600">${c.website}</a>`] : null,
+            c.linkedin    ? ['group',           'LinkedIn',    `<a href="${c.linkedin}" target="_blank" style="color:#0077b5;font-weight:600">View Profile</a>`] : null,
+        ].filter(Boolean);
+
+        const chips = (c.specialisations || '').split(',').map(s => s.trim()).filter(Boolean);
+
+        modal.innerHTML = `
+        <div style="background:${bg};border-radius:28px;width:100%;max-width:480px;overflow:hidden;box-shadow:0 24px 64px -12px rgba(0,0,0,0.5)">
+            <div style="height:8px;background:linear-gradient(135deg,#4d41df,#5c51a0,#875041)"></div>
+            <div style="padding:20px 20px 0">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px">
+                    <div style="display:flex;align-items:center;gap:12px">
+                        <div style="width:56px;height:56px;border-radius:16px;overflow:hidden;flex-shrink:0;background:linear-gradient(135deg,#4d41df,#675df9);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff">
+                            ${c.logo ? `<img src="${c.logo}" style="width:100%;height:100%;object-fit:cover"/>` : c.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
+                        </div>
+                        <div>
+                            <p style="font-size:18px;font-weight:800;color:${titleC};font-family:'Plus Jakarta Sans',sans-serif">${c.name}</p>
+                            ${c.tagline ? `<p style="font-size:12px;color:#4d41df;font-weight:600">${c.tagline}</p>` : ''}
+                        </div>
+                    </div>
+                    <button onclick="document.getElementById('co-detail-modal').remove()" style="width:32px;height:32px;border-radius:50%;border:none;background:rgba(119,117,135,0.12);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                        <span class="material-symbols-outlined" style="font-size:18px;color:${subC}">close</span>
+                    </button>
+                </div>
+                ${c.description ? `<p style="font-size:13px;color:${subC};line-height:1.6;margin-bottom:14px">${c.description}</p>` : ''}
+                ${c.mission ? `<div style="background:rgba(77,65,223,0.07);border-radius:14px;padding:12px;margin-bottom:14px"><p style="font-size:11px;font-weight:700;color:#4d41df;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px">Mission</p><p style="font-size:13px;color:${subC};line-height:1.5">${c.mission}</p></div>` : ''}
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+                    ${rows.map(([icon, label, val]) => `
+                    <div style="background:rgba(77,65,223,0.05);border-radius:12px;padding:10px">
+                        <p style="font-size:10px;font-weight:700;color:#777587;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:2px">${label}</p>
+                        <p style="font-size:13px;font-weight:600;color:${titleC}">${val}</p>
+                    </div>`).join('')}
+                </div>
+                ${chips.length ? `<div style="margin-bottom:14px"><p style="font-size:11px;font-weight:700;color:#777587;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">Specialisations</p><div style="display:flex;flex-wrap:wrap;gap:5px">${chips.map(s=>`<span style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;background:rgba(77,65,223,0.10);color:#4d41df">${s}</span>`).join('')}</div></div>` : ''}
+            </div>
+            <div style="padding:16px;display:flex;gap:8px">
+                <button onclick="document.getElementById('co-detail-modal').remove()" style="flex:1;height:44px;border-radius:14px;border:1.5px solid rgba(77,65,223,0.25);background:transparent;color:#4d41df;font-size:13px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif">Close</button>
+                <button onclick="applyToCompany('${c.name.replace(/'/g,"\\'")}');document.getElementById('co-detail-modal').remove()" style="flex:2;height:44px;border-radius:14px;border:none;background:linear-gradient(135deg,#4d41df,#5c51a0);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px"><span class="material-symbols-outlined" style="font-size:16px;font-variation-settings:'FILL' 1">send</span>Apply to Jobs</button>
+            </div>
+        </div>`;
+        document.body.appendChild(modal);
+    });
+}
+window.viewCompanyDetails = viewCompanyDetails;
+
+function applyToCompany(name) {
+    navigateTo('jobs');
+    setTimeout(() => {
+        const input = document.getElementById('job-search-input');
+        if (input) { input.value = name; applyJobFilters(); }
+    }, 300);
+}
+window.applyToCompany = applyToCompany;
+
