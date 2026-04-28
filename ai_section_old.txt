@@ -1,0 +1,91 @@
+﻿// ============================================================
+// AI ASSISTANT — sendAIMessage
+// ============================================================
+
+const _aiResponses = [
+    "Great question! Based on your profile, I'd recommend exploring roles in your skill area. Have you checked the Jobs section?",
+    "You're doing amazing! Try completing your profile to get better job matches.",
+    "I suggest enrolling in a Skill Hub course to boost your chances with employers.",
+    "Your skills look strong! Apply to at least 3 jobs this week to increase your chances.",
+    "Have you tried the AI Job Match feature? It finds jobs tailored to your skills automatically.",
+    "Tip: A complete profile gets 3x more visibility to companies on Tarini.",
+    "Consider listing a product in the Marketplace to earn extra income while job hunting.",
+    "Keep going! Every application brings you one step closer to your dream job.",
+    "I noticed you haven't enrolled in any courses yet. Skill Hub has free courses to get you started!",
+    "Your journey matters. Tarini is here to support every step of your empowerment.",
+];
+
+function sendAIMessage() {
+    const input = document.getElementById('ai-chat-input');
+    const container = document.getElementById('ai-chat-container');
+    if (!input || !container) return;
+
+    const text = input.value.trim();
+    if (!text) return;
+
+    const _dark = document.documentElement.classList.contains('dark-theme');
+    const userBg = _dark ? '#2a2840' : '#4d41df';
+    const botBg  = _dark ? '#252438' : '#f0ecf9';
+    const botTxt = _dark ? '#e8e6f4' : '#1b1b24';
+
+    // Append user message
+    const userMsg = document.createElement('div');
+    userMsg.style.cssText = 'display:flex;justify-content:flex-end';
+    userMsg.innerHTML = `<div style="background:${userBg};color:#fff;border-radius:18px;border-bottom-right-radius:4px;padding:12px 16px;max-width:75%;font-size:14px;line-height:1.5">${text}</div>`;
+    container.appendChild(userMsg);
+
+    input.value = '';
+    container.scrollTop = container.scrollHeight;
+
+    // Typing indicator
+    const typing = document.createElement('div');
+    typing.id = 'ai-typing';
+    typing.style.cssText = 'display:flex;align-items:center;gap:8px';
+    typing.innerHTML = `
+        <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#4d41df,#5c51a0);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <span class="material-symbols-outlined" style="font-size:16px;color:#fff;font-variation-settings:'FILL' 1">smart_toy</span>
+        </div>
+        <div style="background:${botBg};border-radius:18px;border-top-left-radius:4px;padding:12px 16px">
+            <div style="display:flex;gap:4px;align-items:center">
+                <span style="width:7px;height:7px;border-radius:50%;background:#4d41df;animation:typingDot 1.2s infinite 0s"></span>
+                <span style="width:7px;height:7px;border-radius:50%;background:#4d41df;animation:typingDot 1.2s infinite 0.2s"></span>
+                <span style="width:7px;height:7px;border-radius:50%;background:#4d41df;animation:typingDot 1.2s infinite 0.4s"></span>
+            </div>
+        </div>`;
+    container.appendChild(typing);
+    container.scrollTop = container.scrollHeight;
+
+    // Inject typing animation style once
+    if (!document.getElementById('typing-dot-style')) {
+        const s = document.createElement('style');
+        s.id = 'typing-dot-style';
+        s.textContent = '@keyframes typingDot{0%,80%,100%{transform:scale(0.6);opacity:0.4}40%{transform:scale(1);opacity:1}}';
+        document.head.appendChild(s);
+    }
+
+    // Pick a response
+    const lower = text.toLowerCase();
+    let reply = _aiResponses[Math.floor(Math.random() * _aiResponses.length)];
+    if (lower.includes('job') || lower.includes('work'))       reply = "I'd recommend checking the Jobs section and using AI Match to find roles that fit your skills perfectly!";
+    else if (lower.includes('skill') || lower.includes('learn')) reply = "Skill Hub has free and paid courses in Design, Finance, Communication and more. Start with a Beginner course today!";
+    else if (lower.includes('shop') || lower.includes('sell'))   reply = "The Marketplace lets you list handmade products and earn income. Go to My Shop and add your first product!";
+    else if (lower.includes('reward') || lower.includes('coin')) reply = "You earn Tarini Coins by logging in daily, applying to jobs, enrolling in courses, and listing products. Check the Rewards screen!";
+    else if (lower.includes('profile'))                          reply = "A complete profile gets 3x more visibility. Go to Profile → Edit and fill in your bio, skills, and upload a resume!";
+    else if (lower.includes('hello') || lower.includes('hi'))    reply = "Hello! I'm Tarini AI, your personal career assistant. Ask me about jobs, skills, the marketplace, or rewards!";
+
+    setTimeout(() => {
+        const t = document.getElementById('ai-typing');
+        if (t) t.remove();
+
+        const botMsg = document.createElement('div');
+        botMsg.style.cssText = 'display:flex;align-items:flex-start;gap:8px';
+        botMsg.innerHTML = `
+            <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#4d41df,#5c51a0);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px">
+                <span class="material-symbols-outlined" style="font-size:16px;color:#fff;font-variation-settings:'FILL' 1">smart_toy</span>
+            </div>
+            <div style="background:${botBg};color:${botTxt};border-radius:18px;border-top-left-radius:4px;padding:12px 16px;max-width:75%;font-size:14px;line-height:1.5">${reply}</div>`;
+        container.appendChild(botMsg);
+        container.scrollTop = container.scrollHeight;
+    }, 1400);
+}
+window.sendAIMessage = sendAIMessage;
