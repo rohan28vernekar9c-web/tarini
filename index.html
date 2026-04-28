@@ -1052,6 +1052,18 @@
                     <div id="ai-match-container" class="space-y-3"></div>
                 </div>
 
+                
+                <!-- Search Companies -->
+                <div class="mb-md">
+                    <button onclick="navigateTo('company-search')"
+                        class="w-full py-4 rounded-[20px] flex items-center justify-center gap-3 active:scale-[0.98] transition-all"
+                        style="background:linear-gradient(135deg,rgba(92,81,160,0.10),rgba(77,65,223,0.08));border:1.5px solid rgba(77,65,223,0.15)">
+                        <span class="material-symbols-outlined text-tertiary" style="font-size:22px;font-variation-settings:'FILL' 1">business_center</span>
+                        <span class="font-bold text-[15px] text-tertiary">Search Companies</span>
+                        <span class="material-symbols-outlined text-tertiary" style="font-size:18px">chevron_right</span>
+                    </button>
+                </div>
+
                 <!-- Explore Companies -->
                 <section id="jobs-company-section" class="mb-lg">
                     <div class="flex items-center justify-between mb-3">
@@ -2440,7 +2452,73 @@
             </main>
         </div>
 
+        
+        <!-- SCREEN: COMPANY SEARCH (Women-facing) -->
+        <div id="screen-company-search" class="screen">
+            <main class="max-w-2xl mx-auto px-5 py-md pb-32">
+                <div class="flex items-center gap-3 mb-5">
+                    <button onclick="navigateTo('jobs')" class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center active:scale-90 transition-all">
+                        <span class="material-symbols-outlined">arrow_back</span>
+                    </button>
+                    <div class="flex-1 min-w-0">
+                        <h2 class="font-['Plus_Jakarta_Sans'] text-[20px] font-bold text-on-surface">Search Companies</h2>
+                        <p class="text-[12px] text-on-surface-variant mt-0.5" id="company-search-count"></p>
+                    </div>
+                </div>
+                <div class="relative mb-4">
+                    <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                        <span class="material-symbols-outlined text-outline" style="font-size:18px">search</span>
+                    </div>
+                    <input id="company-search-input" type="text"
+                        placeholder="Search by name, industry, location..."
+                        oninput="searchCompanies()"
+                        class="w-full pl-11 pr-4 py-3.5 bg-surface-container-low border-none rounded-2xl focus:ring-2 focus:ring-primary/20 text-[14px] transition-all shadow-sm"/>
+                </div>
+                <div id="company-search-empty" class="hidden text-center py-12">
+                    <div class="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                        <span class="material-symbols-outlined text-primary" style="font-size:28px">domain_disabled</span>
+                    </div>
+                    <p class="font-bold text-on-surface text-[14px]">No companies found</p>
+                    <p class="text-[12px] text-on-surface-variant mt-1">Try a different search term</p>
+                </div>
+                <div id="company-search-results" class="space-y-3"></div>
+            </main>
+        </div>
+
         <!-- SCREEN: ALL COMPANIES -->
+        
+        <!-- SCREEN: COMPANY SEARCH (Women-facing) -->
+        <div id="screen-company-search" class="screen">
+            <main class="max-w-2xl mx-auto px-5 py-md pb-32">
+                <div class="flex items-center gap-3 mb-5">
+                    <button onclick="navigateTo('jobs')" class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center active:scale-90 transition-all">
+                        <span class="material-symbols-outlined">arrow_back</span>
+                    </button>
+                    <div class="flex-1 min-w-0">
+                        <h2 class="font-['Plus_Jakarta_Sans'] text-[20px] font-bold text-on-surface">Search Companies</h2>
+                        <p class="text-[12px] text-on-surface-variant mt-0.5" id="company-search-count"></p>
+                    </div>
+                </div>
+                <div class="relative mb-4">
+                    <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                        <span class="material-symbols-outlined text-outline" style="font-size:18px">search</span>
+                    </div>
+                    <input id="company-search-input" type="text"
+                        placeholder="Search by name, industry, location..."
+                        oninput="searchCompanies()"
+                        class="w-full pl-11 pr-4 py-3.5 bg-surface-container-low border-none rounded-2xl focus:ring-2 focus:ring-primary/20 text-[14px] transition-all shadow-sm"/>
+                </div>
+                <div id="company-search-empty" class="hidden text-center py-12">
+                    <div class="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                        <span class="material-symbols-outlined text-primary" style="font-size:28px">domain_disabled</span>
+                    </div>
+                    <p class="font-bold text-on-surface text-[14px]">No companies found</p>
+                    <p class="text-[12px] text-on-surface-variant mt-1">Try a different search term</p>
+                </div>
+                <div id="company-search-results" class="space-y-3"></div>
+            </main>
+        </div>
+
         <!-- SCREEN: ALL COMPANIES -->
         <div id="screen-all-companies" class="screen">
             <main class="max-w-2xl mx-auto px-5 py-md pb-32">
@@ -3309,9 +3387,9 @@
             </div>
             
             <div class="co-nav-item flex flex-col items-center justify-center cursor-pointer transition-all active:scale-95 text-slate-400"
-                data-co-target="company-messages" onclick="companyNavTo('company-messages')">
-                <span class="material-symbols-outlined co-nav-icon">chat</span>
-                <span class="text-[11px] font-semibold font-['Plus_Jakarta_Sans']">Messages</span>
+                data-co-target="company-candidates" onclick="companyNavTo('company-candidates')">
+                <span class="material-symbols-outlined co-nav-icon">person_search</span>
+                <span class="text-[11px] font-semibold font-['Plus_Jakarta_Sans']">Candidates</span>
             </div>
             <div class="co-nav-item flex flex-col items-center justify-center cursor-pointer transition-all active:scale-95 text-slate-400"
                 data-co-target="co-own-profile" onclick="companyNavTo('co-own-profile')">

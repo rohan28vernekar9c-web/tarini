@@ -1,4 +1,4 @@
-// --- FIREBASE CONFIGURATION ---
+﻿// --- FIREBASE CONFIGURATION ---
 const firebaseConfig = {
     apiKey: "AIzaSyAuHnd-CtqEJ3XrwAmWDcrVuMLGnlB42Dk",
     authDomain: "tarini-9ff23.firebaseapp.com",
@@ -15,7 +15,7 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 // List of screens that should hide the bottom navigation
-const screensWithoutNav = ['login', 'notifications', 'ai-assistant', 'post-product', 'product-detail', 'edit-profile', 'job-detail', 'job-apply', 'skill-categories', 'market-categories', 'all-companies', 'company-profile'];
+const screensWithoutNav = ['login', 'notifications', 'ai-assistant', 'post-product', 'product-detail', 'edit-profile', 'job-detail', 'job-apply', 'skill-categories', 'market-categories', 'all-companies', 'company-profile', 'company-search'];
 // Screens that show the nav but don't have a matching nav tab (no active highlight needed)
 const mainNavScreens = ['dashboard', 'jobs', 'skills', 'shop', 'profile'];
 const _navStack = [];
@@ -45,6 +45,7 @@ function navigateTo(screenId) {
         if (screenId === 'rewards') initRewardsScreen();
         if (screenId === 'all-companies') renderAllCompanies();
         if (screenId === 'company-profile') renderCompanyProfile();
+        if (screenId === 'company-search') { searchCompanies(); }
         if (screenId === 'co-own-profile') loadCompanyProfile();
     } else {
         console.error(`Screen 'screen-${screenId}' not found.`);
@@ -85,7 +86,7 @@ function updateBottomNav(screenId) {
 
     if (role === 'company') {
         // Company users: always hide women nav & header; company nav visibility
-        // is managed by companyNavTo — just ensure women nav stays hidden
+        // is managed by companyNavTo â€” just ensure women nav stays hidden
         if (bottomNav)    bottomNav.classList.add('hidden');
         if (globalHeader) globalHeader.classList.add('hidden');
         return;
@@ -105,7 +106,7 @@ function updateBottomNav(screenId) {
     // Update active state on nav items
     const navTargetMap = {
         'my-shop': 'shop', 'cart': 'shop', 'market-categories': 'shop',
-        'applications': 'jobs', 'job-detail': 'jobs', 'job-apply': 'jobs',
+        'applications': 'jobs', 'job-detail': 'jobs', 'job-apply': 'jobs', 'company-search': 'jobs', 'all-companies': 'jobs', 'company-profile': 'jobs',
         'skill-categories': 'skills',
         'notifications': 'dashboard', 'ai-assistant': 'dashboard', 'rewards': 'dashboard',
         'edit-profile': 'profile',
@@ -1111,7 +1112,7 @@ function _currentRole() {
 }
 window._currentRole = _currentRole;
 
-// Enforce nav visibility based on role — call this any time screens change
+// Enforce nav visibility based on role â€” call this any time screens change
 function _applyRoleNav(role) {
     const bottomNav   = document.getElementById('bottom-nav');
     const companyNav  = document.getElementById('company-bottom-nav');
@@ -1173,7 +1174,7 @@ async function handleLogin() {
             return;
         }
 
-        // No role stored yet — trust the selected role and persist it
+        // No role stored yet â€” trust the selected role and persist it
         if (!storedRole) {
             const _key = `profileData_${cred.user.uid}`;
             const _ex = JSON.parse(localStorage.getItem(_key) || '{}');
@@ -1420,7 +1421,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ============================================================
-// FIND JOBS PAGE ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â data, filters, AI match, top companies
+// FIND JOBS PAGE ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â data, filters, AI match, top companies
 // ============================================================
 
 const _allJobs = [
@@ -2161,7 +2162,7 @@ function loadApplicationsScreen() {
 window.loadApplicationsScreen = loadApplicationsScreen;
 
 // ============================================================
-// BACK NAVIGATION ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â My Applications
+// BACK NAVIGATION ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â My Applications
 // ============================================================
 
 function goBackFromApplications() {
@@ -2215,7 +2216,7 @@ const _skillCategories = [
     { name:'Smartphone',    icon:'smartphone',        color:'#4d41df', bg:'rgba(77,65,223,0.12)',   grad:'linear-gradient(135deg,#4d41df,#5c51a0)' },
 ];
 const _allCourses = [
-    // â”€â”€ English courses â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Ã¢â€â‚¬Ã¢â€â‚¬ English courses Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     { id:1,  ytId:'dU1xS07N-FA', title:'Figma for Beginners',              instructor:'DesignCraft',    category:'Design',        level:'Beginner',     durLabel:'1.5h',  durKey:'short',  type:'Free', rating:4.8, enrolled:3200, lang:'en', tags:['figma','ui','design','wireframe'],          desc:'Learn UI design fundamentals using Figma from wireframes to polished prototypes.' },
     { id:2,  ytId:'w7ejDZ8SWv8', title:'React.js Essentials',              instructor:'CodeNest',       category:'Development',   level:'Intermediate', durLabel:'4h',    durKey:'medium', type:'Free', rating:4.7, enrolled:5100, lang:'en', tags:['react','javascript','web','frontend'],      desc:'Build modern web apps with React hooks, components, and state management.' },
     { id:3,  ytId:'nU-IIXBWlS4', title:'Digital Marketing Masterclass',    instructor:'GrowthLab',      category:'Marketing',     level:'Beginner',     durLabel:'3h',    durKey:'medium', type:'Paid', rating:4.6, enrolled:2800, lang:'en', tags:['marketing','seo','social media','ads'],     desc:'Master SEO, social media, email campaigns, and paid ads from scratch.' },
@@ -2236,7 +2237,7 @@ const _allCourses = [
     { id:18, ytId:'Ks-_Mh1QhMc', title:'WhatsApp and Video Calls Guide',  instructor:'TechSaathi',     category:'Smartphone',    level:'Beginner',     durLabel:'20min', durKey:'short',  type:'Free', rating:4.9, enrolled:7100, lang:'en', tags:['whatsapp','video call','smartphone','chat'], desc:'Learn to use WhatsApp, make video calls, and share photos with family and friends.' },
     { id:19, ytId:'HQzoZfc3GwQ', title:'Save Money Every Day',             instructor:'MoneyWise',      category:'Finance',       level:'Beginner',     durLabel:'18min', durKey:'short',  type:'Free', rating:4.7, enrolled:5200, lang:'en', tags:['savings','money','budget','daily'],         desc:'Easy tips to save money from your daily income and build a small emergency fund.' },
     { id:20, ytId:'1Rs2ND1ryYc', title:'Basic Sewing and Tailoring',       instructor:'CraftIndia',     category:'Basics',        level:'Beginner',     durLabel:'45min', durKey:'short',  type:'Free', rating:4.8, enrolled:4300, lang:'en', tags:['sewing','tailoring','stitching','craft'],   desc:'Learn basic hand stitching and simple tailoring skills to make and repair clothes.' },
-    // â”€â”€ Hindi courses â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Hindi courses Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     { id:21, ytId:'BVbFHfFgFcE', title:'Silai Machine Chalana Sikhe',     instructor:'Sewing Duniya',  category:'Basics',        level:'Beginner',     durLabel:'40min', durKey:'short',  type:'Free', rating:4.9, enrolled:9100, lang:'hi', tags:['silai','machine','stitching','hindi','sewing'],     desc:'Silai machine ka basic istemal Hindi mein seekhein, bilkul shuruaat se.' },
     { id:22, ytId:'7Gy_OkFbSKQ', title:'Kapde Ki Cutting aur Silai',       instructor:'Sewing Duniya',  category:'Basics',        level:'Beginner',     durLabel:'35min', durKey:'short',  type:'Free', rating:4.8, enrolled:7600, lang:'hi', tags:['kapde','cutting','silai','tailoring','hindi'],      desc:'Ghar par kapde ki cutting aur silai karna seekhein, step by step Hindi mein.' },
     { id:23, ytId:'8jPQjjsBbIc', title:'Paise Kaise Bachaye - Hindi',      instructor:'Yadnya Academy', category:'Finance',        level:'Beginner',     durLabel:'20min', durKey:'short',  type:'Free', rating:4.7, enrolled:6200, lang:'hi', tags:['paise','bachana','savings','finance','hindi'],      desc:'Roz ki kamaai mein se paise kaise bachayein, simple aur practical tips Hindi mein.' },
@@ -2314,18 +2315,18 @@ function _renderCourseCards(courses) {
 }
 
 function openCourseVideo(courseId) {
+    const modal = document.getElementById('course-video-modal');
+    if (!modal || !modal.classList.contains('hidden')) return; // prevent double-open
     const course = _allCourses.find(c => c.id === courseId);
     if (!course) return;
-    const modal   = document.getElementById('course-video-modal');
     const iframe  = document.getElementById('course-video-iframe');
     const titleEl = document.getElementById('course-video-title');
     const metaEl  = document.getElementById('course-video-meta');
-    if (!modal || !iframe) return;
+    if (!iframe) return;
     if (titleEl) titleEl.textContent = course.title;
     if (metaEl)  metaEl.textContent  = course.instructor + ' \u2022 ' + course.category + ' \u2022 ' + course.durLabel;
     iframe.src = 'https://www.youtube.com/embed/' + course.ytId + '?autoplay=1&rel=0&modestbranding=1';
     modal.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
     enrollCourse(courseId);
 }
 window.openCourseVideo = openCourseVideo;
@@ -2335,7 +2336,6 @@ function closeCourseVideo() {
     const iframe = document.getElementById('course-video-iframe');
     if (iframe) iframe.src = '';
     if (modal)  modal.classList.add('hidden');
-    document.body.style.overflow = '';
 }
 window.closeCourseVideo = closeCourseVideo;
 
@@ -2478,11 +2478,11 @@ function _renderCourseCardsInto(container, courses) {
             `<span class="material-symbols-outlined" style="font-size:13px;color:${i < Math.floor(c.rating) ? '#f59e0b' : starEmpty};font-variation-settings:'FILL' 1">star</span>`
         ).join('');
         return `
-        <div onclick="openTrainingPlayer(${v.id})" style="background:${cardBg};border-radius:20px;overflow:hidden;border:1px solid ${cardBorder};box-shadow:${shadowNorm};transition:transform 0.15s,box-shadow 0.15s"
+        <div onclick="openCourseVideo(${c.id})" style="background:${cardBg};border-radius:20px;overflow:hidden;border:1px solid ${cardBorder};box-shadow:${shadowNorm};transition:transform 0.15s,box-shadow 0.15s"
             onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='${shadowHov}'"
             onmouseleave="this.style.transform='';this.style.boxShadow='${shadowNorm}'"
             ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform=''">
-            <div onclick="openCourseVideo(${c.id})" style="position:relative;width:100%;height:160px;cursor:pointer;overflow:hidden;background:${catMeta.bg}">
+            <div style="position:relative;width:100%;height:160px;cursor:pointer;overflow:hidden;background:${catMeta.bg}">
                 <img src="${thumbHq}" alt="${c.title}"
                     style="width:100%;height:100%;object-fit:cover;display:block"
                     onerror="this.src='${thumbMq}';this.onerror=function(){this.style.display='none';this.nextElementSibling.style.display='flex'}"/>
@@ -2559,7 +2559,7 @@ const _marketProducts = [
     { id:'m4', image:'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=400&q=80', name:'Madhubani Art Print',        seller:'ArtByPriya',     sellerType:'user',    category:'Art',         price:1200, stock:5,  rating:4.6, desc:'Original Madhubani art print on handmade paper.', lang:'en' },
     { id:'m5', image:'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&q=80', name:'Handwoven Jute Bag',         seller:'GreenWeave',     sellerType:'company', category:'Handicrafts', price:450,  stock:20, rating:4.5, desc:'Eco-friendly jute bag, perfect for daily use.', lang:'en' },
     { id:'m6', image:'https://images.unsplash.com/photo-1607006344380-b6775a0824a7?w=400&q=80', name:'Rose & Sandalwood Soap',     seller:'NaturalGlow',    sellerType:'user',    category:'Beauty',      price:150,  stock:40, rating:4.8, desc:'Handmade cold-process soap with natural ingredients.', lang:'en' },
-    { id:'m7', image:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80', name:'MacramÃƒÆ’Ã‚Â© Wall Hanging',       seller:'KnotArt Studio', sellerType:'company', category:'Home Decor',  price:2200, stock:8,  rating:4.7, desc:'Handcrafted macramÃƒÆ’Ã‚Â© wall hanging, boho style.', lang:'en' },
+    { id:'m7', image:'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80', name:'MacramÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â© Wall Hanging',       seller:'KnotArt Studio', sellerType:'company', category:'Home Decor',  price:2200, stock:8,  rating:4.7, desc:'Handcrafted macramÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â© wall hanging, boho style.', lang:'en' },
     { id:'m8', image:'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=400&q=80', name:'Handmade Greeting Cards',    seller:'PaperLove',      sellerType:'user',    category:'Stationery',  price:80,   stock:100,rating:4.4, desc:'Set of 5 handmade greeting cards for all occasions.', lang:'en' },
     { id:'m9', image:'https://images.unsplash.com/photo-1611085583191-a3b181a88401?w=400&q=80', name:'Silk Thread Bangles',        seller:'Meena Crafts',   sellerType:'user',    category:'Jewellery',   price:250,  stock:25, rating:4.6, desc:'Colourful silk thread bangles, set of 6.', lang:'en' },
     { id:'m10',name:'Handloom Cotton Saree',      seller:'WeaversHub',     sellerType:'company', category:'Clothing',    price:3500, stock:15, rating:4.9, desc:'Pure handloom cotton saree with natural dyes.', lang:'en' },
@@ -2916,7 +2916,7 @@ function proceedToCheckout() {
     const cart = _getCart();
     if (cart.length === 0) return;
     const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
-    cart.forEach(item => addNotification('order', `Order: ${item.name}`, `Your order for ${item.name} (ÃƒÆ’Ã¢â‚¬â€${item.qty}) has been placed.`));
+    cart.forEach(item => addNotification('order', `Order: ${item.name}`, `Your order for ${item.name} (ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â${item.qty}) has been placed.`));
     clearCart();
     showToast(`Order placed! Total: \u20b9${total.toLocaleString('en-IN')} \u2713`);
     navigateTo('shop');
@@ -3000,7 +3000,7 @@ window.deleteMyShopProduct = deleteMyShopProduct;
 document.addEventListener('DOMContentLoaded', () => { _updateCartBadge(); });
 
 // ============================================================
-// REWARDS ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â TARINI COINS, TASKS & BADGES
+// REWARDS ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â TARINI COINS, TASKS & BADGES
 // ============================================================
 
 const _REWARDS_KEY = () => { const u = auth.currentUser; return u ? `tarini_rewards_${u.uid}` : 'tarini_rewards_guest'; };
@@ -3033,7 +3033,7 @@ function _animateCoinEarn(amount) {
     setTimeout(() => { el.style.transform = 'scale(1)'; el.style.color = ''; }, 400);
     // Floating +N toast
     const toast = document.createElement('div');
-    toast.textContent = `+${amount} ⭐ coins`;
+    toast.textContent = `+${amount} â­ coins`;
     toast.style.cssText = 'position:fixed;top:80px;right:20px;background:linear-gradient(135deg,#4d41df,#675df9);color:#fff;font-size:14px;font-weight:800;padding:8px 16px;border-radius:999px;z-index:9999;animation:coinFloat 1.8s ease-out forwards;pointer-events:none;box-shadow:0 4px 16px rgba(77,65,223,0.4)';
     if (!document.getElementById('coin-float-style')) {
         const s = document.createElement('style');
@@ -3091,7 +3091,7 @@ window.checkAndAwardBadges = checkAndAwardBadges;
 function _showBadgeUnlockToast(badge) {
     const el = document.createElement('div');
     el.style.cssText = 'position:fixed;bottom:120px;left:50%;transform:translateX(-50%);background:#fff;border:2px solid rgba(77,65,223,0.25);border-radius:20px;padding:12px 20px;display:flex;align-items:center;gap:12px;z-index:9999;box-shadow:0 8px 32px rgba(77,65,223,0.20);animation:fadeIn 0.3s ease-out;min-width:260px;max-width:320px';
-    el.innerHTML = `<div style="width:40px;height:40px;border-radius:12px;background:${badge.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><span class="material-symbols-outlined" style="font-size:22px;color:${badge.color};font-variation-settings:'FILL' 1">${badge.icon}</span></div><div><p style="font-size:12px;font-weight:700;color:#4d41df">🏆 Badge Unlocked!</p><p style="font-size:13px;font-weight:700;color:#1b1b24">${badge.name}</p><p style="font-size:11px;color:#777587">${badge.desc}</p></div>`;
+    el.innerHTML = `<div style="width:40px;height:40px;border-radius:12px;background:${badge.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0"><span class="material-symbols-outlined" style="font-size:22px;color:${badge.color};font-variation-settings:'FILL' 1">${badge.icon}</span></div><div><p style="font-size:12px;font-weight:700;color:#4d41df">ðŸ† Badge Unlocked!</p><p style="font-size:13px;font-weight:700;color:#1b1b24">${badge.name}</p><p style="font-size:11px;color:#777587">${badge.desc}</p></div>`;
     document.body.appendChild(el);
     setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.4s'; setTimeout(() => el.remove(), 400); }, 3000);
 }
@@ -3409,7 +3409,7 @@ window.handleLogin = async function() {
 };
 
 // ============================================================
-// COMPANY PROFILE DATA — separate localStorage key from women users
+// COMPANY PROFILE DATA â€” separate localStorage key from women users
 // ============================================================
 
 function _companyDataKey() {
@@ -3445,12 +3445,12 @@ loadCompanyProfile = function() {
     set('co-profile-industry', d.industry || '');
     set('co-profile-location', d.location || 'Location not set');
     set('co-profile-website', d.website || 'Website not set');
-    set('co-profile-employees', d.employees || '—');
-    set('co-profile-founded', d.founded || '—');
+    set('co-profile-employees', d.employees || 'â€”');
+    set('co-profile-founded', d.founded || 'â€”');
     set('co-profile-desc', d.description || 'No description added yet.');
-    set('co-profile-email', d.email || '—');
-    set('co-profile-phone', d.phone || '—');
-    set('co-profile-address', d.address || '—');
+    set('co-profile-email', d.email || 'â€”');
+    set('co-profile-phone', d.phone || 'â€”');
+    set('co-profile-address', d.address || 'â€”');
     const wLink = document.getElementById('co-profile-website-link');
     if (wLink && d.website) { wLink.href = d.website.startsWith('http') ? d.website : 'https://' + d.website; wLink.onclick = null; }
     const hlEl = document.getElementById('co-profile-highlights-list');
@@ -3564,7 +3564,7 @@ window.handleCompanyLogoChange = handleCompanyLogoChange;
 })();
 
 // ============================================================
-// POST A JOB — Company Side (full implementation)
+// POST A JOB â€” Company Side (full implementation)
 // ============================================================
 
 function _companyJobsKey() {
@@ -3841,7 +3841,7 @@ function renderPostedJobsList() {
 window.renderPostedJobsList = renderPostedJobsList;
 
 // ============================================================
-// ACTIVE JOBS COUNTER — real-time sync
+// ACTIVE JOBS COUNTER â€” real-time sync
 // ============================================================
 
 function updateActiveJobsCounter() {
@@ -3960,7 +3960,7 @@ function closeTrainingUpload() {
 }
 window.closeTrainingUpload = closeTrainingUpload;
 
-// Session-only object URL store (cleared on page reload â€” videos are not persisted as binary)
+// Session-only object URL store (cleared on page reload Ã¢â‚¬â€ videos are not persisted as binary)
 const _trainingObjectURLs = {};
 
 function submitTrainingVideo() {
@@ -3980,7 +3980,7 @@ function submitTrainingVideo() {
 
     const id = Date.now();
 
-    // Store only metadata â€” never read video binary into memory
+    // Store only metadata Ã¢â‚¬â€ never read video binary into memory
     const entry = {
         id,
         title,
@@ -4034,7 +4034,7 @@ function openTrainingPlayer(id) {
 
     const isPrivate = v.privacy === 'private';
     const badge = document.getElementById('player-privacy-badge');
-    badge.textContent = isPrivate ? 'ðŸ”’ Private' : 'ðŸŒ Public';
+    badge.textContent = isPrivate ? 'Ã°Å¸â€â€™ Private' : 'Ã°Å¸Å’Â Public';
     badge.style.cssText = isPrivate
         ? 'font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;background:rgba(135,80,65,0.25);color:#feb5a2'
         : 'font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;background:rgba(45,106,79,0.25);color:#74c69d';
@@ -4250,7 +4250,7 @@ window.viewCompanyTraining = viewCompanyTraining;
 
 
 // ============================================================
-// COMPANY SEARCH â€” Women Dashboard
+// COMPANY SEARCH Ã¢â‚¬â€ Women Dashboard
 // ============================================================
 
 // In-memory cache so Firestore is only queried once per session
@@ -4333,7 +4333,7 @@ async function _getAllRegisteredCompanies() {
     });
 
 
-    // Static sample companies — always visible even before any company registers
+    // Static sample companies â€” always visible even before any company registers
     [
         { name:'TechSeva',           industry:'Technology', location:'Remote',    description:'Hiring freshers in tech roles.',          tagline:'Hiring freshers now!',  logo:'' },
         { name:'Craft India',        industry:'Education',  location:'Mumbai',    description:'Teaching tailoring and crafts to women.', tagline:'Empowering artisans',   logo:'' },
@@ -4565,7 +4565,7 @@ function renderCompanyProfile() {
         const grad   = grads[Math.abs(name.split('').reduce((a,ch)=>a+ch.charCodeAt(0),0)) % grads.length];
         const initials = name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
 
-        // ── Header ──────────────────────────────────────────────────────────
+        // â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         const hdr = document.getElementById('cp-header');
         if (hdr) hdr.innerHTML = `
             <div style="position:relative;overflow:hidden;border-radius:0 0 28px 28px;background:${grad};padding:24px 20px 28px">
@@ -4589,7 +4589,7 @@ function renderCompanyProfile() {
                 </div>
             </div>`;
 
-        // ── Stats row ────────────────────────────────────────────────────────
+        // â”€â”€ Stats row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         const statsEl = document.getElementById('cp-stats');
         if (statsEl) {
             const uid = c.uid;
@@ -4605,7 +4605,7 @@ function renderCompanyProfile() {
                 </div>`;
             statsEl.innerHTML =
                 sc(totalJobs || 0, 'Open Jobs', '#4d41df') +
-                sc(c.employees || '—', 'Team Size', '#875041') +
+                sc(c.employees || 'â€”', 'Team Size', '#875041') +
                 sc(localPubCount, 'Videos', '#5c51a0');
             if (!localVids.length && uid) {
                 db.collection('users').doc(uid).get().then(doc => {
@@ -4629,7 +4629,7 @@ function renderCompanyProfile() {
                 <p style="font-size:13px;font-weight:700;color:${titleC};text-transform:uppercase;letter-spacing:0.06em">${label}</p>
             </div>`;
 
-        // ── About ────────────────────────────────────────────────────────────
+        // â”€â”€ About â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         const about = document.getElementById('cp-about');
         if (about) {
             let html = '';
@@ -4666,7 +4666,7 @@ function renderCompanyProfile() {
             about.innerHTML = html;
         }
 
-        // ── Company Details ──────────────────────────────────────────────────
+        // â”€â”€ Company Details â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         const detailsEl = document.getElementById('cp-about');
         // (details are merged into about section above; extra details card below)
         const statsSection = document.getElementById('cp-stats');
@@ -4690,7 +4690,7 @@ function renderCompanyProfile() {
             );
         }
 
-        // ── Contact ──────────────────────────────────────────────────────────
+        // â”€â”€ Contact â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         const hasContact = c.email || c.phone || c.address || c.website;
         let contactCard = '';
         if (hasContact) {
@@ -4713,7 +4713,7 @@ function renderCompanyProfile() {
             );
         }
 
-        // ── Social Links ─────────────────────────────────────────────────────
+        // â”€â”€ Social Links â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         const hasSocial = c.linkedin || c.twitter;
         let socialCard = '';
         if (hasSocial) {
@@ -4743,7 +4743,7 @@ function renderCompanyProfile() {
             aboutEl.innerHTML += extra;
         }
 
-        // ── Jobs ─────────────────────────────────────────────────────────────
+        // â”€â”€ Jobs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         const jobsEl      = document.getElementById('cp-jobs');
         const jobsCountEl = document.getElementById('cp-jobs-count');
         if (jobsEl) {
@@ -4777,7 +4777,7 @@ function renderCompanyProfile() {
             const builtinCards = compJobs.map(j => jobCard(j.title, j.location, j.exp, j.type, j.salary, `openJobDetail(${j.id})`)).join('');
             const postedCards  = postedJobs.map(j => jobCard(
                 j.title, j.location||'', j.experience||'', j.type||'',
-                j.salaryMin&&j.salaryMax ? '&#8377;'+j.salaryMin+'–&#8377;'+j.salaryMax : '',
+                j.salaryMin&&j.salaryMax ? '&#8377;'+j.salaryMin+'â€“&#8377;'+j.salaryMax : '',
                 `navigateTo('jobs')`
             )).join('');
 
@@ -4785,7 +4785,7 @@ function renderCompanyProfile() {
                 `<div style="text-align:center;padding:24px 0;color:${subC};font-size:13px">No open positions right now.</div>`;
         }
 
-        // ── Videos ───────────────────────────────────────────────────────────
+        // â”€â”€ Videos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         const videosEl = document.getElementById('cp-videos');
         if (videosEl) {
             const uid = c.uid;
@@ -4849,7 +4849,7 @@ function renderCompanyProfile() {
 window.renderCompanyProfile = renderCompanyProfile;
 
 // ============================================================
-// WOMEN ↔ COMPANY CONNECTION MODULE
+// WOMEN â†” COMPANY CONNECTION MODULE
 // ============================================================
 
 
@@ -4919,6 +4919,7 @@ function searchCandidates() {
                     <div style="display:flex;gap:8px;margin-top:12px">
                         <button onclick="inviteCandidate('${c.id}','${(c.name||'').replace(/'/g,'')}')" style="flex:1;height:36px;border-radius:10px;border:none;background:linear-gradient(135deg,#4d41df,#5c51a0);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif">Invite</button>
                         <button onclick="contactCandidate('${c.email||''}')" style="flex:1;height:36px;border-radius:10px;border:1px solid rgba(77,65,223,0.25);background:rgba(77,65,223,0.06);color:#4d41df;font-size:12px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif">Contact</button>
+                        <button onclick="hireCandidate('${c.id}','${(c.name||'').replace(/'/g,'')}')" style="flex:1;height:34px;border-radius:10px;border:none;background:rgba(45,106,79,0.12);color:#276749;font-size:11px;font-weight:700;cursor:pointer;font-family:'Poppins',sans-serif">Hire</button>
                     </div>
                 </div>`;
             }).join('');
@@ -4938,7 +4939,7 @@ function inviteCandidate(uid, name) {
         time: new Date().toISOString(),
         read: false,
     }).catch(console.warn);
-    showToast(`Invite sent to ${name} ✓`);
+    showToast(`Invite sent to ${name} âœ“`);
 }
 window.inviteCandidate = inviteCandidate;
 
@@ -4948,33 +4949,46 @@ function contactCandidate(email) {
 }
 window.contactCandidate = contactCandidate;
 
-// ---- COMPANY SIDE: Update application status ----
+function hireCandidate(uid, name) {
+    db.collection('notifications').add({
+        toUid: uid, type: 'application',
+        title: 'Congratulations! You have been hired!',
+        description: 'A company on Tarini has selected you. Check your applications.',
+        time: new Date().toISOString(), read: false,
+    }).catch(console.warn);
+    showToast(`Hire notification sent to ${name} \u2713`);
+}
+window.hireCandidate = hireCandidate;
 
+
+
+// ============================================================
+// WOMEN <-> COMPANY CONNECTION: Application Status & Firestore Sync
+// ============================================================
+
+// ---- COMPANY SIDE: Update application status ----
 function updateApplicationStatus(appKey, jobId, newStatus) {
-    // Update in the specific user's localStorage key
-    const list = JSON.parse(localStorage.getItem(appKey) || '[]');
-    const updated = list.map(a => a.jobId === jobId ? { ...a, status: newStatus } : a);
-    localStorage.setItem(appKey, JSON.stringify(updated));
-    // Also update in Firestore
+    if (appKey) {
+        const list = JSON.parse(localStorage.getItem(appKey) || '[]');
+        const updated = list.map(a => a.jobId === jobId ? { ...a, status: newStatus } : a);
+        localStorage.setItem(appKey, JSON.stringify(updated));
+    }
     db.collection('applications')
         .where('jobId', '==', jobId)
         .get()
         .then(snap => snap.forEach(doc => doc.ref.update({ status: newStatus })))
         .catch(console.warn);
     loadCompanyApplications();
-    showToast(`Status updated to ${newStatus} ✓`);
+    showToast(`Status updated to ${newStatus} \u2713`);
 }
 window.updateApplicationStatus = updateApplicationStatus;
 
 // ---- Patch finalSubmitApplication to also write to Firestore ----
-// so companies can query applications cross-user
-
 (function _patchFinalSubmit() {
     const _orig = window.finalSubmitApplication;
+    if (!_orig) return;
     window.finalSubmitApplication = function () {
-        // Call original first
         _orig();
-        // After a short delay (original uses setTimeout(1000)), write to Firestore
         setTimeout(() => {
             const job = _allJobs.find(j => j.id === _currentJobId);
             if (!job) return;
@@ -4992,8 +5006,7 @@ window.updateApplicationStatus = updateApplicationStatus;
     };
 })();
 
-// ---- Patch loadCompanyApplications to show status-change buttons ----
-
+// ---- Patch loadCompanyApplications to show Shortlist/Hire/Reject buttons ----
 (function _patchLoadCompanyApplications() {
     const _orig = loadCompanyApplications;
     loadCompanyApplications = function () {
@@ -5004,29 +5017,26 @@ window.updateApplicationStatus = updateApplicationStatus;
         const container = document.getElementById('co-applications-list');
         if (!container) return;
 
-        // Gather from all users' localStorage keys
         const allKeys = Object.keys(localStorage).filter(k => k.startsWith('tarini_applications_'));
         let apps = allKeys.reduce((acc, k) => {
             const list = JSON.parse(localStorage.getItem(k) || '[]');
             return acc.concat(list.filter(a => a.companyId === companyId).map(a => ({ ...a, _storageKey: k })));
         }, []);
 
-        // Also try Firestore
         db.collection('applications').where('companyId', '==', companyId).get()
             .then(snap => {
                 const fsApps = snap.docs.map(doc => ({ ...doc.data(), _docId: doc.id }));
-                // Merge: prefer Firestore status if available
                 fsApps.forEach(fa => {
                     const idx = apps.findIndex(a => a.jobId === fa.jobId && (a.applicant?.email === fa.applicant?.email));
                     if (idx >= 0) apps[idx].status = fa.status;
                     else apps.push(fa);
                 });
-                _renderCompanyApps(container, apps, companyId);
+                _renderCompanyApps(container, apps);
             })
-            .catch(() => _renderCompanyApps(container, apps, companyId));
+            .catch(() => _renderCompanyApps(container, apps));
     };
 
-    function _renderCompanyApps(container, apps, companyId) {
+    function _renderCompanyApps(container, apps) {
         if (apps.length === 0) {
             container.innerHTML = `
                 <div class="text-center py-16">
@@ -5038,18 +5048,15 @@ window.updateApplicationStatus = updateApplicationStatus;
                 </div>`;
             return;
         }
-
         const _dark = document.documentElement.classList.contains('dark-theme');
         const cardBg = _dark ? '#1c1b2e' : '#fff';
         const border = _dark ? '#2a2840' : '#eae6f3';
         const titleC = _dark ? '#e8e6f4' : '#1b1b24';
         const subC   = _dark ? '#9e9bb8' : '#777587';
-
         const statusStyle = s => s === 'Applied'     ? 'background:rgba(77,65,223,0.10);color:#4d41df'
                                : s === 'Shortlisted' ? 'background:rgba(92,81,160,0.10);color:#5c51a0'
                                : s === 'Hired'       ? 'background:rgba(45,106,79,0.10);color:#276749'
                                :                       'background:rgba(135,80,65,0.10);color:#875041';
-
         container.innerHTML = apps.map(app => {
             const date = new Date(app.appliedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
             const storageKey = app._storageKey ? `'${app._storageKey}'` : 'null';
@@ -5059,7 +5066,7 @@ window.updateApplicationStatus = updateApplicationStatus;
                     <div style="flex:1;min-width:0">
                         <p style="font-size:14px;font-weight:700;color:${titleC}">${app.applicant ? app.applicant.name : 'Applicant'}</p>
                         <p style="font-size:12px;color:${subC};margin-top:2px">${app.title} &bull; ${app.location}</p>
-                        ${app.applicant ? `<p style="font-size:11px;color:${subC};margin-top:2px">Skills: ${app.applicant.skills || '—'} &bull; Exp: ${app.applicant.experience || '—'}</p>` : ''}
+                        ${app.applicant ? `<p style="font-size:11px;color:${subC};margin-top:2px">Skills: ${app.applicant.skills || '\u2014'} &bull; Exp: ${app.applicant.experience || '\u2014'}</p>` : ''}
                         <p style="font-size:11px;color:#9e9bb8;margin-top:4px">Applied ${date}</p>
                     </div>
                     <span style="flex-shrink:0;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;${statusStyle(app.status)}">${app.status}</span>
@@ -5074,29 +5081,30 @@ window.updateApplicationStatus = updateApplicationStatus;
     }
 })();
 
-// ---- Patch loadApplicationsScreen to show company response status ----
-
+// ---- Patch loadApplicationsScreen to sync status from Firestore (women side) ----
 (function _patchLoadApplicationsScreen() {
     const _orig = window.loadApplicationsScreen;
+    if (!_orig) return;
     window.loadApplicationsScreen = function () {
         _orig();
-        // After rendering, refresh statuses from Firestore for real-time company responses
         const user = auth.currentUser;
         if (!user) return;
         db.collection('applications').where('userId', '==', user.uid).get()
             .then(snap => {
+                let changed = false;
+                const apps = JSON.parse(localStorage.getItem(_appsKey()) || '[]');
                 snap.forEach(doc => {
                     const data = doc.data();
-                    // Update localStorage status if changed
-                    const apps = JSON.parse(localStorage.getItem(_appsKey()) || '[]');
                     const idx = apps.findIndex(a => a.jobId === data.jobId);
                     if (idx >= 0 && apps[idx].status !== data.status) {
                         apps[idx].status = data.status;
-                        localStorage.setItem(_appsKey(), JSON.stringify(apps));
-                        // Re-render to show updated status
-                        _orig();
+                        changed = true;
                     }
                 });
+                if (changed) {
+                    localStorage.setItem(_appsKey(), JSON.stringify(apps));
+                    _orig();
+                }
             })
             .catch(console.warn);
     };
