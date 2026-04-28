@@ -1,4 +1,4 @@
-﻿// --- FIREBASE CONFIGURATION ---
+// --- FIREBASE CONFIGURATION ---
 const firebaseConfig = {
     apiKey: "AIzaSyAuHnd-CtqEJ3XrwAmWDcrVuMLGnlB42Dk",
     authDomain: "tarini-9ff23.firebaseapp.com",
@@ -5153,6 +5153,60 @@ function _aiActionBtns(actions) {
     '</div>';
 }
 
+function aiRedirectTo(screenId, screenName, extraFnStr) {
+    var container = document.getElementById('ai-chat-container');
+    if (!container) {
+        navigateTo(screenId);
+        if (extraFnStr) {
+            try { eval(extraFnStr); } catch(e) {}
+        }
+        return;
+    }
+
+    var dark = document.documentElement.classList.contains('dark-theme');
+    var botBg  = dark ? '#252438' : '#f0ecf9';
+    var botTxt = dark ? '#e8e6f4' : '#1b1b24';
+    
+    var itemType = 'options';
+    if (screenName === 'Find Job') itemType = 'jobs';
+    else if (screenName === 'Skill Hub') itemType = 'courses';
+    else if (screenName === 'Marketplace') itemType = 'products';
+    else if (screenName === 'My Shop') itemType = 'shop items';
+    else if (screenName === 'Rewards') itemType = 'rewards';
+    else if (screenName === 'My Profile') itemType = 'profile details';
+    else if (screenName === 'Edit Profile') itemType = 'profile settings';
+    else if (screenName === 'My Applications') itemType = 'applications';
+    
+    var botMsg = document.createElement('div');
+    botMsg.style.cssText = 'display:flex;align-items:flex-start;gap:8px';
+    botMsg.innerHTML =
+        '<div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#4d41df,#5c51a0);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px">' +
+            '<span class="material-symbols-outlined" style="font-size:14px;color:#fff;font-variation-settings:\'FILL\' 1">smart_toy</span>' +
+        '</div>' +
+        '<div style="background:' + botBg + ';color:' + botTxt + ';border-radius:18px;border-top-left-radius:4px;padding:10px 14px;max-width:82%;font-size:13px;line-height:1.55">' +
+            'I found matching ' + itemType + ' for you &mdash; opening the ' + screenName + ' page now.' +
+            '<div style="margin-top:8px;display:flex;align-items:center;gap:6px;color:#4d41df;font-size:12px;font-weight:600">' +
+                '<span class="material-symbols-outlined" style="font-size:16px;animation:spin 1s linear infinite">progress_activity</span>' +
+                'Redirecting...' +
+            '</div>' +
+        '</div>';
+    
+    container.appendChild(botMsg);
+    container.scrollTop = container.scrollHeight;
+
+    var input = document.getElementById('ai-chat-input');
+    if (input) input.disabled = true;
+
+    setTimeout(function() {
+        if (input) input.disabled = false;
+        navigateTo(screenId);
+        if (extraFnStr) {
+            try { eval(extraFnStr); } catch(e) {}
+        }
+    }, 1500);
+}
+window.aiRedirectTo = aiRedirectTo;
+
 function _aiGetReply(lower) {
     var dark = document.documentElement.classList.contains('dark-theme');
     var botTxt = dark ? '#e8e6f4' : '#1b1b24';
@@ -5173,8 +5227,8 @@ function _aiGetReply(lower) {
             '</div>';
         }).join('');
         var btns = _aiActionBtns([
-            { fn: "navigateTo('jobs')", icon: 'work', label: 'All Jobs', bg: 'linear-gradient(135deg,#4d41df,#5c51a0)', col: '#fff' },
-            { fn: "navigateTo('jobs');setTimeout(runAIMatch,400)", icon: 'auto_awesome', label: 'AI Match', bg: 'rgba(77,65,223,0.12)', col: '#4d41df' }
+            { fn: "aiRedirectTo('jobs', 'Find Job')", icon: 'work', label: 'All Jobs', bg: 'linear-gradient(135deg,#4d41df,#5c51a0)', col: '#fff' },
+            { fn: "aiRedirectTo('jobs', 'Find Job', 'setTimeout(runAIMatch,400)')", icon: 'auto_awesome', label: 'AI Match', bg: 'rgba(77,65,223,0.12)', col: '#4d41df' }
         ]);
         return { text: 'Here are some jobs that might suit you \uD83D\uDCBC', extra: cards + btns };
     }
@@ -5195,7 +5249,7 @@ function _aiGetReply(lower) {
             '</div>';
         }).join('');
         var cBtns = _aiActionBtns([
-            { fn: "navigateTo('skills')", icon: 'school', label: 'Skill Hub', bg: 'linear-gradient(135deg,#5c51a0,#675df9)', col: '#fff' }
+            { fn: "aiRedirectTo('skills', 'Skill Hub')", icon: 'school', label: 'Skill Hub', bg: 'linear-gradient(135deg,#5c51a0,#675df9)', col: '#fff' }
         ]);
         return { text: 'Here are some top courses for you \uD83D\uDCDA', extra: cCards + cBtns };
     }
@@ -5217,8 +5271,8 @@ function _aiGetReply(lower) {
             '</div>';
         }).join('');
         var mBtns = _aiActionBtns([
-            { fn: "navigateTo('shop')",    icon: 'storefront', label: 'Marketplace', bg: 'linear-gradient(135deg,#875041,#feb5a2)', col: '#fff' },
-            { fn: "navigateTo('my-shop')", icon: 'add_circle', label: 'My Shop',     bg: 'rgba(135,80,65,0.12)',                   col: '#875041' }
+            { fn: "aiRedirectTo('shop', 'Marketplace')",    icon: 'storefront', label: 'Marketplace', bg: 'linear-gradient(135deg,#875041,#feb5a2)', col: '#fff' },
+            { fn: "aiRedirectTo('my-shop', 'My Shop')", icon: 'add_circle', label: 'My Shop',     bg: 'rgba(135,80,65,0.12)',                   col: '#875041' }
         ]);
         return { text: 'Check out these popular products \uD83D\uDECD\uFE0F', extra: mCards + mBtns };
     }
@@ -5227,7 +5281,7 @@ function _aiGetReply(lower) {
     if (/reward|coin|badge|streak|point/.test(lower)) {
         var r = (typeof _getRewards === 'function') ? _getRewards() : { coins: 0, streak: 0, earnedBadges: [] };
         var rBtns = _aiActionBtns([
-            { fn: "navigateTo('rewards')", icon: 'military_tech', label: 'View Rewards', bg: 'linear-gradient(135deg,#675df9,#4d41df)', col: '#fff' }
+            { fn: "aiRedirectTo('rewards', 'Rewards')", icon: 'military_tech', label: 'View Rewards', bg: 'linear-gradient(135deg,#675df9,#4d41df)', col: '#fff' }
         ]);
         return { text: 'You have <strong>' + r.coins + ' Tarini Coins</strong> and a <strong>' + (r.streak || 0) + '-day streak</strong> \uD83C\uDFC6<br><br>Earn more by logging in daily, applying to jobs, enrolling in courses, and listing products!', extra: rBtns };
     }
@@ -5236,8 +5290,8 @@ function _aiGetReply(lower) {
     if (/profile|bio|resume|complete|photo|picture/.test(lower)) {
         var pct = (typeof computeProfileProgress === 'function') ? computeProfileProgress() : 0;
         var pBtns = _aiActionBtns([
-            { fn: "navigateTo('profile')",      icon: 'person', label: 'My Profile', bg: 'linear-gradient(135deg,#276749,#74c69d)', col: '#fff' },
-            { fn: "navigateTo('edit-profile')", icon: 'edit',   label: 'Edit',       bg: 'rgba(45,106,79,0.12)',                   col: '#276749' }
+            { fn: "aiRedirectTo('profile', 'My Profile')",      icon: 'person', label: 'My Profile', bg: 'linear-gradient(135deg,#276749,#74c69d)', col: '#fff' },
+            { fn: "aiRedirectTo('edit-profile', 'Edit Profile')", icon: 'edit',   label: 'Edit',       bg: 'rgba(45,106,79,0.12)',                   col: '#276749' }
         ]);
         return { text: 'Your profile is <strong>' + pct + '% complete</strong> \uD83D\uDCCB<br><br>A complete profile gets <strong>3x more visibility</strong> to companies. Add your bio, skills, and upload a resume!', extra: pBtns };
     }
@@ -5245,7 +5299,7 @@ function _aiGetReply(lower) {
     // Applications intent
     if (/application|applied|status|interview|shortlist/.test(lower)) {
         var aBtns = _aiActionBtns([
-            { fn: "navigateTo('applications')", icon: 'assignment', label: 'My Applications', bg: 'linear-gradient(135deg,#875041,#feb5a2)', col: '#fff' }
+            { fn: "aiRedirectTo('applications', 'My Applications')", icon: 'assignment', label: 'My Applications', bg: 'linear-gradient(135deg,#875041,#feb5a2)', col: '#fff' }
         ]);
         return { text: 'Track all your job applications and their status in the Applications section \uD83D\uDCCB', extra: aBtns };
     }
@@ -5256,9 +5310,9 @@ function _aiGetReply(lower) {
         var u2 = (typeof auth !== 'undefined') ? auth.currentUser : null;
         var name2 = d2.name || (u2 && u2.displayName) || 'there';
         var gBtns = _aiActionBtns([
-            { fn: "navigateTo('jobs')",    icon: 'work',       label: 'Find Jobs',   bg: 'linear-gradient(135deg,#4d41df,#5c51a0)', col: '#fff' },
-            { fn: "navigateTo('skills')",  icon: 'school',     label: 'Skill Hub',   bg: 'rgba(92,81,160,0.12)',                   col: '#5c51a0' },
-            { fn: "navigateTo('shop')",    icon: 'storefront', label: 'Marketplace', bg: 'rgba(135,80,65,0.12)',                   col: '#875041' }
+            { fn: "aiRedirectTo('jobs', 'Find Job')",    icon: 'work',       label: 'Find Jobs',   bg: 'linear-gradient(135deg,#4d41df,#5c51a0)', col: '#fff' },
+            { fn: "aiRedirectTo('skills', 'Skill Hub')",  icon: 'school',     label: 'Skill Hub',   bg: 'rgba(92,81,160,0.12)',                   col: '#5c51a0' },
+            { fn: "aiRedirectTo('shop', 'Marketplace')",    icon: 'storefront', label: 'Marketplace', bg: 'rgba(135,80,65,0.12)',                   col: '#875041' }
         ]);
         return { text: 'Hello ' + name2 + '! \uD83D\uDC4B I\'m Tarini AI, your personal career assistant.<br><br>What would you like to do today?', extra: gBtns };
     }
@@ -5271,8 +5325,8 @@ function _aiGetReply(lower) {
         'Try the AI Job Match feature \u2014 it finds jobs tailored to your skills automatically!'
     ];
     var fBtns = _aiActionBtns([
-        { fn: "navigateTo('jobs')",   icon: 'work',   label: 'Find Jobs', bg: 'linear-gradient(135deg,#4d41df,#5c51a0)', col: '#fff' },
-        { fn: "navigateTo('skills')", icon: 'school', label: 'Skill Hub', bg: 'rgba(92,81,160,0.12)',                   col: '#5c51a0' }
+        { fn: "aiRedirectTo('jobs', 'Find Job')",   icon: 'work',   label: 'Find Jobs', bg: 'linear-gradient(135deg,#4d41df,#5c51a0)', col: '#fff' },
+        { fn: "aiRedirectTo('skills', 'Skill Hub')", icon: 'school', label: 'Skill Hub', bg: 'rgba(92,81,160,0.12)',                   col: '#5c51a0' }
     ]);
     return { text: fallbacks[Math.floor(Math.random() * fallbacks.length)], extra: fBtns };
 }
